@@ -34,3 +34,8 @@ hs_err_pid*
 # Claude / agent tooling
 .claude/
 CLAUDE.md
+
+# UI (React/Vite)
+ui/node_modules/
+ui/dist/
+ui/*.tsbuildinfo
