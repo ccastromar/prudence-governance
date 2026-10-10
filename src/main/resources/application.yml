@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: prudence
+  datasource:
+    url: jdbc:h2:mem:prudence;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: 8099
+
+# Prudence integrations (control plane): the OPA policy engine (PDP sidecar) and Ernest
+# (evidence + attestation sealing). Fail-closed when unreachable.
+prudence:
+  opa:
+    base-url: http://127.0.0.1:8181
+    decision-path: /v1/data/prudence/allow
+  ernest:
+    base-url: http://127.0.0.1:3001
