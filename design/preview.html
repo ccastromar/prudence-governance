@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en" data-vertex="govern">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trio design language</title>
+<link rel="stylesheet" href="tokens.css">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:var(--font-sans); font-size:var(--fs-base); line-height:var(--lh-normal); }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: var(--sp-8) var(--sp-5); }
+  h1 { font-size:var(--fs-2xl); margin:0 0 var(--sp-1); }
+  h2 { font-size:var(--fs-sm); text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin:var(--sp-8) 0 var(--sp-3); font-weight:var(--fw-semibold); }
+  .sub { color:var(--text-muted); margin:0 0 var(--sp-6); }
+  .row { display:flex; gap:var(--sp-3); flex-wrap:wrap; align-items:center; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow-sm); padding:var(--sp-5); }
+  .accent-chip { flex:1; min-width:150px; border-radius:var(--radius); padding:var(--sp-4); color:#fff; font-weight:var(--fw-semibold); }
+  .badge { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:var(--radius-full); font-size:var(--fs-xs); font-weight:var(--fw-semibold); text-transform:uppercase; letter-spacing:.04em; }
+  .btn { border:0; border-radius:var(--radius-sm); padding:8px 16px; font-size:var(--fs-sm); font-weight:var(--fw-semibold); cursor:pointer; }
+  .btn-primary { background:var(--accent); color:var(--accent-fg); }
+  .btn-outline { background:transparent; color:var(--text); border:1px solid var(--border-strong); }
+  .btn:focus-visible { outline:none; box-shadow:var(--ring); }
+  table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; font-size:var(--fs-sm); }
+  th { text-align:left; text-transform:uppercase; font-size:var(--fs-xs); letter-spacing:.05em; color:var(--text-muted); font-weight:var(--fw-semibold); padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--border); }
+  td { padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--border); }
+  tr:last-child td { border-bottom:0; }
+  tr:hover td { background:var(--surface-muted); }
+  code { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--text-muted); }
+  .mut { color:var(--text-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trio design language</h1>
+  <p class="sub">One family, three apps · AOS operate · Prudence govern · Ernest assure · <span class="mut">(this page shows the <b>govern</b> accent)</span></p>
+
+  <h2>Vertex accents — the only thing that differs</h2>
+  <div class="row">
+    <div class="accent-chip" style="background:var(--accent-operate)">AOS · operate<br><code style="color:#dbeafe">#2563eb</code></div>
+    <div class="accent-chip" style="background:var(--accent-govern)">Prudence · govern<br><code style="color:#fef3c7">#d97706</code></div>
+    <div class="accent-chip" style="background:var(--accent-assure)">Ernest · assure<br><code style="color:#ccfbf1">#0d9488</code></div>
+  </div>
+
+  <h2>EU AI Act risk tiers (shared vocabulary)</h2>
+  <div class="row">
+    <span class="badge" style="background:var(--risk-prohibited-bg);color:var(--risk-prohibited)">Prohibited</span>
+    <span class="badge" style="background:var(--risk-high-bg);color:var(--risk-high)">High · Annex III</span>
+    <span class="badge" style="background:var(--risk-limited-bg);color:var(--risk-limited)">Limited</span>
+    <span class="badge" style="background:var(--risk-minimal-bg);color:var(--risk-minimal)">Minimal</span>
+  </div>
+
+  <h2>PDP decisions</h2>
+  <div class="row">
+    <span class="badge" style="background:var(--ok-bg);color:var(--ok)">● Allow</span>
+    <span class="badge" style="background:var(--warn-bg);color:var(--warn)">● Approval required</span>
+    <span class="badge" style="background:var(--danger-bg);color:var(--danger)">● Deny</span>
+  </div>
+
+  <h2>Buttons & focus</h2>
+  <div class="row">
+    <button class="btn btn-primary">Register system</button>
+    <button class="btn btn-outline">Export</button>
+    <span class="mut">(tab to a button to see the accent focus ring)</span>
+  </div>
+
+  <h2>Sample — AI system registry (Prudence)</h2>
+  <div class="card" style="margin-bottom:var(--sp-5)">
+    <div class="row" style="justify-content:space-between">
+      <div>
+        <div style="font-weight:var(--fw-semibold); font-size:var(--fs-md)">Credit Risk EU</div>
+        <div class="mut" style="font-size:var(--fs-sm)">Creditworthiness assessment of natural persons · owner: risk@bank.eu</div>
+      </div>
+      <span class="badge" style="background:var(--risk-high-bg);color:var(--risk-high)">High · Annex III</span>
+    </div>
+  </div>
+  <table>
+    <thead><tr><th>AI system</th><th>Risk tier</th><th>Approval</th><th>Last decision</th></tr></thead>
+    <tbody>
+      <tr><td>Credit Risk EU <code>credit-risk-eu</code></td><td><span class="badge" style="background:var(--risk-high-bg);color:var(--risk-high)">High</span></td><td><span class="badge" style="background:var(--warn-bg);color:var(--warn)">Pending</span></td><td><span class="badge" style="background:var(--warn-bg);color:var(--warn)">Approval req.</span></td></tr>
+      <tr><td>Fraud Triage <code>fraud-triage</code></td><td><span class="badge" style="background:var(--risk-limited-bg);color:var(--risk-limited)">Limited</span></td><td><span class="badge" style="background:var(--ok-bg);color:var(--ok)">Approved</span></td><td><span class="badge" style="background:var(--ok-bg);color:var(--ok)">Allow</span></td></tr>
+      <tr><td>Marketing Copy <code>mkt-copy</code></td><td><span class="badge" style="background:var(--risk-minimal-bg);color:var(--risk-minimal)">Minimal</span></td><td><span class="badge" style="background:var(--ok-bg);color:var(--ok)">Approved</span></td><td><span class="badge" style="background:var(--ok-bg);color:var(--ok)">Allow</span></td></tr>
+      <tr><td>Social Scoring <code>social-score</code></td><td><span class="badge" style="background:var(--risk-prohibited-bg);color:var(--risk-prohibited)">Prohibited</span></td><td><span class="badge" style="background:var(--danger-bg);color:var(--danger)">Blocked</span></td><td><span class="badge" style="background:var(--danger-bg);color:var(--danger)">Deny</span></td></tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>
