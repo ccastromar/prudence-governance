@@ -1,0 +1,16 @@
+{
+  "prudence": {
+    "roles_of": {
+      "alice@bank.eu": ["model-operator"],
+      "bob@bank.eu": ["risk-officer"]
+    },
+    "role_permissions": {
+      "model-operator": [
+        { "pipeline": "credit-risk-scoring", "actions": ["run"] }
+      ],
+      "risk-officer": [
+        { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
+      ]
+    }
+  }
+}
