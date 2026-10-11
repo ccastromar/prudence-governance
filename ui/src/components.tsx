@@ -14,11 +14,21 @@ export function RiskBadge({ tier, annexIII }: { tier: RiskTier; annexIII?: boole
 const statusStyle: Record<string, React.CSSProperties> = {
   APPROVED: { background: 'var(--ok-bg)', color: 'var(--ok)' },
   PENDING_APPROVAL: { background: 'var(--warn-bg)', color: 'var(--warn)' },
+  REJECTED: { background: 'var(--danger-bg)', color: 'var(--danger)' },
   BLOCKED: { background: 'var(--danger-bg)', color: 'var(--danger)' },
   DRAFT: { background: 'var(--surface-muted)', color: 'var(--text-muted)' },
 };
 export function StatusBadge({ status }: { status: string }) {
   return <span className="badge" style={statusStyle[status] ?? statusStyle.DRAFT}>{status.replace('_', ' ')}</span>;
+}
+
+const postureStyle: Record<string, React.CSSProperties> = {
+  GREEN: { background: 'var(--ok-bg)', color: 'var(--ok)' },
+  AMBER: { background: 'var(--warn-bg)', color: 'var(--warn)' },
+  RED: { background: 'var(--danger-bg)', color: 'var(--danger)' },
+};
+export function PostureBadge({ status }: { status: string }) {
+  return <span className="badge" style={postureStyle[status] ?? postureStyle.AMBER}>● {status}</span>;
 }
 
 const decisionStyle: Record<string, React.CSSProperties> = {

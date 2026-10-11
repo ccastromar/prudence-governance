@@ -2,8 +2,10 @@ package com.prudence.registry.adapter.in.web;
 
 import com.prudence.registry.adapter.in.web.dto.AiSystemResponse;
 import com.prudence.registry.adapter.in.web.dto.RegisterAiSystemRequest;
+import com.prudence.registry.adapter.in.web.dto.ReviewRequest;
 import com.prudence.registry.application.port.in.AiSystemQueries;
 import com.prudence.registry.application.port.in.RegisterAiSystemUseCase;
+import com.prudence.registry.application.port.in.ReviewAiSystemUseCase;
 import com.prudence.registry.domain.AiSystem;
 import com.prudence.registry.domain.AiSystemId;
 import jakarta.validation.Valid;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.List;
 
 /// Driving adapter: REST surface of the AI-system registry.
@@ -20,10 +23,12 @@ public class AiSystemController {
 
     private final RegisterAiSystemUseCase register;
     private final AiSystemQueries queries;
+    private final ReviewAiSystemUseCase review;
 
-    public AiSystemController(RegisterAiSystemUseCase register, AiSystemQueries queries) {
+    public AiSystemController(RegisterAiSystemUseCase register, AiSystemQueries queries, ReviewAiSystemUseCase review) {
         this.register = register;
         this.queries = queries;
+        this.review = review;
     }
 
     @PostMapping
@@ -43,5 +48,24 @@ public class AiSystemController {
                 .map(AiSystemResponse::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    /// The approvals inbox acts here. Access is restricted to reviewer roles by the security
+    /// filter chain (see SecurityConfig); the reviewer's identity is taken from the principal.
+    @PostMapping("/{id}/approve")
+    public AiSystemResponse approve(@PathVariable String id, Principal principal) {
+        return AiSystemResponse.from(review.approve(new AiSystemId(id), reviewerOf(principal)));
+    }
+
+    @PostMapping("/{id}/reject")
+    public AiSystemResponse reject(@PathVariable String id,
+                                   @RequestBody(required = false) ReviewRequest body,
+                                   Principal principal) {
+        String reason = body != null ? body.reason() : null;
+        return AiSystemResponse.from(review.reject(new AiSystemId(id), reviewerOf(principal), reason));
+    }
+
+    private static String reviewerOf(Principal principal) {
+        return principal != null ? principal.getName() : "dev-reviewer";
     }
 }

@@ -63,11 +63,25 @@ public final class AiSystem {
         };
     }
 
+    /// A governance reviewer clears the system to go live. Only a system awaiting a decision
+    /// can be approved; prohibited systems are blocked outright and never eligible.
     public void approve() {
         if (riskTier == RiskTier.PROHIBITED) {
             throw new DomainException("a prohibited AI system cannot be approved");
         }
+        if (approvalStatus != ApprovalStatus.PENDING_APPROVAL && approvalStatus != ApprovalStatus.REJECTED) {
+            throw new DomainException("only a system awaiting approval can be approved (was " + approvalStatus + ")");
+        }
         this.approvalStatus = ApprovalStatus.APPROVED;
+    }
+
+    /// A governance reviewer declines the request. The system stays off-limits to the PDP
+    /// (not approved) until it is re-submitted or reclassified.
+    public void reject() {
+        if (approvalStatus == ApprovalStatus.BLOCKED) {
+            throw new DomainException("a blocked AI system cannot be rejected");
+        }
+        this.approvalStatus = ApprovalStatus.REJECTED;
     }
 
     public boolean isApproved() {

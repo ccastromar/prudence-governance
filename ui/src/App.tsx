@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import Registry from './pages/Registry';
 import Decisions from './pages/Decisions';
+import Approvals from './pages/Approvals';
+import Posture from './pages/Posture';
 import { APPS, CURRENT } from './chestertown';
 import { ssoEnabled, getToken, login, completeLoginIfPresent, clearToken } from './auth';
 
-type Tab = 'registry' | 'decisions';
+type Tab = 'registry' | 'approvals' | 'decisions' | 'posture';
 
 function Switcher() {
   return (
@@ -66,9 +68,16 @@ export default function App() {
       {topbar}
       <nav className="tabs">
         <button className={tab === 'registry' ? 'active' : ''} onClick={() => setTab('registry')}>AI system registry</button>
+        <button className={tab === 'approvals' ? 'active' : ''} onClick={() => setTab('approvals')}>Approvals</button>
         <button className={tab === 'decisions' ? 'active' : ''} onClick={() => setTab('decisions')}>Policy decisions</button>
+        <button className={tab === 'posture' ? 'active' : ''} onClick={() => setTab('posture')}>Posture</button>
       </nav>
-      <main>{tab === 'registry' ? <Registry /> : <Decisions />}</main>
+      <main>
+        {tab === 'registry' && <Registry />}
+        {tab === 'approvals' && <Approvals />}
+        {tab === 'decisions' && <Decisions />}
+        {tab === 'posture' && <Posture />}
+      </main>
     </div>
   );
 }
