@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "prudence-governance"
+version = "0.1.0"
+description = "Framework-agnostic govern+prove core: Prudence PDP gate + Ernest evidence."
+requires-python = ">=3.10"
+dependencies = ["httpx>=0.27"]
+
+[tool.setuptools]
+packages = ["prudence_governance"]

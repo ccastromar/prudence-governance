@@ -17,8 +17,7 @@ from typing import Callable
 
 from pydantic_ai import RunContext
 
-from .evidence import ErnestEvidence
-from .gate import Decision, PrudenceGate
+from prudence_governance import Decision, ErnestEvidence, PrudenceGate
 
 
 @dataclass
