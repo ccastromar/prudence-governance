@@ -51,7 +51,9 @@ New surfaces (Prudence) are built on this from day one. AOS and Ernest converge 
 drop in `tokens.css`, set their `data-vertex`, migrate hard-coded colors as they're touched.
 No big-bang redesign.
 
-## The glue (later)
-One SSO (OIDC, already built) + a top-bar **app switcher** turns "three apps" into "one
-platform, three modules" — you log in once and move between the lines of defense you hold a
-role in.
+## The glue
+A top-bar **app switcher** (implemented in all three UIs) turns "three apps" into "one
+platform, three modules": the same AOS · Prudence · Ernest control, the current app shown in
+its vertex accent, cross-linking via deploy-configured URLs (`*_AOS_URL` / `*_PRUDENCE_URL` /
+`*_ERNEST_URL`, dev defaults otherwise). The remaining layer is **one SSO** (OIDC, already
+built in Ernest) so a single login carries across the lines of defense a user holds a role in.

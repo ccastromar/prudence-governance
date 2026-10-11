@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Registry from './pages/Registry';
 import Decisions from './pages/Decisions';
+import { TRIO, CURRENT } from './trio';
 
 type Tab = 'registry' | 'decisions';
 
@@ -16,9 +17,11 @@ export default function App() {
         </div>
         {/* App switcher across the trio (one platform, three lines of defense) */}
         <nav className="switcher">
-          <a href="#" title="AOS — operate">AOS</a>
-          <a href="#" className="here" title="Prudence — govern">Prudence</a>
-          <a href="#" title="Ernest — assure">Ernest</a>
+          {TRIO.map((app) => (
+            <a key={app.key} href={app.url} className={app.vertex === CURRENT ? 'here' : ''} title={`${app.label} — ${app.vertex}`}>
+              {app.label}
+            </a>
+          ))}
         </nav>
       </header>
       <nav className="tabs">
