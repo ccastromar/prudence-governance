@@ -1,0 +1,30 @@
+{
+  "realm": "chestertown",
+  "enabled": true,
+  "roles": { "realm": [ { "name": "read-write" }, { "name": "read-only" } ] },
+  "clients": [
+    { "clientId": "ernest-spa", "enabled": true, "publicClient": true, "standardFlowEnabled": true, "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5173/*","http://localhost:5174/*","http://127.0.0.1:5173/*","http://127.0.0.1:5174/*"], "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+" },
+      "protocolMappers": [ { "name": "realm-roles-to-roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false,
+        "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" } } ] },
+    { "clientId": "prudence-spa", "enabled": true, "publicClient": true, "standardFlowEnabled": true, "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5200/*","http://127.0.0.1:5200/*"], "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+" },
+      "protocolMappers": [ { "name": "realm-roles-to-roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false,
+        "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" } } ] },
+    { "clientId": "aos-spa", "enabled": true, "publicClient": true, "standardFlowEnabled": true, "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:5173/*","http://127.0.0.1:5173/*"], "webOrigins": ["+"],
+      "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+" },
+      "protocolMappers": [ { "name": "realm-roles-to-roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false,
+        "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "id.token.claim": "true", "access.token.claim": "true", "userinfo.token.claim": "true" } } ] }
+  ],
+  "users": [
+    { "username": "alice", "enabled": true, "emailVerified": true, "email": "alice@bank.eu", "firstName": "Alice", "lastName": "Operator",
+      "credentials": [ { "type": "password", "value": "alice", "temporary": false } ], "realmRoles": ["read-write"] },
+    { "username": "bob", "enabled": true, "emailVerified": true, "email": "bob@bank.eu", "firstName": "Bob", "lastName": "RiskOfficer",
+      "credentials": [ { "type": "password", "value": "bob", "temporary": false } ], "realmRoles": ["read-write"] },
+    { "username": "auditor", "enabled": true, "emailVerified": true, "email": "auditor@bank.eu", "firstName": "Aud", "lastName": "Itor",
+      "credentials": [ { "type": "password", "value": "auditor", "temporary": false } ], "realmRoles": ["read-only"] }
+  ]
+}

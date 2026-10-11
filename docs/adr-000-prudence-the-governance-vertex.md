@@ -94,7 +94,7 @@ or Ernest's evidence; it orchestrates them.
 - **Frontend**: **React** —
   registry, approvals, posture dashboard, attestations.
 
-### First vertical slice (prove the trio wired, not boil the ocean)
+### First vertical slice (prove the Chestertown wired, not boil the ocean)
 
 1. **Registry + risk classification** for one use case (e.g. a credit-risk scoring model).
 2. **PDP (OPA/Cedar)** + **one AOS gate** that consults it for that pipeline.
@@ -104,7 +104,7 @@ Demonstrates the whole loop: policy decides → AOS runs → Ernest proves → P
 
 ## Consequences
 
-**Positive** — completes the trio with zero overlap; a single control loop and one identity
+**Positive** — completes the Chestertown with zero overlap; a single control loop and one identity
 plane across three planes; governance reports that are themselves tamper-evident.
 
 **Negative / honest** — as with Ernest, **engineering is not the bottleneck**. The policy

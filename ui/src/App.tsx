@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Registry from './pages/Registry';
 import Decisions from './pages/Decisions';
-import { TRIO, CURRENT } from './trio';
+import { APPS, CURRENT } from './chestertown';
 import { ssoEnabled, getToken, login, completeLoginIfPresent, clearToken } from './auth';
 
 type Tab = 'registry' | 'decisions';
@@ -9,7 +9,7 @@ type Tab = 'registry' | 'decisions';
 function Switcher() {
   return (
     <nav className="switcher">
-      {TRIO.map((app) => (
+      {APPS.map((app) => (
         <a key={app.key} href={app.url} className={app.vertex === CURRENT ? 'here' : ''} title={`${app.label} — ${app.vertex}`}>
           {app.label}
         </a>

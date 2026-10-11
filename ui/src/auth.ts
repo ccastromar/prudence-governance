@@ -1,4 +1,4 @@
-// SSO for the Prudence UI — Authorization Code + PKCE against the trio IdP (Keycloak,
+// SSO for the Prudence UI — Authorization Code + PKCE against the Chestertown IdP (Keycloak,
 // client prudence-spa). Opt-in: enabled only when VITE_OIDC_ISSUER is set. The resulting
 // access token (carrying the realm `roles` claim) is sent as a bearer to the backend,
 // which validates it as an OAuth2 resource server.

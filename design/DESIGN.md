@@ -1,4 +1,4 @@
-# Trio design language — one family, three apps
+# Chestertown design language — one family, three apps
 
 AOS **operate** · Prudence **govern** · Ernest **assure**. Three apps because they serve a regulated
 organization's **three lines of defense** (operations / risk & compliance / audit), which are
