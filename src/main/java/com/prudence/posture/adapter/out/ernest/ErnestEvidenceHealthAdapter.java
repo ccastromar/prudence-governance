@@ -21,10 +21,15 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort {
     private final RestClient client;
 
     public ErnestEvidenceHealthAdapter(IntegrationProperties props) {
-        this.client = RestClient.builder()
+        RestClient.Builder builder = RestClient.builder()
                 .baseUrl(props.ernest().baseUrl())
-                .requestFactory(timeoutFactory())
-                .build();
+                .requestFactory(timeoutFactory());
+        String apiKey = props.ernest().apiKey();
+        if (apiKey != null && !apiKey.isBlank()) {
+            // Prudence authenticates to Ernest as a read client (ADR-002 caller identity).
+            builder.defaultHeader("X-Ernest-Api-Key", apiKey);
+        }
+        this.client = builder.build();
     }
 
     @Override
