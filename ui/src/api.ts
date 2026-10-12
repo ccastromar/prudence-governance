@@ -41,6 +41,12 @@ export interface RegisterInput {
 
 export interface Decision { decision: 'ALLOW' | 'DENY' | 'APPROVAL_REQUIRED'; reason?: string; approver?: string; }
 
+export interface ReviewEvent {
+  id: string; aiSystemId: string; action: 'APPROVE' | 'REJECT'; reviewer: string;
+  reason: string | null; at: string; previousStatus: string; newStatus: string;
+  sealed: boolean; blockIndex: number | null;
+}
+
 export interface AttestationEntry {
   aiSystemId: string; name: string; riskTier: RiskTier;
   approvalStatus: AiSystem['approvalStatus']; posture: PostureStatus; detail: string;
@@ -90,6 +96,7 @@ export const api = {
   rejectSystem: (id: string, reason: string) =>
     fetch(`/api/registry/systems/${id}/reject`, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify({ reason }) }).then(ok<AiSystem>),
   posture: () => fetch('/api/posture', { headers: withAuth() }).then(json<Posture>),
+  systemReviews: (id: string) => fetch(`/api/registry/systems/${id}/reviews`, { headers: withAuth() }).then(json<ReviewEvent[]>),
   listAttestations: () => fetch('/api/attestations', { headers: withAuth() }).then(json<AttestationSummary[]>),
   getAttestation: (id: string) => fetch(`/api/attestations/${id}`, { headers: withAuth() }).then(json<Attestation>),
   verifyAttestation: (id: string) => fetch(`/api/attestations/${id}/verify`, { headers: withAuth() }).then(json<Verification>),

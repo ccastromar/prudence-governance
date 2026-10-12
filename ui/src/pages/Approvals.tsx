@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
-import { api, type AiSystem } from '../api';
+import { api, type AiSystem, type ReviewEvent } from '../api';
 import { RiskBadge, StatusBadge } from '../components';
+
+const actionColor: Record<string, string> = { APPROVE: 'var(--ok)', REJECT: 'var(--danger)' };
+const when = (iso: string) => iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '');
 
 /// The reviewer's inbox: every system awaiting a governance decision. Approving one here flips
 /// the PDP verdict to ALLOW, so the AOS gate lets its pipeline run — the human link in the loop.
@@ -10,10 +13,18 @@ export default function Approvals() {
   const [busyId, setBusyId] = useState('');
   const [rejecting, setRejecting] = useState<AiSystem | null>(null);
   const [reason, setReason] = useState('');
+  const [trailFor, setTrailFor] = useState<AiSystem | null>(null);
+  const [trail, setTrail] = useState<ReviewEvent[]>([]);
 
   const load = () =>
     api.listSystems().then(setSystems).catch(() => setError('Could not load systems (is the backend on :8099?)'));
   useEffect(() => { load(); }, []);
+
+  const openTrail = async (s: AiSystem) => {
+    setTrailFor(s); setTrail([]);
+    try { setTrail(await api.systemReviews(s.id)); }
+    catch { setError('Could not load the audit trail'); }
+  };
 
   const pending = systems.filter(s => s.approvalStatus === 'PENDING_APPROVAL');
   const recent = systems.filter(s => s.approvalStatus === 'APPROVED' || s.approvalStatus === 'REJECTED');
@@ -62,12 +73,14 @@ export default function Approvals() {
       </table>
 
       <h2 style={{ fontSize: 'var(--fs-lg)' }}>Recently decided</h2>
+      <p className="mut" style={{ fontSize: 'var(--fs-sm)', marginTop: 0 }}>Click a system to see its sealed audit trail.</p>
       <table>
         <thead><tr><th>AI system</th><th>Risk tier</th><th>Outcome</th><th>Owner</th></tr></thead>
         <tbody>
           {recent.length === 0 && <tr><td colSpan={4} className="mut">No decisions yet.</td></tr>}
           {recent.map(s => (
-            <tr key={s.id}>
+            <tr key={s.id} onClick={() => openTrail(s)} style={{ cursor: 'pointer' }}
+                className={trailFor?.id === s.id ? 'active-row' : ''}>
               <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code></td>
               <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /></td>
               <td><StatusBadge status={s.approvalStatus} /></td>
@@ -76,6 +89,36 @@ export default function Approvals() {
           ))}
         </tbody>
       </table>
+
+      {trailFor && (
+        <div className="card" style={{ marginTop: 'var(--sp-6)' }}>
+          <div className="row between">
+            <h2 style={{ marginTop: 0, fontSize: 'var(--fs-lg)' }}>Audit trail — {trailFor.name}</h2>
+            <button className="btn btn-outline" style={{ fontSize: 'var(--fs-sm)', padding: '4px 10px' }} onClick={() => setTrailFor(null)}>Close</button>
+          </div>
+          {trail.length === 0
+            ? <p className="mut">No review events recorded for this system.</p>
+            : (
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                {trail.map(e => (
+                  <li key={e.id} style={{ padding: 'var(--sp-3) 0', borderBottom: '1px solid var(--border)' }}>
+                    <div className="row between">
+                      <span style={{ fontWeight: 700, color: actionColor[e.action] }}>● {e.action}</span>
+                      <span className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{when(e.at)}</span>
+                    </div>
+                    <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>
+                      {e.previousStatus} → {e.newStatus} · by <b>{e.reviewer}</b>
+                      {e.sealed
+                        ? <span style={{ color: 'var(--ok)' }}> · ● sealed{e.blockIndex != null ? ` · Ernest block ${e.blockIndex}` : ''}</span>
+                        : <span style={{ color: 'var(--warn)' }}> · ● unsealed</span>}
+                    </div>
+                    {e.reason && <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>“{e.reason}”</div>}
+                  </li>
+                ))}
+              </ul>
+            )}
+        </div>
+      )}
 
       {rejecting && (
         <div className="card" style={{ position: 'fixed', inset: 0, margin: 'auto', maxWidth: 440, height: 'fit-content', boxShadow: 'var(--shadow-lg, 0 12px 40px rgba(0,0,0,.3))' }}>
