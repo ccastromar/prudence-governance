@@ -3,9 +3,11 @@ package com.prudence.evidence.adapter.out.ernest;
 import org.springframework.web.client.RestClient;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -15,18 +17,18 @@ import java.util.Map;
 /// Ernest's `cleanObject` cleans it, JCS-canonicalized (RFC 8785), wrapped in a DSSE PAE.
 /// The signature is produced by a QTSP CSC remote-signing endpoint, so no private key lives
 /// in Prudence. Mirrors `signing.util.ts` / `prudence_governance/seal.py` byte-for-byte.
-class ErnestSealer {
+public class ErnestSealer {
 
     private static final String PAYLOAD_TYPE = "application/vnd.ernest.provenance+json";
 
     private final RestClient csc;
 
-    ErnestSealer(String cscUrl) {
+    public ErnestSealer(String cscUrl) {
         this.csc = RestClient.builder().baseUrl(cscUrl).build();
     }
 
     /// Seal the given block data: returns the envelope to embed as the submission `signature`.
-    Map<String, Object> seal(Map<String, Object> blockData) {
+    public Map<String, Object> seal(Map<String, Object> blockData) {
         String b64 = Base64.getEncoder().encodeToString(signedBytes(blockData));
         @SuppressWarnings("unchecked")
         Map<String, Object> envelope = csc.post()
@@ -84,9 +86,21 @@ class ErnestSealer {
         return v;
     }
 
+    /// SHA-256 hex of the canonical form of a String/Map/List document — a deterministic
+    /// content hash reused for attestation reports.
+    public static String sha256Canonical(Object document) {
+        try {
+            byte[] d = MessageDigest.getInstance("SHA-256")
+                    .digest(canonicalize(document).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(d);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /// RFC 8785 JSON Canonicalization for the String/Map/List payloads Ernest signs
     /// (keys sorted by UTF-16 code unit, minimal separators, RFC 8785 string escaping).
-    static String canonicalize(Object v) {
+    public static String canonicalize(Object v) {
         StringBuilder sb = new StringBuilder();
         write(sb, v);
         return sb.toString();

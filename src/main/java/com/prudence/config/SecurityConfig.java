@@ -46,8 +46,9 @@ public class SecurityConfig {
             // calls it with a client-credentials token. Require the `pdp.decide` scope
             // (a human SSO token does not carry it, so humans can't drive the PDP directly).
             .requestMatchers(HttpMethod.POST, "/api/policy/decisions").hasAuthority("SCOPE_pdp.decide")
-            // Approving/rejecting a system is a reviewer act — the realm's write role.
-            .requestMatchers(HttpMethod.POST, "/api/registry/systems/*/approve", "/api/registry/systems/*/reject")
+            // Approving/rejecting a system and issuing an attestation are reviewer acts.
+            .requestMatchers(HttpMethod.POST, "/api/registry/systems/*/approve", "/api/registry/systems/*/reject",
+                    "/api/attestations")
                 .hasRole("read-write")
             .anyRequest().authenticated())
         .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(rolesConverter())));
