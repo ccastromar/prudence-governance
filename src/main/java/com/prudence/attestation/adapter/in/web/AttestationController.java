@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /// Driving adapter: issue and read estate attestations. POST generates and seals a new one;
 /// GET lists prior ones and fetches a full stored report.
@@ -33,5 +34,13 @@ public class AttestationController {
     @GetMapping("/{id}")
     public ResponseEntity<Attestation> get(@PathVariable String id) {
         return attestations.get(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    /// The same attestation rendered as a NIST OSCAL Assessment Results document —
+    /// machine-readable compliance that points back at the Ernest seal.
+    @GetMapping("/{id}/oscal")
+    public ResponseEntity<Map<String, Object>> oscal(@PathVariable String id) {
+        return attestations.get(id).map(OscalMapper::toAssessmentResults)
+                .map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 }

@@ -65,7 +65,11 @@ export default function Attestations() {
         <div className="card">
           <div className="row between">
             <h2 style={{ marginTop: 0 }}>Attestation {selected.id.slice(0, 8)}</h2>
-            <PostureBadge status={selected.overallPosture} />
+            <div className="row" style={{ gap: 'var(--sp-3)', alignItems: 'center' }}>
+              <a className="btn btn-outline" href={`/api/attestations/${selected.id}/oscal`} target="_blank" rel="noreferrer"
+                 style={{ fontSize: 'var(--fs-sm)', padding: '4px 10px' }} title="NIST OSCAL Assessment Results (machine-readable compliance)">OSCAL</a>
+              <PostureBadge status={selected.overallPosture} />
+            </div>
           </div>
           <div className="mut" style={{ fontSize: 'var(--fs-sm)', marginBottom: 'var(--sp-4)' }}>
             <div>Issued: <b>{when(selected.generatedAt)}</b></div>
