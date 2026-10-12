@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
-import { api, type Posture as PostureData } from '../api';
+import { api, type Posture as PostureData, type Drift } from '../api';
 import { RiskBadge, StatusBadge, PostureBadge } from '../components';
 
 /// Oversight dashboard: the step that closes the control loop. Prudence reads Ernest's evidence
 /// back and colours each registered system — GREEN only when it is both approved to run and
-/// backed by an intact, reachable evidence record.
+/// backed by an intact, reachable evidence record — and flags policy drift (ungoverned runs).
 export default function Posture() {
   const [data, setData] = useState<PostureData | null>(null);
+  const [drift, setDrift] = useState<Drift | null>(null);
   const [error, setError] = useState('');
 
-  const load = () => api.posture().then(setData).catch(() => setError('Could not load posture (is the backend on :8099?)'));
+  const load = () => {
+    api.posture().then(setData).catch(() => setError('Could not load posture (is the backend on :8099?)'));
+    api.drift().then(setDrift).catch(() => { /* drift is best-effort */ });
+  };
   useEffect(() => { load(); }, []);
 
   return (
@@ -52,6 +56,34 @@ export default function Posture() {
             </tbody>
           </table>
         </>
+      )}
+
+      {drift && drift.findings.length > 0 && (
+        <div className="card" style={{ marginTop: 'var(--sp-6)', borderColor: drift.hasViolations ? 'var(--danger)' : 'var(--border)' }}>
+          <div className="row between">
+            <h2 style={{ marginTop: 0, fontSize: 'var(--fs-lg)' }}>Policy drift</h2>
+            <span style={{ fontWeight: 700, color: drift.hasViolations ? 'var(--danger)' : 'var(--ok)' }}>
+              {drift.hasViolations ? '● violations detected' : '● clean'}
+            </span>
+          </div>
+          <p className="mut" style={{ fontSize: 'var(--fs-sm)', marginTop: 0 }}>Executions in the evidence plane checked against the governance record.</p>
+          <table>
+            <thead><tr><th>AI system</th><th>Approval</th><th>Runs</th><th>Finding</th></tr></thead>
+            <tbody>
+              {drift.findings.map(f => (
+                <tr key={f.aiSystemId}>
+                  <td><div style={{ fontWeight: 600 }}>{f.name}</div><code>{f.aiSystemId}</code></td>
+                  <td><StatusBadge status={f.approvalStatus} /></td>
+                  <td className="mut">{f.executionCount}</td>
+                  <td>
+                    <span style={{ fontWeight: 700, color: f.severity === 'VIOLATION' ? 'var(--danger)' : 'var(--ok)' }}>● {f.severity}</span>
+                    <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{f.detail}</div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </>
   );

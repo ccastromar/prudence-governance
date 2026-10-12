@@ -35,6 +35,12 @@ export interface Posture {
   systems: SystemPosture[];
 }
 
+export interface DriftFinding {
+  aiSystemId: string; name: string; approvalStatus: string;
+  executionCount: number; severity: 'VIOLATION' | 'OK'; detail: string;
+}
+export interface Drift { generatedAt: string; hasViolations: boolean; findings: DriftFinding[]; }
+
 export interface RegisterInput {
   name: string; intendedPurpose: string; ownerName: string; ownerEmail: string; riskTier: RiskTier;
 }
@@ -97,6 +103,7 @@ export const api = {
     fetch(`/api/registry/systems/${id}/reject`, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify({ reason }) }).then(ok<AiSystem>),
   posture: () => fetch('/api/posture', { headers: withAuth() }).then(json<Posture>),
   systemReviews: (id: string) => fetch(`/api/registry/systems/${id}/reviews`, { headers: withAuth() }).then(json<ReviewEvent[]>),
+  drift: () => fetch('/api/posture/drift', { headers: withAuth() }).then(json<Drift>),
   listAttestations: () => fetch('/api/attestations', { headers: withAuth() }).then(json<AttestationSummary[]>),
   getAttestation: (id: string) => fetch(`/api/attestations/${id}`, { headers: withAuth() }).then(json<Attestation>),
   verifyAttestation: (id: string) => fetch(`/api/attestations/${id}/verify`, { headers: withAuth() }).then(json<Verification>),
