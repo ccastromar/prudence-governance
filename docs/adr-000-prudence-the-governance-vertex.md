@@ -73,8 +73,8 @@ or Ernest's evidence; it orchestrates them.
 - **Policy engine**: **OPA + Rego** (general, de-facto standard) or **AWS Cedar** (cleaner
   authz). Policy decisions are themselves sealed in Ernest.
 - **Backend**: **Java Spring Boot 4.x on the latest JDK** — greenfield.
-  *Scaffold built on Spring Boot 4.1.1 / JDK 24 (the
-  latest installed; bump to Java 25 LTS when available).* A credible enterprise/banking choice for a compliance control plane. **Spring Security**
+  *Scaffold built on Spring Boot 4.1.1 / JDK 25 LTS.*
+  A credible enterprise/banking choice for a compliance control plane. **Spring Security**
   gives OIDC/OAuth2 resource-server out of the box (better than a hand-rolled verifier);
   JPA for the registry, a state-machine/workflow for approvals, and `@Scheduled` for the
   oversight loop are all mature. The policy engine (OPA/Cedar) is language-agnostic (HTTP
