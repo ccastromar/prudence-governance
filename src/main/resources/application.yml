@@ -2,11 +2,16 @@ spring:
   application:
     name: prudence
   datasource:
-    url: jdbc:h2:mem:prudence;DB_CLOSE_DELAY=-1
-    username: sa
-    password: ""
+    # Durable by default: an H2 database file under ./data, so the registry and approvals
+    # survive restarts (the in-memory DB lost them). Override the three vars to point at a
+    # managed database in production (e.g. Postgres) — add its driver and set PRUDENCE_DB_URL;
+    # no code changes. AUTO_SERVER lets a second process (a DB tool) attach while the app runs.
+    url: ${PRUDENCE_DB_URL:jdbc:h2:file:./data/prudence;AUTO_SERVER=TRUE}
+    username: ${PRUDENCE_DB_USER:sa}
+    password: ${PRUDENCE_DB_PASSWORD:}
   jpa:
     hibernate:
+      # `update` evolves the schema without dropping data across restarts.
       ddl-auto: update
     open-in-view: false
 
