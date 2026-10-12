@@ -2,6 +2,7 @@ package com.prudence.attestation.adapter.in.web;
 
 import com.prudence.attestation.application.port.in.AttestationUseCase;
 import com.prudence.attestation.domain.Attestation;
+import com.prudence.attestation.domain.Verification;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,13 @@ public class AttestationController {
     @GetMapping("/{id}")
     public ResponseEntity<Attestation> get(@PathVariable String id) {
         return attestations.get(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+    /// Independently verify a stored attestation: recompute its hash and confirm the seal
+    /// against Ernest. The verdict proves whether the report is intact and provably sealed.
+    @GetMapping("/{id}/verify")
+    public ResponseEntity<Verification> verify(@PathVariable String id) {
+        return attestations.verify(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
     }
 
     /// The same attestation rendered as a NIST OSCAL Assessment Results document —

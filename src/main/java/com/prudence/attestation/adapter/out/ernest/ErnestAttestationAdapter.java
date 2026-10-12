@@ -1,5 +1,6 @@
 package com.prudence.attestation.adapter.out.ernest;
 
+import com.prudence.attestation.application.port.out.AttestationEvidenceQueryPort;
 import com.prudence.attestation.application.port.out.AttestationSealPort;
 import com.prudence.attestation.domain.Attestation;
 import com.prudence.config.IntegrationProperties;
@@ -11,13 +12,14 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /// ACL adapter: seals an attestation's content hash into Ernest as a provenance block under
 /// a well-known model ("prudence-attestations"), qualify-sealed (ADR-002 B2) when a QTSP is
 /// configured. Fail-soft — if Ernest/QTSP is unavailable the report is returned unsealed.
 @Component
-public class ErnestAttestationAdapter implements AttestationSealPort {
+public class ErnestAttestationAdapter implements AttestationSealPort, AttestationEvidenceQueryPort {
 
     private static final Logger log = LoggerFactory.getLogger(ErnestAttestationAdapter.class);
     private static final String MODEL_ID = "prudence-attestations";
@@ -72,6 +74,32 @@ public class ErnestAttestationAdapter implements AttestationSealPort {
         } catch (Exception e) {
             log.warn("could not seal attestation {} in Ernest: {}", attestationId, e.getMessage());
             return new Attestation.Evidence(false, null, MODEL_ID, "Ernest seal failed: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public Confirmation confirm(String modelId, String contentHash) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> body = ernest.get()
+                    .uri("/api/provenances/{m}", modelId).retrieve().body(Map.class);
+            if (body == null) return new Confirmation(true, false, false, null);
+            boolean chainValid = Boolean.TRUE.equals(body.get("chainValid"));
+            Long blockIndex = null;
+            boolean present = false;
+            if (body.get("history") instanceof List<?> history) {
+                for (Object item : history) {
+                    if (item instanceof Map<?, ?> entry && contentHash.equals(entry.get("inputHash"))) {
+                        present = true;
+                        if (entry.get("blockIndex") instanceof Number n) blockIndex = n.longValue();
+                        break;
+                    }
+                }
+            }
+            return new Confirmation(true, present, chainValid, blockIndex);
+        } catch (Exception e) {
+            log.warn("could not confirm attestation seal in Ernest: {}", e.getMessage());
+            return new Confirmation(false, false, false, null);
         }
     }
 

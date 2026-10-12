@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react';
-import { api, type Attestation, type AttestationSummary } from '../api';
+import { api, type Attestation, type AttestationSummary, type Verification } from '../api';
 import { RiskBadge, StatusBadge, PostureBadge } from '../components';
+
+const verdictColor: Record<string, string> = {
+  VERIFIED: 'var(--ok)', ALTERED: 'var(--danger)', UNSEALED: 'var(--warn)', UNCONFIRMED: 'var(--warn)',
+};
 
 /// Attestations: generate a tamper-evident report of the estate and see it sealed in Ernest.
 /// The report's content hash is what gets qualify-sealed — the report proves itself.
 export default function Attestations() {
   const [list, setList] = useState<AttestationSummary[]>([]);
   const [selected, setSelected] = useState<Attestation | null>(null);
+  const [verification, setVerification] = useState<Verification | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -21,9 +26,16 @@ export default function Attestations() {
   };
 
   const open = async (id: string) => {
-    setError('');
+    setError(''); setVerification(null);
     try { setSelected(await api.getAttestation(id)); }
     catch { setError('Could not load that attestation'); }
+  };
+
+  const doVerify = async () => {
+    if (!selected) return;
+    setError('');
+    try { setVerification(await api.verifyAttestation(selected.id)); }
+    catch { setError('Verification call failed'); }
   };
 
   const shortHash = (h: string) => `${h.slice(0, 12)}…`;
@@ -66,11 +78,24 @@ export default function Attestations() {
           <div className="row between">
             <h2 style={{ marginTop: 0 }}>Attestation {selected.id.slice(0, 8)}</h2>
             <div className="row" style={{ gap: 'var(--sp-3)', alignItems: 'center' }}>
+              <button className="btn btn-outline" onClick={doVerify}
+                 style={{ fontSize: 'var(--fs-sm)', padding: '4px 10px' }} title="Recompute the hash and confirm the seal in Ernest">Verify</button>
               <a className="btn btn-outline" href={`/api/attestations/${selected.id}/oscal`} target="_blank" rel="noreferrer"
                  style={{ fontSize: 'var(--fs-sm)', padding: '4px 10px' }} title="NIST OSCAL Assessment Results (machine-readable compliance)">OSCAL</a>
               <PostureBadge status={selected.overallPosture} />
             </div>
           </div>
+
+          {verification && (
+            <div className="card" style={{ marginBottom: 'var(--sp-4)', borderColor: verdictColor[verification.verdict] }}>
+              <div style={{ fontWeight: 700, color: verdictColor[verification.verdict] }}>● {verification.verdict}</div>
+              <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{verification.detail}</div>
+              <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>
+                hash recomputed {verification.hashMatches ? '✓ matches' : '✗ differs'}
+                {verification.sealed && <> · Ernest {verification.ernestConfirmed ? '✓ confirmed' : '✗ not found'} · chain {verification.chainValid ? '✓ valid' : '✗ invalid'}{verification.blockIndex != null && <> · block {verification.blockIndex}</>}</>}
+              </div>
+            </div>
+          )}
           <div className="mut" style={{ fontSize: 'var(--fs-sm)', marginBottom: 'var(--sp-4)' }}>
             <div>Issued: <b>{when(selected.generatedAt)}</b></div>
             <div>Content hash: <code>{selected.contentHash}</code></div>

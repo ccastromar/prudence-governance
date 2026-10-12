@@ -2,9 +2,11 @@ package com.prudence.attestation.application.service;
 
 import tools.jackson.databind.json.JsonMapper;
 import com.prudence.attestation.application.port.in.AttestationUseCase;
+import com.prudence.attestation.application.port.out.AttestationEvidenceQueryPort;
 import com.prudence.attestation.application.port.out.AttestationRepository;
 import com.prudence.attestation.application.port.out.AttestationSealPort;
 import com.prudence.attestation.domain.Attestation;
+import com.prudence.attestation.domain.Verification;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import com.prudence.posture.application.port.in.PostureQuery;
 import com.prudence.posture.domain.Posture;
@@ -24,14 +26,19 @@ import java.util.UUID;
 @Service
 public class AttestationService implements AttestationUseCase {
 
+    private static final String ATTESTATION_MODEL = "prudence-attestations";
+
     private final PostureQuery posture;
     private final AttestationSealPort sealPort;
+    private final AttestationEvidenceQueryPort evidenceQuery;
     private final AttestationRepository repository;
     private final JsonMapper mapper = JsonMapper.builder().build();
 
-    public AttestationService(PostureQuery posture, AttestationSealPort sealPort, AttestationRepository repository) {
+    public AttestationService(PostureQuery posture, AttestationSealPort sealPort,
+                              AttestationEvidenceQueryPort evidenceQuery, AttestationRepository repository) {
         this.posture = posture;
         this.sealPort = sealPort;
+        this.evidenceQuery = evidenceQuery;
         this.repository = repository;
     }
 
@@ -84,6 +91,50 @@ public class AttestationService implements AttestationUseCase {
     @Override
     public Optional<Attestation> get(String id) {
         return repository.findById(id).map(AttestationRepository.Stored::attestation);
+    }
+
+    @Override
+    public Optional<Verification> verify(String id) {
+        return repository.findById(id).map(stored -> {
+            Attestation a = stored.attestation();
+
+            // Recompute the hash from the stored report — detects tampering of the report
+            // (or of the stored hash column).
+            String recomputed;
+            try {
+                Map<String, Object> report = mapper.readValue(stored.reportJson(), Map.class);
+                recomputed = ErnestSealer.sha256Canonical(report);
+            } catch (Exception e) {
+                recomputed = "";
+            }
+            boolean hashMatches = !recomputed.isEmpty() && recomputed.equals(a.contentHash());
+
+            boolean sealed = a.evidence().sealed();
+            boolean confirmed = false, chainValid = false;
+            Long blockIndex = a.evidence().blockIndex();
+            String detail;
+            if (sealed) {
+                AttestationEvidenceQueryPort.Confirmation c = evidenceQuery.confirm(ATTESTATION_MODEL, a.contentHash());
+                confirmed = c.present();
+                chainValid = c.chainValid();
+                if (c.blockIndex() != null) blockIndex = c.blockIndex();
+                if (!c.reachable()) detail = "Evidence plane unreachable — the seal could not be confirmed.";
+                else if (c.present() && c.chainValid()) detail = "Report hash is sealed in Ernest and the chain verifies.";
+                else if (c.present()) detail = "Seal present, but the Ernest chain does not verify.";
+                else detail = "No Ernest block carries this report hash.";
+            } else {
+                detail = "Attestation was issued without a seal.";
+            }
+
+            String verdict;
+            if (!hashMatches) verdict = "ALTERED";
+            else if (!sealed) verdict = "UNSEALED";
+            else if (confirmed && chainValid) verdict = "VERIFIED";
+            else verdict = "UNCONFIRMED";
+
+            return new Verification(a.id(), hashMatches, recomputed, a.contentHash(),
+                    sealed, blockIndex, confirmed, chainValid, verdict, detail);
+        });
     }
 
     private static Map<String, Object> entryMap(Attestation.Entry e) {

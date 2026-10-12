@@ -54,6 +54,12 @@ export interface AttestationSummary {
   id: string; generatedAt: string; overallPosture: PostureStatus; contentHash: string;
   sealed: boolean; blockIndex: number | null;
 }
+export type Verdict = 'VERIFIED' | 'ALTERED' | 'UNSEALED' | 'UNCONFIRMED';
+export interface Verification {
+  attestationId: string; hashMatches: boolean; recomputedHash: string; storedHash: string;
+  sealed: boolean; blockIndex: number | null; ernestConfirmed: boolean; chainValid: boolean;
+  verdict: Verdict; detail: string;
+}
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok && res.status >= 500) throw new Error(`${res.status}`);
@@ -86,6 +92,7 @@ export const api = {
   posture: () => fetch('/api/posture', { headers: withAuth() }).then(json<Posture>),
   listAttestations: () => fetch('/api/attestations', { headers: withAuth() }).then(json<AttestationSummary[]>),
   getAttestation: (id: string) => fetch(`/api/attestations/${id}`, { headers: withAuth() }).then(json<Attestation>),
+  verifyAttestation: (id: string) => fetch(`/api/attestations/${id}/verify`, { headers: withAuth() }).then(json<Verification>),
   generateAttestation: () =>
     fetch('/api/attestations', { method: 'POST', headers: withAuth(json_ct) }).then(ok<Attestation>),
 };
