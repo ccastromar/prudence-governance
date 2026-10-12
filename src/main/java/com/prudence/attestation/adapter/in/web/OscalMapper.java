@@ -54,7 +54,7 @@ final class OscalMapper {
         List<Map<String, Object>> observations = new ArrayList<>();
         List<Map<String, Object>> findings = new ArrayList<>();
         for (Attestation.Entry e : a.systems()) {
-            observations.add(observation(e));
+            observations.add(observation(e, a.generatedAt()));
             findings.add(finding(e));
         }
         r.put("observations", observations);
@@ -62,12 +62,13 @@ final class OscalMapper {
         return r;
     }
 
-    private static Map<String, Object> observation(Attestation.Entry e) {
+    private static Map<String, Object> observation(Attestation.Entry e, String collected) {
         Map<String, Object> o = new LinkedHashMap<>();
         o.put("uuid", UUID.randomUUID().toString());
         o.put("title", e.name());
         o.put("description", "Registry record and posture for AI system " + e.aiSystemId() + ".");
         o.put("methods", List.of("EXAMINE"));
+        o.put("collected", collected);
         o.put("subjects", List.of(subjectRef(e.aiSystemId())));
         o.put("props", List.of(
                 prop("risk-tier", e.riskTier()),
@@ -91,7 +92,8 @@ final class OscalMapper {
         f.put("description", e.detail());
         Map<String, Object> target = new LinkedHashMap<>();
         target.put("type", "objective-id");
-        target.put("target-id", e.aiSystemId());
+        // OSCAL target-id is a token (must start with a letter/underscore), so prefix the UUID.
+        target.put("target-id", "system-" + e.aiSystemId());
         target.put("status", Map.of("state", "GREEN".equals(e.posture()) ? "satisfied" : "not-satisfied"));
         f.put("target", target);
         return f;
