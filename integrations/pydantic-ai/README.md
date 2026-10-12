@@ -48,3 +48,6 @@ as each governed step is sealed.
 
 Uses Pydantic AI's `TestModel`, so **no LLM API key is required**: the agent still drives
 the tool, and the governance layer is the real subject of the demo.
+
+Add qualified seals (eIDAS B2): `export QTSP_CSC_URL=http://127.0.0.1:4600/csc/sign` (dev
+QTSP emulator) before running — each step's block then carries a `qeseal-ecdsa-p256` seal.

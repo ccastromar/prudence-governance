@@ -4,6 +4,10 @@ Emits tamper-evident provenance to Ernest: a *model* block per governed agent, a
 *inference* block per governed step. Only SHA-256 hashes of inputs/outputs are sent —
 raw data never leaves the process. This is the "prove" leg of the loop: the governance
 decision and the execution are both sealed into Ernest's hashchain.
+
+When a `QtspSealer` is supplied (ADR-002 B2), each submission is additionally signed with a
+qualified electronic seal over the exact block-data Ernest canonicalizes, so the evidence
+carries eIDAS-qualified authorship, not just tamper-evidence.
 """
 from __future__ import annotations
 
@@ -13,6 +17,8 @@ import os
 import uuid
 
 import httpx
+
+from .seal import QtspSealer
 
 
 def sha256_json(obj) -> str:
@@ -28,10 +34,12 @@ def _safe_json(r: httpx.Response):
 
 
 class ErnestEvidence:
-    def __init__(self, base_url: str | None = None, api_key: str | None = None, timeout: float = 5.0):
+    def __init__(self, base_url: str | None = None, api_key: str | None = None,
+                 timeout: float = 5.0, sealer: QtspSealer | None = None):
         self.base_url = (base_url or os.getenv("ERNEST_URL", "http://127.0.0.1:3001")).rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("ERNEST_API_KEY", "")
         self.timeout = timeout
+        self.sealer = sealer
 
     def _headers(self) -> dict[str, str]:
         h = {"Content-Type": "application/json"}
@@ -42,17 +50,22 @@ class ErnestEvidence:
     def ensure_model(self, model_id: str, model_name: str, version: str,
                      *, model_hash: str | None = None, git_commit: str = "0000000",
                      metadata: dict | None = None):
+        model_hash = model_hash or sha256_json({"model": model_id, "v": version})
         body = {
             "modelId": model_id,
             "modelName": model_name,
             "version": version,
-            "mlflow": {
-                "modelHash": model_hash or sha256_json({"model": model_id, "v": version}),
-                "gitCommit": git_commit,
-            },
+            "mlflow": {"modelHash": model_hash, "gitCommit": git_commit},
         }
         if metadata:
             body["metadata"] = metadata
+        if self.sealer is not None:
+            # The signed block-data is the flat shape Ernest stores (mlflow flattened).
+            signed = {"type": "model_registration", "modelId": model_id, "modelName": model_name,
+                      "version": version, "modelHash": model_hash, "gitCommit": git_commit}
+            if metadata:
+                signed["metadata"] = metadata
+            body["signature"] = self.sealer.seal(signed)
         try:
             r = httpx.post(f"{self.base_url}/api/models", json=body, headers=self._headers(), timeout=self.timeout)
             return r.status_code, _safe_json(r)
@@ -68,6 +81,12 @@ class ErnestEvidence:
         }
         if metadata:
             body["metadata"] = metadata
+        if self.sealer is not None:
+            signed = {"type": "inference", "modelId": model_id, "inferenceId": body["inferenceId"],
+                      "inputHash": body["inputHash"], "outputHash": body["outputHash"]}
+            if metadata:
+                signed["metadata"] = metadata
+            body["signature"] = self.sealer.seal(signed)
         try:
             r = httpx.post(f"{self.base_url}/api/inferences", json=body, headers=self._headers(), timeout=self.timeout)
             return r.status_code, _safe_json(r)

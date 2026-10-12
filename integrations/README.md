@@ -18,6 +18,24 @@ PDP before a step runs (allow / deny / approval-required), and seal the decision
 execution in Ernest afterwards. Adding a runtime (OpenAI Agents SDK, CrewAI, …) is a new
 thin adapter, not a new core.
 
+## Qualified seals (eIDAS B2) — optional
+
+Pass a `QtspSealer` to `ErnestEvidence` (the examples do so when `QTSP_CSC_URL` is set) and
+every submission is additionally signed with a **qualified electronic seal** over the exact
+bytes Ernest canonicalizes (cleanObject → JCS → DSSE PAE), via a QTSP remote-signing
+endpoint (CSC). Each agent step's block then carries a `qeseal-ecdsa-p256` envelope with its
+X.509 chain; with Ernest at `SEAL_LEVEL=qualified` + `SIGNED_SUBMISSIONS=required`, unsigned
+writes are rejected and sealed ones are admitted only if the chain validates to the trusted
+CA (the EU LOTL in production). The private key never touches the agent process. Combined
+with B1 (a qualified RFC 3161 timestamp on the anchored Merkle root), the evidence is
+**govern + *qualified* prove** — admissible, not merely tamper-evident.
+
+```bash
+# with the dev QTSP emulator on :4600 and Ernest started with B1+B2 env
+export QTSP_CSC_URL=http://127.0.0.1:4600/csc/sign
+python example_graph.py      # or example_agent.py
+```
+
 Each demo runs against the live local stack (Prudence :8099 + OPA :8181 + Ernest :3001) with
 no LLM key, and shows ALLOW / DENY / APPROVAL_REQUIRED plus the Ernest chain growing as each
 governed step is sealed. See each folder's README / example.

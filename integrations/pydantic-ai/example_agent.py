@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import hashlib
 import os
+import uuid
 
 import httpx
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.test import TestModel
 
+from prudence_governance import QtspSealer
 from prudence_pydantic import ErnestEvidence, GovDeps, PrudenceGate, governed
 
 PRUDENCE = os.getenv("PRUDENCE_URL", "http://127.0.0.1:8099")
@@ -58,12 +60,16 @@ def run_once(label: str, subject: str, ai_system_id: str, model_id: str,
 
 def main() -> None:
     gate = PrudenceGate(PRUDENCE)
-    evidence = ErnestEvidence()  # ERNEST_API_KEY from env
+    csc = os.getenv("QTSP_CSC_URL")  # e.g. http://127.0.0.1:4600/csc/sign
+    sealer = QtspSealer(csc) if csc else None
+    evidence = ErnestEvidence(sealer=sealer)  # ERNEST_API_KEY from env
+    print(f"qualified seal (eIDAS B2): {'ON via ' + csc if sealer else 'off'}")
 
     approved = register_system("HIGH", approve=True)
     pending = register_system("HIGH", approve=False)
-    model_id = "credit-risk-scoring-agent"
-    evidence.ensure_model(model_id, "Credit risk scoring agent (Pydantic AI)", "1.0.0",
+    run = uuid.uuid4().hex[:8]
+    model_id = f"credit-risk-scoring-agent-{run}"
+    evidence.ensure_model(model_id, f"Credit risk scoring agent (Pydantic AI) {run}", "1.0.0",
                           metadata={"framework": "pydantic-ai", "aiSystemId": approved})
 
     before = evidence.verify().get("blocksVerified")

@@ -10,5 +10,6 @@ only where the gate is enforced does.
 """
 from .evidence import ErnestEvidence, sha256_json
 from .gate import Decision, PrudenceGate
+from .seal import QtspSealer, signed_bytes
 
-__all__ = ["PrudenceGate", "Decision", "ErnestEvidence", "sha256_json"]
+__all__ = ["PrudenceGate", "Decision", "ErnestEvidence", "sha256_json", "QtspSealer", "signed_bytes"]
