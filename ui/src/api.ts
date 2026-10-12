@@ -41,6 +41,20 @@ export interface RegisterInput {
 
 export interface Decision { decision: 'ALLOW' | 'DENY' | 'APPROVAL_REQUIRED'; reason?: string; approver?: string; }
 
+export interface AttestationEntry {
+  aiSystemId: string; name: string; riskTier: RiskTier;
+  approvalStatus: AiSystem['approvalStatus']; posture: PostureStatus; detail: string;
+}
+export interface AttestationEvidence { sealed: boolean; blockIndex: number | null; modelId: string; detail: string; }
+export interface Attestation {
+  id: string; generatedAt: string; overallPosture: PostureStatus; contentHash: string;
+  systems: AttestationEntry[]; evidence: AttestationEvidence;
+}
+export interface AttestationSummary {
+  id: string; generatedAt: string; overallPosture: PostureStatus; contentHash: string;
+  sealed: boolean; blockIndex: number | null;
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok && res.status >= 500) throw new Error(`${res.status}`);
   return res.json() as Promise<T>;
@@ -70,4 +84,8 @@ export const api = {
   rejectSystem: (id: string, reason: string) =>
     fetch(`/api/registry/systems/${id}/reject`, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify({ reason }) }).then(ok<AiSystem>),
   posture: () => fetch('/api/posture', { headers: withAuth() }).then(json<Posture>),
+  listAttestations: () => fetch('/api/attestations', { headers: withAuth() }).then(json<AttestationSummary[]>),
+  getAttestation: (id: string) => fetch(`/api/attestations/${id}`, { headers: withAuth() }).then(json<Attestation>),
+  generateAttestation: () =>
+    fetch('/api/attestations', { method: 'POST', headers: withAuth(json_ct) }).then(ok<Attestation>),
 };
