@@ -9,7 +9,7 @@ that calls these at the right hook point. The policy and the evidence layer neve
 only where the gate is enforced does.
 """
 from .evidence import ErnestEvidence, sha256_json
-from .gate import Decision, PrudenceGate
+from .gate import Decision, M2MAuth, PrudenceGate
 from .seal import QtspSealer, signed_bytes
 
-__all__ = ["PrudenceGate", "Decision", "ErnestEvidence", "sha256_json", "QtspSealer", "signed_bytes"]
+__all__ = ["PrudenceGate", "Decision", "M2MAuth", "ErnestEvidence", "sha256_json", "QtspSealer", "signed_bytes"]

@@ -14,7 +14,26 @@ KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
 
 Realm `chestertown` issuer: `http://localhost:8081/realms/chestertown`.
 Clients (public, PKCE): `ernest-spa`, `prudence-spa`, `aos-spa`.
+Machine-to-machine (confidential, client_credentials): `pdp-client` (secret `pdp-dev-secret`),
+carrying the `pdp.decide` client scope — the credential a PDP caller (AOS gate, runtime
+adapter) presents to Prudence's `/api/policy/decisions`.
 Users: `alice`/`alice` (read-write), `bob`/`bob` (read-write), `auditor`/`auditor` (read-only).
+
+### Calling the secured PDP (client_credentials)
+
+```bash
+TOKEN=$(curl -s -X POST \
+  http://localhost:8081/realms/chestertown/protocol/openid-connect/token \
+  -d grant_type=client_credentials -d client_id=pdp-client \
+  -d client_secret=pdp-dev-secret -d scope=pdp.decide | jq -r .access_token)
+curl -X POST http://localhost:8099/api/policy/decisions \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"subject":"alice@bank.eu","pipeline":"credit-risk-scoring","aiSystemId":"<id>","action":"run"}'
+```
+
+The Python adapters do this automatically when `PRUDENCE_PDP_TOKEN_URL` / `_CLIENT_ID` /
+`_CLIENT_SECRET` are set (see `prudence_governance.M2MAuth`). A token without the
+`pdp.decide` scope (e.g. a human SSO token) gets 403; no token gets 401.
 
 ## Point the apps at it (dev)
 

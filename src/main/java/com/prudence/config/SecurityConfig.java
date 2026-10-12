@@ -26,8 +26,9 @@ import java.util.List;
  * (Keycloak realm). Enabled only when an issuer is configured
  * (spring.security.oauth2.resourceserver.jwt.issuer-uri); otherwise a permit-all chain keeps
  * dev and tests unauthenticated. Realm roles arrive in the `roles` claim and become
- * ROLE_* authorities. The machine-to-machine PDP endpoint stays open (a gate like AOS calls
- * it; securing it with client credentials is a separate concern).
+ * ROLE_* authorities. The machine-to-machine PDP endpoint (/api/policy/decisions) is secured
+ * with the `pdp.decide` scope: a caller (AOS gate, runtime adapter) presents a
+ * client-credentials token carrying that scope. Granted scopes map to SCOPE_* authorities.
  */
 @Configuration
 public class SecurityConfig {
@@ -40,7 +41,11 @@ public class SecurityConfig {
         .csrf(csrf -> csrf.disable())
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/actuator/health", "/api/policy/decisions").permitAll()
+            .requestMatchers("/actuator/health").permitAll()
+            // The PDP is a machine-to-machine endpoint: an AOS gate or a runtime adapter
+            // calls it with a client-credentials token. Require the `pdp.decide` scope
+            // (a human SSO token does not carry it, so humans can't drive the PDP directly).
+            .requestMatchers(HttpMethod.POST, "/api/policy/decisions").hasAuthority("SCOPE_pdp.decide")
             // Approving/rejecting a system is a reviewer act — the realm's write role.
             .requestMatchers(HttpMethod.POST, "/api/registry/systems/*/approve", "/api/registry/systems/*/reject")
                 .hasRole("read-write")

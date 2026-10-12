@@ -2,7 +2,17 @@
   "realm": "chestertown",
   "enabled": true,
   "roles": { "realm": [ { "name": "read-write" }, { "name": "read-only" } ] },
+  "clientScopes": [
+    { "name": "pdp.decide", "protocol": "openid-connect",
+      "description": "Permission to call the Prudence PDP (/api/policy/decisions).",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } }
+  ],
   "clients": [
+    { "clientId": "pdp-client", "enabled": true, "publicClient": false, "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false, "directAccessGrantsEnabled": false,
+      "description": "Machine-to-machine caller of the Prudence PDP (client_credentials).",
+      "secret": "pdp-dev-secret",
+      "defaultClientScopes": ["basic", "roles", "pdp.decide"], "optionalClientScopes": [] },
     { "clientId": "ernest-spa", "enabled": true, "publicClient": true, "standardFlowEnabled": true, "directAccessGrantsEnabled": true,
       "redirectUris": ["http://localhost:5173/*","http://localhost:5174/*","http://127.0.0.1:5173/*","http://127.0.0.1:5174/*"], "webOrigins": ["+"],
       "attributes": { "pkce.code.challenge.method": "S256", "post.logout.redirect.uris": "+" },
