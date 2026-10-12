@@ -21,6 +21,10 @@ prudence:
     decision-path: /v1/data/prudence/allow
   ernest:
     base-url: http://127.0.0.1:3001
-    # Read credential presented to Ernest (X-Ernest-Api-Key). Supplied via the environment;
-    # blank when Ernest runs with open reads.
+    # Credential presented to Ernest (X-Ernest-Api-Key) for reads and evidence writes.
+    # Supplied via the environment; blank when Ernest runs with open access.
     api-key: ${PRUDENCE_ERNEST_API_KEY:}
+  qtsp:
+    # QTSP CSC remote-signing endpoint to qualify-seal evidence (ADR-002 B2). Blank disables
+    # sealing (decisions are then only logged). e.g. http://127.0.0.1:4600/csc/sign
+    csc-url: ${PRUDENCE_QTSP_CSC_URL:}

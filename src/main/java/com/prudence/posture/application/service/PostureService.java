@@ -48,8 +48,15 @@ public class PostureService implements PostureQuery {
             case REJECTED -> { status = PostureStatus.RED; detail = "Rejected by governance review."; }
             case DRAFT, PENDING_APPROVAL -> { status = PostureStatus.AMBER; detail = "Awaiting governance approval."; }
             case APPROVED -> {
-                if (evidenceHealthy) { status = PostureStatus.GREEN; detail = "Approved and attested by Ernest."; }
-                else { status = PostureStatus.AMBER; detail = "Approved, but evidence is unavailable."; }
+                if (!evidenceHealthy) {
+                    status = PostureStatus.AMBER; detail = "Approved, but the evidence layer is unavailable.";
+                } else if (evidence.hasEvidence(s.id())) {
+                    status = PostureStatus.GREEN; detail = "Approved and attested by Ernest.";
+                } else {
+                    // Approved and the chain is healthy, but nothing has been proved for this
+                    // system yet — a drift signal (no governed run on record).
+                    status = PostureStatus.AMBER; detail = "Approved, but no evidence recorded yet.";
+                }
             }
             default -> { status = PostureStatus.AMBER; detail = "Unknown state."; }
         }

@@ -48,6 +48,24 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort {
         }
     }
 
+    @Override
+    public boolean hasEvidence(String aiSystemId) {
+        try {
+            Map<?, ?> body = client.get()
+                    .uri("/api/models/{id}/integrity", aiSystemId)
+                    .retrieve()
+                    .body(Map.class);
+            if (body == null) return false;
+            boolean valid = Boolean.TRUE.equals(body.get("isValid")) || Boolean.TRUE.equals(body.get("valid"));
+            Object total = body.get("totalBlocks");
+            long blocks = total instanceof Number n ? n.longValue() : 0L;
+            return valid && blocks >= 1;
+        } catch (Exception e) {
+            // 404 (no such model) or unreachable -> no evidence recorded for this system yet.
+            return false;
+        }
+    }
+
     private static org.springframework.http.client.ClientHttpRequestFactory timeoutFactory() {
         var f = new org.springframework.http.client.SimpleClientHttpRequestFactory();
         f.setConnectTimeout(Duration.ofSeconds(2));

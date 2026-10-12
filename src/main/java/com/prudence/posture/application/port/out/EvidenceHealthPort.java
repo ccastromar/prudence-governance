@@ -8,5 +8,10 @@ public interface EvidenceHealthPort {
     /// empty or unreachable (fail-closed — unknown evidence is not healthy evidence).
     EvidenceHealth check();
 
+    /// Whether a specific AI system has intact evidence in Ernest (a provenance record under
+    /// the system's id). Lets posture tell "approved and attested" from "approved but nothing
+    /// has been proved yet" — a policy-drift signal. Fail-closed on any error.
+    boolean hasEvidence(String aiSystemId);
+
     record EvidenceHealth(boolean healthy, String detail) {}
 }

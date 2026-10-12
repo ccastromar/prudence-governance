@@ -1,0 +1,146 @@
+package com.prudence.evidence.adapter.out.ernest;
+
+import org.springframework.web.client.RestClient;
+
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/// ADR-002 B2 sealer for the control plane: produces a qualified-electronic-seal envelope
+/// over the EXACT bytes Ernest canonicalizes and verifies — block data cleaned the way
+/// Ernest's `cleanObject` cleans it, JCS-canonicalized (RFC 8785), wrapped in a DSSE PAE.
+/// The signature is produced by a QTSP CSC remote-signing endpoint, so no private key lives
+/// in Prudence. Mirrors `signing.util.ts` / `prudence_governance/seal.py` byte-for-byte.
+class ErnestSealer {
+
+    private static final String PAYLOAD_TYPE = "application/vnd.ernest.provenance+json";
+
+    private final RestClient csc;
+
+    ErnestSealer(String cscUrl) {
+        this.csc = RestClient.builder().baseUrl(cscUrl).build();
+    }
+
+    /// Seal the given block data: returns the envelope to embed as the submission `signature`.
+    Map<String, Object> seal(Map<String, Object> blockData) {
+        String b64 = Base64.getEncoder().encodeToString(signedBytes(blockData));
+        @SuppressWarnings("unchecked")
+        Map<String, Object> envelope = csc.post()
+                .body(Map.of("bytes", b64))
+                .retrieve()
+                .body(Map.class);
+        return envelope;
+    }
+
+    // ── byte construction (must match Ernest exactly) ──────────────────────────
+
+    static byte[] signedBytes(Map<String, Object> data) {
+        Object cleaned = clean(data);
+        if (cleaned instanceof Map<?, ?> m) {
+            // defensive: the signed bytes never include the signature field
+            ((Map<?, ?>) m).remove("signature");
+        }
+        byte[] body = canonicalize(cleaned).getBytes(StandardCharsets.UTF_8);
+        String header = "DSSEv1 " + PAYLOAD_TYPE.length() + " " + PAYLOAD_TYPE + " " + body.length + " ";
+        byte[] h = header.getBytes(StandardCharsets.UTF_8);
+        byte[] out = new byte[h.length + body.length];
+        System.arraycopy(h, 0, out, 0, h.length);
+        System.arraycopy(body, 0, out, h.length, body.length);
+        return out;
+    }
+
+    /// Replicates Ernest's cleanObject: drop null / empty-string values and empty
+    /// nested objects/arrays, recursively.
+    @SuppressWarnings("unchecked")
+    static Object clean(Object v) {
+        if (v == null) return null;
+        if (v instanceof Map<?, ?> map) {
+            Map<String, Object> out = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : map.entrySet()) {
+                Object cv = e.getValue();
+                if (cv == null || "".equals(cv)) continue;
+                if (cv instanceof Map || cv instanceof List) {
+                    Object cc = clean(cv);
+                    if (cc instanceof Map<?, ?> cm && !cm.isEmpty()) out.put((String) e.getKey(), cc);
+                    else if (cc instanceof List<?> cl && !cl.isEmpty()) out.put((String) e.getKey(), cc);
+                } else {
+                    out.put((String) e.getKey(), cv);
+                }
+            }
+            return out;
+        }
+        if (v instanceof List<?> list) {
+            List<Object> out = new ArrayList<>();
+            for (Object it : list) {
+                Object ci = clean(it);
+                if (ci != null) out.add(ci);
+            }
+            return out;
+        }
+        return v;
+    }
+
+    /// RFC 8785 JSON Canonicalization for the String/Map/List payloads Ernest signs
+    /// (keys sorted by UTF-16 code unit, minimal separators, RFC 8785 string escaping).
+    static String canonicalize(Object v) {
+        StringBuilder sb = new StringBuilder();
+        write(sb, v);
+        return sb.toString();
+    }
+
+    private static void write(StringBuilder sb, Object v) {
+        switch (v) {
+            case null -> sb.append("null");
+            case String s -> writeString(sb, s);
+            case Boolean b -> sb.append(b ? "true" : "false");
+            case Map<?, ?> m -> {
+                List<String> keys = new ArrayList<>();
+                for (Object k : m.keySet()) keys.add((String) k);
+                Collections.sort(keys); // String natural order == UTF-16 code-unit order
+                sb.append('{');
+                for (int i = 0; i < keys.size(); i++) {
+                    if (i > 0) sb.append(',');
+                    writeString(sb, keys.get(i));
+                    sb.append(':');
+                    write(sb, m.get(keys.get(i)));
+                }
+                sb.append('}');
+            }
+            case List<?> l -> {
+                sb.append('[');
+                for (int i = 0; i < l.size(); i++) {
+                    if (i > 0) sb.append(',');
+                    write(sb, l.get(i));
+                }
+                sb.append(']');
+            }
+            default -> throw new IllegalArgumentException(
+                    "unsupported canonical type: " + v.getClass().getName());
+        }
+    }
+
+    private static void writeString(StringBuilder sb, String s) {
+        sb.append('"');
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '"' -> sb.append("\\\"");
+                case '\\' -> sb.append("\\\\");
+                case '\b' -> sb.append("\\b");
+                case '\t' -> sb.append("\\t");
+                case '\n' -> sb.append("\\n");
+                case '\f' -> sb.append("\\f");
+                case '\r' -> sb.append("\\r");
+                default -> {
+                    if (c < 0x20) sb.append(String.format("\\u%04x", (int) c));
+                    else sb.append(c);
+                }
+            }
+        }
+        sb.append('"');
+    }
+}
