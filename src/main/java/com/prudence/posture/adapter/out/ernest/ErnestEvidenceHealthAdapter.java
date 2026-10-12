@@ -2,19 +2,23 @@ package com.prudence.posture.adapter.out.ernest;
 
 import com.prudence.config.IntegrationProperties;
 import com.prudence.posture.application.port.out.EvidenceHealthPort;
+import com.prudence.posture.application.port.out.ExecutionEvidencePort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /// ACL adapter over Ernest: reads GET /api/verify and reports whether the hashchain is intact
 /// and reachable. Fail-closed — if Ernest cannot be reached or does not confirm validity,
-/// evidence is reported as unhealthy rather than optimistically green.
+/// evidence is reported as unhealthy rather than optimistically green. Also scans the chain
+/// for runtime execution evidence, grouped by the AI system each run was tagged with.
 @Component
-public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort {
+public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, ExecutionEvidencePort {
 
     private static final Logger log = LoggerFactory.getLogger(ErnestEvidenceHealthAdapter.class);
 
@@ -64,6 +68,36 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort {
             // 404 (no such model) or unreachable -> no evidence recorded for this system yet.
             return false;
         }
+    }
+
+    @Override
+    public Map<String, Long> executionCountsBySystem() {
+        Map<String, Long> counts = new HashMap<>();
+        try {
+            int page = 1, totalPages = 1;
+            do {
+                Map<?, ?> body = client.get()
+                        .uri("/api/blocks?page={p}&limit=200", page)
+                        .retrieve().body(Map.class);
+                if (body == null) break;
+                if (body.get("totalPages") instanceof Number n) totalPages = n.intValue();
+                if (body.get("items") instanceof List<?> items) {
+                    for (Object it : items) {
+                        if (it instanceof Map<?, ?> blk
+                                && blk.get("data") instanceof Map<?, ?> data
+                                && data.get("metadata") instanceof Map<?, ?> md
+                                && "execution".equals(md.get("stage"))
+                                && md.get("aiSystemId") instanceof String sid && !sid.isBlank()) {
+                            counts.merge(sid, 1L, Long::sum);
+                        }
+                    }
+                }
+                page++;
+            } while (page <= totalPages);
+        } catch (Exception e) {
+            log.warn("could not scan execution evidence from Ernest: {}", e.getMessage());
+        }
+        return counts;
     }
 
     private static org.springframework.http.client.ClientHttpRequestFactory timeoutFactory() {

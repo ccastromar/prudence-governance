@@ -54,7 +54,7 @@ def governed_node(fn: Callable[[dict], dict], *, pipeline: str, action: str = "r
                 inputs={"input": _tool_io(state)},
                 output={"updates": updates},
                 metadata={"stage": "execution", "pipeline": pipeline, "action": action,
-                          "subject": subject, "decision": "ALLOW"},
+                          "subject": subject, "aiSystemId": ai_system, "decision": "ALLOW"},
             )
 
         return {"gate": "ALLOW", **updates}
