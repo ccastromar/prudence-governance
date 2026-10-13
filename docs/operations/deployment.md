@@ -114,12 +114,29 @@ The deadline rules encode the regulation as of Regulation (EU) 2024/1689; have l
 classification guidance before relying on it. Sector regimes (e.g. DORA ICT-incident
 reporting for financial entities) are not covered.
 
-## High-volume evidence: Ernest's event-ingestor (optional)
+## High-volume evidence: Kafka or Ernest's event-ingestor (optional)
 
 Every governed agent step costs one PDP decision, and Prudence records each decision in Ernest.
-By default that is a synchronous append (`POST /api/inferences`). For agent platforms with
-many tool calls, PDP decisions can instead be **queued on Ernest's event-ingestor** (Redis
-Streams), which absorbs bursts and deduplicates by the decision id:
+By default decisions go direct, batched (`POST /api/inferences/batch`). For agent platforms with
+many tool calls, use **Kafka** (Ernest ADR-005) — the recommended high-volume transport:
+Prudence publishes each decision to a topic (idempotent producer, `acks=all`, keyed by AI
+system) and Ernest's `event-ingestor kafka` consumer group records it. "Delivered" means the
+broker acknowledged the record; Ernest deduplicates replays by the decision id.
+
+```
+PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka
+PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=kafka-1.example.eu:9092,kafka-2.example.eu:9092
+PRUDENCE_ERNEST_KAFKA_TOPIC=prudence.decisions
+```
+
+Grant Prudence write and Ernest's consumer group read on the topic only: the topic ACL is what
+Ernest records as the events' verification (`kafka_acl`). Size the topic's partitions for the
+number of consumers you want (8 by default in the local script). Measured on one host: ≥ 7,000
+decisions/s (see `loadtest-results.md`).
+
+Without Kafka, PDP decisions can instead be **queued on Ernest's event-ingestor over HTTP**
+(Redis Streams), which absorbs bursts and deduplicates by the decision id (one request per
+decision, ~2,500/s on the same host):
 
 ```
 PRUDENCE_ERNEST_DECISION_TRANSPORT=ingestor
@@ -133,8 +150,9 @@ The agent SDK (`prudence_governance.ErnestEvidence`) has the same option for exe
 Trade-offs, all deliberate:
 - **No qualified seal.** The ingestor stores its own event envelope in the block, so a QTSP seal
   over the direct block-data would not verify. Prudence refuses to start with
-  `decision-transport=ingestor` and a QTSP configured; the SDK raises on a sealer + ingestor.
-- **"Delivered" means durably queued (202), not appended.** If the ingestor's worker later fails
+  `decision-transport=ingestor` or `kafka` and a QTSP configured; the SDK raises on a sealer +
+  ingestor.
+- **"Delivered" means durably queued (202, or the broker's ack for Kafka), not appended.** If the ingestor's worker later fails
   to append, the failure is recorded in Ernest (`event_failures`), not in Prudence's outbox.
 - **Only decisions move.** Reviews, attestations and incidents are low-volume, need block
   receipts and qualified seals, and always go direct.
