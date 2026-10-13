@@ -30,8 +30,10 @@ export default function Approvals() {
   };
 
   const pending = systems.filter(s => s.approvalStatus === 'PENDING_APPROVAL' || s.approvalStatus === 'PENDING_SECOND_APPROVAL');
+  // Everything the backend lets back into review (AiSystem.submitForReview): a suspended system
+  // only returns to service through a fresh submission and full review.
   const assessed = systems.filter(s => s.approvalStatus === 'UNDER_ASSESSMENT' || s.approvalStatus === 'REJECTED'
-    || s.approvalStatus === 'EXPIRED');
+    || s.approvalStatus === 'EXPIRED' || s.approvalStatus === 'SUSPENDED');
   const renewalDue = systems.filter(s => s.approvalStatus === 'APPROVED' && s.reviewDue);
   const recent = systems.filter(s => s.approvalStatus === 'APPROVED' || s.approvalStatus === 'REJECTED'
     || s.approvalStatus === 'EXPIRED');
@@ -72,7 +74,7 @@ export default function Approvals() {
 
       {error && <div className="card" style={{ marginBottom: 'var(--sp-6)' }}><span className="err">{error}</span></div>}
 
-      <h2 style={{ fontSize: 'var(--fs-lg)' }}>Ready to submit — assessed, rejected or expired ({assessed.length})</h2>
+      <h2 style={{ fontSize: 'var(--fs-lg)' }}>Ready to submit — assessed, rejected, expired or suspended ({assessed.length})</h2>
       <table style={{ marginBottom: 'var(--sp-8)' }}>
         <thead><tr><th>AI system</th><th>Classification</th><th>Evidence</th><th style={{ textAlign: 'right' }}>Action</th></tr></thead>
         <tbody>

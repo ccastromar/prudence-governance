@@ -102,18 +102,19 @@ Imagina que se descubre que la IA descarta todos los currículums de mujeres.
 
 ---
 
-## J6 · ¿Se puede volver a enviar una IA suspendida?
+## J6 · Volver a enviar una IA suspendida
 
-Según las reglas, una IA suspendida **solo vuelve a funcionar** si se reenvía a revisión y se
-aprueba de nuevo.
+Una IA suspendida **solo vuelve a funcionar** si se reenvía a revisión y se aprueba de nuevo.
 
-1. Ve a **Approvals** → *Ready to submit*.
+1. Ve a **Approvals** → *Ready to submit — assessed, rejected, expired or suspended*.
 
-**Apunta qué ves:**
-- [ ] ¿Aparece *CV Screening Assistant* para poder pulsar **Submit for review**?
+**Deberías ver:**
+- [ ] *CV Screening Assistant* aparece en esa lista (estado SUSPENDED).
+2. Pulsa **Submit for review**.
+- [ ] Pasa a *Awaiting decision*: vuelve a necesitar las dos firmas (es HIGH).
+- [ ] En **Posture** deja de estar 🔴 RED *Suspended* y pasa a 🟡 AMBER *Awaiting governance approval*.
 
-> 🐞 **Esperado según las reglas:** debería poder reenviarse. Si **no aparece** en ninguna
-> sección de *Approvals*, apúntalo como **fallo**: no habría forma de rehabilitar la IA desde la web.
+❌ **Fallo si** no aparece en ninguna sección de *Approvals*: no habría forma de rehabilitarla.
 
 ---
 
@@ -127,4 +128,4 @@ aprueba de nuevo.
 
 **Deberías ver:**
 - [ ] Ya no hay plazo de informe: *Not a serious incident… no Art. 73 report required.*
-- [ ] La IA **sigue SUSPENDED**: reclasificar el incidente **no** la reactiva sola.
+- [ ] El estado de la IA **no cambia** por reclasificar el incidente (sigue donde la dejó J6: *Awaiting decision*). Un incidente nunca aprueba ni reactiva una IA por sí solo.
