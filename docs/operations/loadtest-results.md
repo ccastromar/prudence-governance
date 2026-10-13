@@ -3,6 +3,24 @@
 Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
 The "after" table comes first.
 
+## Chain-derived read models (Ernest ADR-006, 2026-10-13)
+
+Ernest's chainer now validates each block when it is connected and keeps per-model and
+per-system indexes; stats and per-model integrity read the indexes, and the integrity
+checkpoint follows the validated tip. Same host and script, chain at ~1.14M events:
+
+| Read | Before (~600–800k events) | With indexes (1.14M events) |
+|---|---|---|
+| Per-model integrity (`mode=indexed`) | 4.7–5 s | **2 ms** |
+| Incremental `verify`, first call after heavy writes | 9–16 s | **4–10 ms** |
+| `stats/executions` | 170 ms | **1–2 ms** |
+| Prudence drift | 170 ms | **6–18 ms** |
+| Prudence posture | 250–540 ms | **30–150 ms** |
+| `verify?mode=full` (explicit full re-hash) | 9–16 s | 23 s — linear in events, by design |
+
+Writes are unaffected (Kafka ≥ 7,000/s, direct ~4,200/s) and the indexer never stalled. Read cost
+no longer depends on chain length; only the explicit full re-verification does.
+
 ## Kafka transport and outbox drain (Ernest ADR-005, 2026-10-13)
 
 `decision-transport=kafka`: Prudence publishes decisions to a topic (idempotent producer,
