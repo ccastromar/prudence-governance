@@ -11,8 +11,9 @@ answers "may this subject perform this action on this pipeline?". Governance lif
 ## Run (dev)
 
 ```bash
-# serve the bundle; the Spring adapter points at http://127.0.0.1:8181 by default
-opa run --server --addr :8181 policy/opa/
+# serve the bundle on 127.0.0.1:8181 (where the Spring adapter points by default);
+# runs the policy tests first and reloads on edits
+./dev/opa.sh
 
 # the exact call the adapter makes:
 curl -s http://127.0.0.1:8181/v1/data/prudence/allow \
