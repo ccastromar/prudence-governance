@@ -18,10 +18,11 @@ and unpack it next to this repo. Then, each in its own terminal:
 ./scripts/ui-sso.sh        # console with SSO login on :5200
 ./scripts/seed.sh          # optional: the sample AI systems docs/functional/ uses
 ./scripts/kafka.sh         # optional: Kafka (KRaft) on :9092 for decision-transport=kafka
+./scripts/ernest.sh        # Ernest from the sibling repo on :3001 (--kafka adds its Kafka consumer)
 ```
 
-Decisions over Kafka (Ernest ADR-005): start `./scripts/kafka.sh`, run Ernest's consumer
-(`event-ingestor kafka`, see Ernest `docs/event-ingestion-layer.md`) and start Prudence with
+Decisions over Kafka (Ernest ADR-005): start `./scripts/kafka.sh`, then `./scripts/ernest.sh --kafka`
+(Ernest's backend plus its `event-ingestor kafka` consumer), and start Prudence with
 `PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092`.
 
 `backend-sso.sh` runs the production security configuration with local values: a

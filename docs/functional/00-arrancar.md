@@ -10,6 +10,7 @@ comprobar que van**. Todos los comandos se lanzan desde la carpeta del repo de P
 | **PostgreSQL** | Base de datos de Prudence (modo con login) | 5432 | Solo con login |
 | **MongoDB** | Base de datos de Ernest | 27017 | Solo si usas Ernest |
 | **Ernest** | Guarda las pruebas (semáforo verde) | 3001 | Recomendada |
+| **Kafka** | Lleva las decisiones a Ernest a alto volumen | 9092 | Opcional (ver *Modo Kafka*) |
 | **Keycloak** | Login de usuarios (alice, bob, auditor) | 8081 | Solo con login |
 | **OPA** | Decide quién puede hacer qué | 8181 | **Sí** |
 | **Prudence backend** | El cerebro | 8099 | **Sí** |
@@ -34,6 +35,8 @@ comprobar que van**. Todos los comandos se lanzan desde la carpeta del repo de P
 - **Keycloak** (solo modo 🅱️): descarga un `.tar.gz` 26.x de
   `github.com/keycloak/keycloak/releases` y descomprímelo **al lado** de la carpeta de Prudence.
 - **OPA**: `brew install opa`
+- **Ernest**: su repo (`ai-blockchain-provenance`) clonado **al lado** de la carpeta de Prudence.
+- **Kafka** (solo si vas a usar el modo Kafka): `brew install kafka`
 - **PostgreSQL y MongoDB**: ya funcionan como servicios y arrancan solos al encender el Mac.
   Si alguno no responde, mira [Si algo falla](#si-algo-falla).
 
@@ -47,7 +50,7 @@ Abre una terminal por línea, **en este orden**, y déjala abierta:
 ./scripts/opa.sh
 ```
 ```bash
-cd ../ai-blockchain-provenance && FRONTEND_PORT=5174 ./scripts/dev-local.sh
+./scripts/ernest.sh
 ```
 ```bash
 ./scripts/backend.sh
@@ -67,7 +70,7 @@ La 2ª (Ernest) es opcional: sin ella, el semáforo de las IAs aprobadas se qued
 ./scripts/opa.sh
 ```
 ```bash
-cd ../ai-blockchain-provenance && FRONTEND_PORT=5174 ./scripts/dev-local.sh
+./scripts/ernest.sh
 ```
 ```bash
 ./scripts/backend-sso.sh
@@ -77,6 +80,25 @@ cd ../ai-blockchain-provenance && FRONTEND_PORT=5174 ./scripts/dev-local.sh
 ```
 
 Espera a que Keycloak diga `started` antes de lanzar `backend-sso.sh` (unos 10 segundos).
+
+## Modo Kafka (opcional, cualquiera de los dos modos)
+
+Las decisiones del PDP viajan a Ernest por Kafka en vez de por HTTP (es como se haría con mucho
+volumen). Cambian dos terminales y se añade una:
+
+```bash
+./scripts/kafka.sh
+```
+```bash
+./scripts/ernest.sh --kafka
+```
+```bash
+PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092 ./scripts/backend.sh
+```
+
+(en 🅱️, igual pero con `./scripts/backend-sso.sh`). Para el tester no cambia nada en la web: las
+mismas pantallas, el mismo semáforo. En local Kafka va sin cifrar y Ernest marca esas pruebas
+como `unverified`; en producción va con `SASL_SSL` y Prudence se niega a arrancar si no.
 
 ## Último paso (los dos modos): cargar las IAs de ejemplo
 
@@ -96,7 +118,7 @@ Da de alta las 4 IAs de las guías. Si ya existen, no las duplica.
 |---|---|
 | `curl -s localhost:8099/actuator/health` | `"status":"UP"` |
 | `curl -s localhost:8181/health` | `{}` |
-| `curl -s localhost:3001/health` | algo con `ok` / `healthy` |
+| `curl -s localhost:3001/health` | `"status":"ok"` |
 | `mongosh --quiet --eval "db.runCommand({ping:1}).ok"` | `1` |
 | Abrir **http://localhost:5200** | La web de Prudence (en 🅱️, primero el login) |
 | Abrir **http://localhost:8081** (🅱️) | La consola de Keycloak (`admin` / `admin`) |
@@ -105,7 +127,7 @@ Da de alta las 4 IAs de las guías. Si ya existen, no las duplica.
 
 En cada terminal: **Ctrl + C**. PostgreSQL y MongoDB se quedan encendidos (no molestan).
 
-⚠️ Al parar Ernest con Ctrl + C **se borran sus datos** (es una base de usar y tirar).
+Los datos de Ernest se conservan entre arranques (base `ernest_local` en MongoDB).
 
 ## Empezar de cero (borrar todo lo que hayas probado)
 
@@ -115,6 +137,7 @@ Con el backend **parado**:
 |---|---|---|
 | 🅰️ | `rm -rf data` | Arranca y `./scripts/seed.sh` |
 | 🅱️ | `psql -h 127.0.0.1 -d postgres -c 'drop database prudence_sso'` | Arranca y `./scripts/seed.sh` |
+| Ernest (los dos) | `mongosh ernest_local --eval 'db.dropDatabase()'` | Arranca `./scripts/ernest.sh` |
 
 ---
 
@@ -127,7 +150,9 @@ Con el backend **parado**:
 | `Keycloak not found` | Descárgalo (ver *Una sola vez*) |
 | `Keycloak issuer not reachable` | Arranca primero `./scripts/keycloak.sh` y espera a `started` |
 | `PostgreSQL not reachable` | `brew services restart postgresql@16` |
-| MongoDB no responde | `brew services restart mongodb-community` |
+| MongoDB no responde | Arráncalo en una terminal: `mongod --config $(brew --prefix)/etc/mongod.conf` |
+| `Ernest not found` | Clona `ai-blockchain-provenance` al lado de Prudence (o `ERNEST_HOME=/ruta ./scripts/ernest.sh`) |
+| En modo Kafka el semáforo no pasa a 🟢 | ¿Arrancaste Ernest con `--kafka` y Kafka con `./scripts/kafka.sh`? |
 | El backend en 🅰️ peta con `Columna … no encontrada` | La base es de una versión vieja: haz *Empezar de cero* |
 | En *Policy decisions* todo sale DENY | OPA no está encendido |
 | El semáforo nunca pasa a 🟢 | Ernest no está encendido, o espera 1 minuto y refresca |
