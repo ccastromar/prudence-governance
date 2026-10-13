@@ -3,6 +3,28 @@
 Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
 The "after" table comes first.
 
+## Bulk write path (Ernest batch endpoint + ingestor worker in bulk, 2026-10-13)
+
+Batching on. The batch endpoint and the ingestor worker now store a whole request/read in a few
+round trips (one `insertMany`, model admission once per model, one ack) instead of several per
+event. Same host, same scripts.
+
+| Path | Batching on | Bulk write path |
+|---|---|---|
+| Ernest `POST /api/inferences/batch`, 1 process (isolated bench) | 3,360/s | **~15,300/s** (×4.5) |
+| Ernest batch endpoint inside the full load test | 3,360/s | **11,867/s** |
+| Ingestor worker, 100k queued events (isolated bench) | 2,793/s | **9,091/s** (×3.3), all chained 1 s later |
+| Prudence outbox → Ernest, direct | 1,525/s | **2,998/s** (×2) |
+| Prudence outbox → Ernest, ingestor | 2,249/s | 2,327/s (limited by Prudence: one event per request) |
+| Chainer (batcher), sustained | — | ~11,000–13,000 events/s; `BATCH_MAX_EVENTS` 1,000 → 10,000 changes little |
+| Ernest log volume | 96 MB | 4 MB |
+
+Reading: Ernest's write side is no longer the limit for Prudence. What caps Prudence → Ernest now
+is Prudence's own sender (8 senders; one event per request on the ingestor path). Extra
+`ERNEST_ROLE=writer` replicas on this one host do not add throughput (they share its 10 cores
+with MongoDB and the chainer); horizontal gains need separate hosts. Per-model integrity reads
+grow with events (~5 s for one model with ~600k events) — the next read-side item.
+
 ## With ADR-004 batching (`EVIDENCE_BATCHING=on`, 2026-10-13)
 
 Same host and script (`EVIDENCE_BATCHING=on ./loadtest/run-local.sh`), Ernest with the Merkle
