@@ -5,12 +5,20 @@ Keycloak standalone on your JDK. Test realm only; the passwords here are demo va
 
 ## Run
 
+Download Keycloak once (any recent 26.x `.tar.gz` from github.com/keycloak/keycloak/releases)
+and unpack it next to this repo. Then, each in its own terminal:
+
 ```bash
-# download Keycloak once (any recent 26.x), then from its dir:
-cp path/to/prudence/dev/chestertown-realm.json data/import/
-KC_BOOTSTRAP_ADMIN_USERNAME=admin KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
-  bin/kc.sh start-dev --http-port 8081 --import-realm
+./dev/keycloak.sh      # IdP on :8081, imports this realm (or set KEYCLOAK_HOME)
+./dev/opa.sh           # policy engine on :8181
+./dev/backend-sso.sh   # Prudence secured (JWT + PostgreSQL/Flyway) on :8099
+./dev/ui-sso.sh        # console with SSO login on :5200
 ```
+
+`backend-sso.sh` runs the production security configuration with local values: a
+`prudence_sso` database in your local PostgreSQL (created on first run), a dummy SMTP host
+(alerts end up as undelivered records in Posture) and open-access Ernest. In this mode the
+*Policy decisions* tab answers 403 to people: the PDP only accepts the `pdp-client` token below.
 
 Realm `chestertown` issuer: `http://localhost:8081/realms/chestertown`.
 Clients (public, PKCE): `ernest-spa`, `prudence-spa`, `aos-spa`.

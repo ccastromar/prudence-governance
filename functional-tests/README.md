@@ -86,6 +86,12 @@ rojo, todo sale en rojo.
 > los cuatro ojos funcionando. Para completar esa aprobación hace falta el modo con login
 > (dos usuarios distintos, `alice` y `bob`).
 
+> 🔐 **Modo con login** (si te lo han arrancado así): al abrir la web te pedirá entrar. Usuarios:
+> `alice` / `alice` y `bob` / `bob` (pueden registrar, aprobar y rechazar), `auditor` / `auditor`
+> (solo puede mirar). Así **sí** puedes completar la doble firma: firma con `alice`, pulsa
+> **Sign out**, entra con `bob` y firma otra vez → **APPROVED**. En este modo la pestaña
+> *Policy decisions* da error a las personas: es correcto, solo la usan las máquinas.
+
 > 💡 **Refresca la página (Cmd+R) después de cada acción** si algo no se actualiza: algunas
 > pestañas solo leen los datos al abrirse.
 
