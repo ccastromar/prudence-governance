@@ -98,6 +98,16 @@ public class SecurityConfig {
       if ("kafka".equals(environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
         requireNonBlank(environment, "prudence.ernest.kafka-bootstrap-servers");
         requireNonBlank(environment, "prudence.ernest.kafka-topic");
+        // Decisions are governance evidence: never over an unencrypted or unauthenticated link.
+        String protocol = environment.getProperty("prudence.ernest.kafka-security-protocol", "PLAINTEXT").strip().toUpperCase();
+        if (!protocol.equals("SSL") && !protocol.equals("SASL_SSL")) {
+          throw new IllegalStateException(
+              "Refusing to start outside dev/test with decision-transport=kafka over " + protocol + " (use SASL_SSL or SSL)");
+        }
+        if (protocol.equals("SASL_SSL")) {
+          requireNonBlank(environment, "prudence.ernest.kafka-sasl-username");
+          requireNonBlank(environment, "prudence.ernest.kafka-sasl-password");
+        }
       }
       // Alerts are how humans learn about expiries, drift and lost evidence: no silent channel.
       requireNonBlank(environment, "spring.mail.host");

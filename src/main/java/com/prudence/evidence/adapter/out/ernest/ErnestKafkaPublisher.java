@@ -36,7 +36,7 @@ final class ErnestKafkaPublisher implements AutoCloseable {
     private final String topic;
     private final JsonMapper mapper = JsonMapper.builder().build();
 
-    ErnestKafkaPublisher(String bootstrapServers, String topic) {
+    ErnestKafkaPublisher(String bootstrapServers, String topic, Map<String, Object> security) {
         Properties config = new Properties();
         config.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         config.put(ProducerConfig.ACKS_CONFIG, "all");
@@ -49,6 +49,8 @@ final class ErnestKafkaPublisher implements AutoCloseable {
         config.put(ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG, 5_000);
         config.put(ProducerConfig.DELIVERY_TIMEOUT_MS_CONFIG, (int) SEND_TIMEOUT.toMillis());
         config.put(ProducerConfig.CLIENT_ID_CONFIG, "prudence-pdp");
+        // Security last: it may also override any setting above (kafka-properties passthrough).
+        config.putAll(security);
         this.producer = new KafkaProducer<>(config, new StringSerializer(), new ByteArraySerializer());
         this.topic = topic;
     }
@@ -88,6 +90,45 @@ final class ErnestKafkaPublisher implements AutoCloseable {
             }
         }
         return outcomes;
+    }
+
+    /// Client security from Prudence's settings: protocol, SASL login (SCRAM or PLAIN, built
+    /// into a JAAS line so credentials stay in environment variables), optional truststore, then
+    /// any `kafka-properties` passthrough.
+    static Map<String, Object> securityConfig(String protocol, String mechanism, String username, String password,
+                                              String truststoreLocation, String truststorePassword,
+                                              Map<String, String> passthrough) {
+        Map<String, Object> config = new java.util.LinkedHashMap<>();
+        String p = protocol == null || protocol.isBlank() ? "PLAINTEXT" : protocol.strip().toUpperCase();
+        if (!java.util.Set.of("PLAINTEXT", "SSL", "SASL_PLAINTEXT", "SASL_SSL").contains(p)) {
+            throw new IllegalStateException("prudence.ernest.kafka-security-protocol must be PLAINTEXT, SSL, SASL_PLAINTEXT or SASL_SSL (was " + protocol + ")");
+        }
+        config.put("security.protocol", p);
+        if (p.startsWith("SASL_")) {
+            String m = mechanism == null || mechanism.isBlank() ? "SCRAM-SHA-512" : mechanism.strip().toUpperCase();
+            String module = switch (m) {
+                case "SCRAM-SHA-512", "SCRAM-SHA-256" -> "org.apache.kafka.common.security.scram.ScramLoginModule";
+                case "PLAIN" -> "org.apache.kafka.common.security.plain.PlainLoginModule";
+                default -> throw new IllegalStateException("prudence.ernest.kafka-sasl-mechanism must be SCRAM-SHA-512, SCRAM-SHA-256 or PLAIN (was " + mechanism + ")");
+            };
+            if (username == null || username.isBlank() || password == null || password.isBlank()) {
+                throw new IllegalStateException("SASL needs prudence.ernest.kafka-sasl-username and kafka-sasl-password");
+            }
+            config.put("sasl.mechanism", m);
+            config.put("sasl.jaas.config", module + " required username=\"" + jaasEscape(username)
+                    + "\" password=\"" + jaasEscape(password) + "\";");
+        }
+        if (truststoreLocation != null && !truststoreLocation.isBlank()) {
+            config.put("ssl.truststore.location", truststoreLocation);
+            if (truststoreLocation.toLowerCase().endsWith(".pem")) config.put("ssl.truststore.type", "PEM");
+            if (truststorePassword != null && !truststorePassword.isBlank()) config.put("ssl.truststore.password", truststorePassword);
+        }
+        if (passthrough != null) config.putAll(passthrough);
+        return config;
+    }
+
+    private static String jaasEscape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static byte[] bytes(String value) {

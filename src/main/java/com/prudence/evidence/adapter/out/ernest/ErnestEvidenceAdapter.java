@@ -77,8 +77,12 @@ public class ErnestEvidenceAdapter {
                 throw new IllegalStateException("qualified seals (prudence.qtsp.csc-url) need decision-transport=direct");
             }
             this.ingestor = null;
-            this.kafka = new ErnestKafkaPublisher(servers, topic);
-            log.info("PDP decisions are published to Kafka topic {} at {}", topic, servers);
+            IntegrationProperties.Ernest e = props.ernest();
+            Map<String, Object> security = ErnestKafkaPublisher.securityConfig(e.kafkaSecurityProtocol(),
+                    e.kafkaSaslMechanism(), e.kafkaSaslUsername(), e.kafkaSaslPassword(),
+                    e.kafkaTruststoreLocation(), e.kafkaTruststorePassword(), e.kafkaProperties());
+            this.kafka = new ErnestKafkaPublisher(servers, topic, security);
+            log.info("PDP decisions are published to Kafka topic {} at {} ({})", topic, servers, security.get("security.protocol"));
         } else {
             this.ingestor = null;
             this.kafka = null;

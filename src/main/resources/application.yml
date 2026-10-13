@@ -86,6 +86,13 @@ prudence:
     # decision-transport=kafka (Ernest ADR-005): the topic Ernest's ingestor consumes.
     kafka-bootstrap-servers: ${PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS:}
     kafka-topic: ${PRUDENCE_ERNEST_KAFKA_TOPIC:prudence.decisions}
+    # Kafka security. Outside dev/test Prudence refuses to start unless this is SSL or SASL_SSL.
+    kafka-security-protocol: ${PRUDENCE_ERNEST_KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+    kafka-sasl-mechanism: ${PRUDENCE_ERNEST_KAFKA_SASL_MECHANISM:SCRAM-SHA-512}
+    kafka-sasl-username: ${PRUDENCE_ERNEST_KAFKA_SASL_USERNAME:}
+    kafka-sasl-password: ${PRUDENCE_ERNEST_KAFKA_SASL_PASSWORD:}
+    kafka-truststore-location: ${PRUDENCE_ERNEST_KAFKA_TRUSTSTORE_LOCATION:}
+    kafka-truststore-password: ${PRUDENCE_ERNEST_KAFKA_TRUSTSTORE_PASSWORD:}
   qtsp:
     # QTSP CSC remote-signing endpoint to qualify-seal evidence (ADR-002 B2). Blank disables
     # sealing (decisions are then only logged). e.g. http://127.0.0.1:4600/csc/sign

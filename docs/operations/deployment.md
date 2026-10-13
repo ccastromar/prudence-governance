@@ -125,12 +125,25 @@ broker acknowledged the record; Ernest deduplicates replays by the decision id.
 
 ```
 PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka
-PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=kafka-1.example.eu:9092,kafka-2.example.eu:9092
+PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=kafka-1.example.eu:9093,kafka-2.example.eu:9093
 PRUDENCE_ERNEST_KAFKA_TOPIC=prudence.decisions
+PRUDENCE_ERNEST_KAFKA_SECURITY_PROTOCOL=SASL_SSL
+PRUDENCE_ERNEST_KAFKA_SASL_MECHANISM=SCRAM-SHA-512
+PRUDENCE_ERNEST_KAFKA_SASL_USERNAME=prudence
+PRUDENCE_ERNEST_KAFKA_SASL_PASSWORD=<from your secret store>
+# only for a private CA:
+PRUDENCE_ERNEST_KAFKA_TRUSTSTORE_LOCATION=/etc/prudence/kafka-ca.pem
 ```
 
-Grant Prudence write and Ernest's consumer group read on the topic only: the topic ACL is what
-Ernest records as the events' verification (`kafka_acl`). Size the topic's partitions for the
+Outside dev/test Prudence refuses to start with Kafka over anything but `SASL_SSL` or `SSL`, and
+with SASL but no credentials. Any other Kafka client property can be passed through
+`prudence.ernest.kafka-properties.*` in a config file.
+
+Grant Prudence's principal `Write` + `Describe` on the topic and nothing else; Ernest's consumer
+gets `Read` + `Describe` on the topic and `Read` on its group. The topic ACL is what Ernest
+records as the events' verification (`kafka_acl`, only when Ernest itself connects with SASL). If
+the broker rejects Prudence (wrong password, missing ACL), decisions stay queued in the outbox and
+one configuration error and alert are raised — nothing is lost or dead-lettered. Size the topic's partitions for the
 number of consumers you want (8 by default in the local script). Measured on one host: ≥ 7,000
 decisions/s (see `loadtest-results.md`).
 
