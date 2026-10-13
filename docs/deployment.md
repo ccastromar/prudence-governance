@@ -164,3 +164,14 @@ through `POST /api/inferences/batch`; an Ernest without that endpoint is detecte
 decisions fall back to one-by-one. Ernest counts quotas per credential
 (`THROTTLE_AUTHENTICATED_LIMIT`, Ernest side). Measured on one host: ~1,400 decisions/s direct,
 ~2,100/s through the ingestor (see `docs/loadtest-results.md`).
+
+### With Ernest's Merkle-batched evidence (Ernest ADR-004)
+
+When Ernest runs with `EVIDENCE_BATCHING=on`, it accepts a record before chaining it: `202`
+(per item in the batch endpoint) counts as delivered, and the stored `blockIndex` stays empty
+("chaining pending"). Prudence fetches the inclusion proof lazily when it needs it —
+attestation verification calls `GET /api/events/api%2F<model>/<id>/proof` and verifies it
+itself (block hash and RFC 6962 audit path, `ErnestEventProof`), reporting `PENDING` until the
+record's batch is chained. Against an Ernest with batching off (proof endpoint answers 404) it
+falls back to scanning the model's provenance. Re-sends are idempotent in Ernest; a re-send with
+different content is a permanent delivery failure.

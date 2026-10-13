@@ -47,6 +47,11 @@ public final class ErnestHttp {
         if (error instanceof RestClientResponseException e) {
             int status = e.getStatusCode().value();
             if (status == 401 || status == 403) return DeliveryFailure.CONFIGURATION;
+            // Ernest ADR-004: the event id is already recorded with DIFFERENT content. Retrying
+            // can never succeed; it needs a human (a re-sent record must be byte-identical).
+            if (status == 409 && e.getResponseBodyAsString().contains("already recorded with different content")) {
+                return DeliveryFailure.PERMANENT;
+            }
             if (status == 408 || status == 409 || status == 429 || status >= 500) return DeliveryFailure.RETRYABLE;
             return status >= 400 ? DeliveryFailure.PERMANENT : DeliveryFailure.RETRYABLE;
         }

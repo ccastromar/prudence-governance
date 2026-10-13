@@ -110,16 +110,18 @@ public class AttestationService implements AttestationUseCase {
             boolean sealed = a.evidence().sealed(); // qualified seal
             String delivery = a.evidence().delivery();
             boolean recorded = "DELIVERED".equals(delivery);
-            boolean confirmed = false, chainValid = false;
+            boolean confirmed = false, chainValid = false, pendingInErnest = false;
             Long blockIndex = a.evidence().blockIndex();
             String detail;
             // A report recorded without a qualified seal is still confirmable in Ernest.
             if (recorded) {
-                AttestationEvidenceQueryPort.Confirmation c = evidenceQuery.confirm(ATTESTATION_MODEL, a.contentHash());
+                AttestationEvidenceQueryPort.Confirmation c = evidenceQuery.confirm(ATTESTATION_MODEL, a.id(), a.contentHash());
                 confirmed = c.present();
+                pendingInErnest = c.pending();
                 chainValid = c.chainValid();
                 if (c.blockIndex() != null) blockIndex = c.blockIndex();
                 if (!c.reachable()) detail = "Evidence plane unreachable — the seal could not be confirmed.";
+                else if (c.pending()) detail = "Report is recorded in Ernest and waiting to be chained into the next batch.";
                 else if (c.present() && c.chainValid()) detail = sealed
                         ? "Report hash is qualified-sealed in Ernest and the chain verifies."
                         : "Report hash is recorded in Ernest (no qualified seal) and the chain verifies.";
@@ -134,6 +136,7 @@ public class AttestationService implements AttestationUseCase {
             String verdict;
             if (!hashMatches) verdict = "ALTERED";
             else if ("PENDING".equals(delivery)) verdict = "PENDING";
+            else if (recorded && pendingInErnest) verdict = "PENDING";
             else if (!recorded) verdict = "UNSEALED";
             else if (confirmed && chainValid) verdict = "VERIFIED";
             else verdict = "UNCONFIRMED";

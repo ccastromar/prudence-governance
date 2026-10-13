@@ -98,7 +98,7 @@ public class ErnestSealer {
         }
     }
 
-    /// RFC 8785 JSON Canonicalization for the String/Map/List payloads Ernest signs
+    /// RFC 8785 JSON Canonicalization for the String/Number/Map/List payloads Ernest signs
     /// (keys sorted by UTF-16 code unit, minimal separators, RFC 8785 string escaping).
     public static String canonicalize(Object v) {
         StringBuilder sb = new StringBuilder();
@@ -111,6 +111,7 @@ public class ErnestSealer {
             case null -> sb.append("null");
             case String s -> writeString(sb, s);
             case Boolean b -> sb.append(b ? "true" : "false");
+            case Number n -> writeNumber(sb, n.doubleValue());
             case Map<?, ?> m -> {
                 List<String> keys = new ArrayList<>();
                 for (Object k : m.keySet()) keys.add((String) k);
@@ -134,6 +135,39 @@ public class ErnestSealer {
             }
             default -> throw new IllegalArgumentException(
                     "unsupported canonical type: " + v.getClass().getName());
+        }
+    }
+
+    /// RFC 8785 §3.2.2.3: numbers are IEEE-754 doubles serialized like ECMAScript's
+    /// Number.prototype.toString. Java's Double.toString yields the shortest round-tripping
+    /// digits (JDK 19+); only the layout (plain vs exponent, "e+21" style) is rewritten here.
+    private static void writeNumber(StringBuilder sb, double d) {
+        if (Double.isNaN(d) || Double.isInfinite(d)) {
+            throw new IllegalArgumentException("non-finite numbers cannot be canonicalized");
+        }
+        if (d == 0) {
+            sb.append('0'); // also -0
+            return;
+        }
+        if (d < 0) {
+            sb.append('-');
+            d = -d;
+        }
+        java.math.BigDecimal bd = new java.math.BigDecimal(Double.toString(d)).stripTrailingZeros();
+        String digits = bd.unscaledValue().toString();
+        int k = digits.length();
+        int n = k - bd.scale(); // decimal exponent: value = 0.digits × 10^n
+        if (k <= n && n <= 21) {
+            sb.append(digits).append("0".repeat(n - k));
+        } else if (0 < n && n <= 21) {
+            sb.append(digits, 0, n).append('.').append(digits, n, k);
+        } else if (-6 < n && n <= 0) {
+            sb.append("0.").append("0".repeat(-n)).append(digits);
+        } else {
+            sb.append(digits.charAt(0));
+            if (k > 1) sb.append('.').append(digits, 1, k);
+            int e = n - 1;
+            sb.append('e').append(e < 0 ? '-' : '+').append(Math.abs(e));
         }
     }
 

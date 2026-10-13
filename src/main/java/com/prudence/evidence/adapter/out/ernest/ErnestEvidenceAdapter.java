@@ -180,7 +180,8 @@ public class ErnestEvidenceAdapter {
             for (int j = 0; j < positions.size(); j++) {
                 Map<?, ?> r = j < results.size() && results.get(j) instanceof Map<?, ?> m ? m : Map.of();
                 int status = r.get("status") instanceof Number n ? n.intValue() : 500;
-                if (status != 200) {
+                // 200 chained/duplicate, 202 accepted pending its batch (Ernest ADR-004): both delivered.
+                if (status != 200 && status != 202) {
                     Object err = r.get("error");
                     String error = err == null ? "no result reported" : err.toString();
                     outcomes.set(positions.get(j), new RestClientResponseException(error, status, "", null, null, null));
