@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Local Keycloak (dev IdP) for the Chestertown trio on http://localhost:8081, importing the
-# test realm `chestertown` (users alice / bob / auditor — see dev/README.md). No Docker.
+# test realm `chestertown` (users alice / bob / auditor — see scripts/README.md). No Docker.
 #
-#   ./dev/keycloak.sh                       # finds ../keycloak-* next to this repo
-#   KEYCLOAK_HOME=/path/to/keycloak ./dev/keycloak.sh
+#   ./scripts/keycloak.sh                       # finds ../keycloak-* next to this repo
+#   KEYCLOAK_HOME=/path/to/keycloak ./scripts/keycloak.sh
 #
 # Download once: https://github.com/keycloak/keycloak/releases (any 26.x .tar.gz), unpack it
 # next to this repo. Admin console: http://localhost:8081 (admin/admin, dev only).

@@ -51,7 +51,7 @@ Set `ERNEST_INGESTOR_URL` (and `ERNEST_INGESTOR_KEY`) and `ErnestEvidence.log_st
 records on Ernest's event-ingestor instead of appending them directly: requests return 202 once
 queued, and the inference id doubles as the ingestor's dedupe key. Ingestor records carry no
 qualified seal, so a `QtspSealer` with an ingestor URL is rejected. See
-`docs/deployment.md` → "High-volume evidence".
+`docs/operations/deployment.md` → "High-volume evidence".
 
 Note: `log_step` is still synchronous and does not retry; a failed write returns
 `(None, {"error": …})` and is not re-sent.

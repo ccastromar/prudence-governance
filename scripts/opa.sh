@@ -2,7 +2,7 @@
 # Local OPA sidecar for Prudence's PDP (dev). Serves policy/opa/ on 127.0.0.1:8181, where
 # application.yml's prudence.opa.base-url points, and reloads on policy edits (--watch).
 #
-#   ./dev/opa.sh              # or OPA_PORT=18181 ./dev/opa.sh
+#   ./scripts/opa.sh              # or OPA_PORT=18181 ./scripts/opa.sh
 #
 # Requires the opa binary (brew install opa). Not for production: there the policy is a
 # signed bundle served to the sidecar (see policy/opa/README.md).

@@ -15,7 +15,7 @@ posture is **watched** and **attested**.
 
 The three form a closed control loop: **decide → enforce → prove → oversee → decide.**
 
-See [docs/adr-000-prudence-the-governance-vertex.md](docs/adr-000-prudence-the-governance-vertex.md)
+See [docs/adr/adr-000-prudence-the-governance-vertex.md](docs/adr/adr-000-prudence-the-governance-vertex.md)
 for the founding architecture.
 
 > Status: active implementation. The current vertical slice covers a classification dossier
@@ -23,3 +23,20 @@ for the founding architecture.
 > obligations), policy decisions, review audit, approval expiry and periodic review, posture/drift,
 > an AI incident register with AI Act Art. 73 deadlines, email alerts and attestations. It is a
 > governance-readiness platform, not a legal declaration of EU AI Act conformity.
+
+## Repository layout
+
+| Path | What |
+|---|---|
+| `src/`, `ui/` | Spring Boot backend and React console |
+| `policy/opa/` | OPA/Rego policy bundle (the authorization half of the PDP) |
+| `integrations/` | Python adapters for agent runtimes (LangGraph, Pydantic AI) |
+| `loadtest/` | Local load test of Prudence + Ernest |
+| `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
+| `docs/adr/` | Architecture decisions |
+| `docs/design/` | Shared design language (tokens) of the three apps |
+| `docs/operations/` | Deployment and load-test results |
+| `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
+
+Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md) (step by step) or
+[scripts/README.md](scripts/README.md).

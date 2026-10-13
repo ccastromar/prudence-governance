@@ -3,8 +3,8 @@
 # configuration — JWT from the local Keycloak, PostgreSQL + Flyway, the same fail-closed start
 # checks as production — with local values for everything those checks demand.
 #
-#   ./dev/keycloak.sh        # first, in another terminal
-#   ./dev/backend-sso.sh
+#   ./scripts/keycloak.sh        # first, in another terminal
+#   ./scripts/backend-sso.sh
 #
 # Needs a local PostgreSQL on 127.0.0.1:5432 (brew services start postgresql@16) where the
 # current OS user is a superuser (Homebrew's default). Creates role/database `prudence_sso`
@@ -22,7 +22,7 @@ command -v mvn >/dev/null || { echo "mvn not found" >&2; exit 1; }
 "$PSQL" -h "$PG_HOST" -p "$PG_PORT" -d postgres -Atc 'select 1' >/dev/null 2>&1 || {
   echo "PostgreSQL not reachable on $PG_HOST:$PG_PORT (brew services start postgresql@16)" >&2; exit 1; }
 curl -sf -o /dev/null "$ISSUER/.well-known/openid-configuration" || {
-  echo "Keycloak issuer not reachable: $ISSUER — start ./dev/keycloak.sh first" >&2; exit 1; }
+  echo "Keycloak issuer not reachable: $ISSUER — start ./scripts/keycloak.sh first" >&2; exit 1; }
 
 # Idempotent: role + database for this mode only (separate from any other local database).
 if [ "$("$PSQL" -h "$PG_HOST" -p "$PG_PORT" -d postgres -Atc "select 1 from pg_roles where rolname='$DB'")" != 1 ]; then

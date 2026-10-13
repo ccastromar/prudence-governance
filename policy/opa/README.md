@@ -13,7 +13,7 @@ answers "may this subject perform this action on this pipeline?". Governance lif
 ```bash
 # serve the bundle on 127.0.0.1:8181 (where the Spring adapter points by default);
 # runs the policy tests first and reloads on edits
-./dev/opa.sh
+./scripts/opa.sh
 
 # the exact call the adapter makes:
 curl -s http://127.0.0.1:8181/v1/data/prudence/allow \

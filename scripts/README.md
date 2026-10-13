@@ -1,19 +1,22 @@
-# Chestertown dev IdP (Keycloak)
+# Local scripts (no Docker)
 
-Local SSO for the Chestertown trio (AOS · Prudence · Ernest). Open-source, no Docker —
-Keycloak standalone on your JDK. Test realm only; the passwords here are demo values.
+Run Prudence and its dependencies on one machine. Login comes from a local Keycloak — the
+Chestertown dev IdP shared by AOS · Prudence · Ernest, standalone on your JDK. Test realm only; the passwords here are demo values.
 
 ## Run
+
+Without login (H2 in `./data`, every action signed as `dev-reviewer`): `./scripts/opa.sh`,
+`./scripts/backend.sh`, `./scripts/ui.sh`. With login, as below.
 
 Download Keycloak once (any recent 26.x `.tar.gz` from github.com/keycloak/keycloak/releases)
 and unpack it next to this repo. Then, each in its own terminal:
 
 ```bash
-./dev/keycloak.sh      # IdP on :8081, imports this realm (or set KEYCLOAK_HOME)
-./dev/opa.sh           # policy engine on :8181
-./dev/backend-sso.sh   # Prudence secured (JWT + PostgreSQL/Flyway) on :8099
-./dev/ui-sso.sh        # console with SSO login on :5200
-./dev/seed.sh          # optional: the sample AI systems functional-tests/ uses
+./scripts/keycloak.sh      # IdP on :8081, imports this realm (or set KEYCLOAK_HOME)
+./scripts/opa.sh           # policy engine on :8181
+./scripts/backend-sso.sh   # Prudence secured (JWT + PostgreSQL/Flyway) on :8099
+./scripts/ui-sso.sh        # console with SSO login on :5200
+./scripts/seed.sh          # optional: the sample AI systems docs/functional/ uses
 ```
 
 `backend-sso.sh` runs the production security configuration with local values: a

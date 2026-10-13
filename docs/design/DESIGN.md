@@ -22,7 +22,7 @@ of defense you're standing in* — while the layout, density and components stay
 Import `tokens.css` and set the vertex:
 ```html
 <html data-vertex="govern">
-  <link rel="stylesheet" href="design/tokens.css">
+  <link rel="stylesheet" href="docs/design/tokens.css">
 ```
 Then use the role tokens, never raw hex: `var(--bg)`, `--surface`, `--border`, `--text`,
 `--text-muted`, `--accent`, `--accent-fg`. Dark mode is automatic (`prefers-color-scheme`),

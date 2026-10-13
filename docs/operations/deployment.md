@@ -163,7 +163,7 @@ senders. PDP decisions go to Ernest in batches of `prudence.ernest.batch-size` (
 through `POST /api/inferences/batch`; an Ernest without that endpoint is detected (404) and
 decisions fall back to one-by-one. Ernest counts quotas per credential
 (`THROTTLE_AUTHENTICATED_LIMIT`, Ernest side). Measured on one host: ~1,400 decisions/s direct,
-~2,100/s through the ingestor (see `docs/loadtest-results.md`).
+~2,100/s through the ingestor (see `docs/operations/loadtest-results.md`).
 
 ### With Ernest's Merkle-batched evidence (Ernest ADR-004)
 

@@ -6,6 +6,7 @@ deberías ver. Si ves otra cosa, has encontrado un posible fallo. 🎯
 
 | Archivo | Sistema de IA | Riesgo |
 |---|---|---|
+| [00-arrancar.md](00-arrancar.md) | **Empieza aquí:** cómo encender todo | — |
 | [01-credit-risk-scoring.md](01-credit-risk-scoring.md) | Credit Risk Scoring EU | 🔴 HIGH |
 | [02-cv-screening.md](02-cv-screening.md) | CV Screening Assistant | 🔴 HIGH |
 | [03-customer-chatbot.md](03-customer-chatbot.md) | Customer Support Chatbot | 🟡 LIMITED |
@@ -71,13 +72,12 @@ rojo, todo sale en rojo.
 
 ## Antes de empezar
 
-1. Pide a quien te pasó esto que tenga arrancado: **Prudence** (backend), **la web de Prudence**
-   y, si se puede, **OPA** y **Ernest**.
+1. Enciende todo siguiendo [00-arrancar.md](00-arrancar.md) (o pide que te lo dejen encendido).
 2. Abre en el navegador: **http://localhost:5200**
 3. Verás arriba unas pestañas: *AI system registry · Approvals · Policy decisions · Posture ·
    Incidents · Attestations*.
 4. En **AI system registry**, abajo, están los 4 sistemas de estas guías. Si no están, pide que
-   ejecuten `./dev/seed.sh` (los da de alta; si ya existen, no los duplica). Debajo de cada
+   ejecuten `./scripts/seed.sh` (los da de alta; si ya existen, no los duplica). Debajo de cada
    nombre hay un código largo (el **id**, tipo `5f350cde-8c1b-…`). **Lo vas a necesitar**:
    selecciónalo con doble clic y cópialo (Cmd+C).
 

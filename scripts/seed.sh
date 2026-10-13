@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Registers the sample AI systems from dev/seed-systems.json (the ones functional-tests/ walks
+# Registers the sample AI systems from scripts/seed-systems.json (the ones docs/functional/ walks
 # through) through Prudence's API — the same validation and audit as a person using the
 # console, no SQL behind its back. Idempotent: a system whose name already exists is skipped.
 #
-#   ./dev/seed.sh                  # dev profile (H2, no login) or ./dev/backend-sso.sh
-#   SEED_USER=bob ./dev/seed.sh    # secured mode: register as another read-write user
+#   ./scripts/seed.sh                  # dev profile (H2, no login) or ./scripts/backend-sso.sh
+#   SEED_USER=bob ./scripts/seed.sh    # secured mode: register as another read-write user
 #
 # In secured mode it signs in to the local Keycloak as alice (read-write) to get a token.
 set -euo pipefail
@@ -20,7 +20,7 @@ case "$code" in
     TOKEN="$(curl -sf "$ISSUER/protocol/openid-connect/token" -d grant_type=password -d client_id=prudence-spa \
       -d username="$SEED_USER" -d password="$SEED_USER" \
       | python3 -c 'import sys,json; print(json.load(sys.stdin)["access_token"])')" || {
-      echo "could not sign in as $SEED_USER at $ISSUER (is ./dev/keycloak.sh running?)" >&2; exit 1; }
+      echo "could not sign in as $SEED_USER at $ISSUER (is ./scripts/keycloak.sh running?)" >&2; exit 1; }
     echo "Prudence with login — registering as $SEED_USER" ;;
   000) echo "Prudence is not reachable at $API" >&2; exit 1 ;;
   *) echo "unexpected HTTP $code from $API" >&2; exit 1 ;;

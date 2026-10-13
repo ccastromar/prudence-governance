@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Prudence UI with SSO (Authorization Code + PKCE, client prudence-spa) on http://localhost:5200.
-# Pair it with ./dev/keycloak.sh and ./dev/backend-sso.sh. Users: alice/alice, bob/bob,
-# auditor/auditor (see dev/README.md).
+# Pair it with ./scripts/keycloak.sh and ./scripts/backend-sso.sh. Users: alice/alice, bob/bob,
+# auditor/auditor (see scripts/README.md).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE/../ui"
