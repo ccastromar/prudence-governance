@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.HashMap;
@@ -41,7 +42,9 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
         try {
             Map<?, ?> body = client.get().uri("/api/verify").retrieve().body(Map.class);
             boolean valid = body != null && Boolean.TRUE.equals(body.get("isValid"));
-            Object blocks = body != null ? body.get("blocksVerified") : null;
+            // Ernest verifies incrementally (blocksVerified = new blocks since its checkpoint);
+            // chainLength is the size of the chain. Older Ernest versions only report the former.
+            Object blocks = body == null ? null : body.get("chainLength") != null ? body.get("chainLength") : body.get("blocksVerified");
             if (valid) {
                 return new EvidenceHealth(true, "Hashchain verified" + (blocks != null ? " (" + blocks + " blocks)" : "") + ".");
             }
@@ -72,6 +75,29 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
 
     @Override
     public ExecutionScan scan() {
+        // One server-side aggregation instead of paging the whole chain. Ernest versions
+        // without the endpoint (404) fall back to paging.
+        try {
+            Map<?, ?> body = client.get().uri("/api/stats/executions").retrieve().body(Map.class);
+            Map<String, Long> counts = new HashMap<>();
+            if (body != null && body.get("counts") instanceof Map<?, ?> c) {
+                c.forEach((k, v) -> { if (k instanceof String id && v instanceof Number n) counts.put(id, n.longValue()); });
+            }
+            return new ExecutionScan(counts, true, null);
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() != 404) {
+                log.warn("could not read execution counts from Ernest: {}", e.getMessage());
+                return new ExecutionScan(Map.of(), false, "Execution counts unavailable: " + e.getMessage());
+            }
+        } catch (Exception e) {
+            log.warn("could not read execution counts from Ernest: {}", e.getMessage());
+            return new ExecutionScan(Map.of(), false, "Execution counts unavailable: " + e.getMessage());
+        }
+        return scanByPaging();
+    }
+
+    /// Fallback for Ernest versions without /api/stats/executions.
+    private ExecutionScan scanByPaging() {
         Map<String, Long> counts = new HashMap<>();
         try {
             int page = 1, totalPages = 1;

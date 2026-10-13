@@ -126,13 +126,13 @@ func runHTTP(args []string) {
 					break
 				}
 				n := seq.Add(1)
-				b := strings.ReplaceAll(*body, "{{uuid}}", uuid())
+				b := freshUUIDs(*body)
 				b = strings.ReplaceAll(b, "{{seq}}", fmt.Sprint(n))
 				req, _ := http.NewRequest(*method, *url, bytes.NewBufferString(b))
 				req.Header.Set("Content-Type", "application/json")
 				for _, h := range hs {
 					if k, v, ok := strings.Cut(h, ":"); ok {
-						req.Header.Set(strings.TrimSpace(k), strings.TrimSpace(strings.ReplaceAll(v, "{{uuid}}", uuid())))
+						req.Header.Set(strings.TrimSpace(k), strings.TrimSpace(freshUUIDs(v)))
 					}
 				}
 				t0 := time.Now()
@@ -185,6 +185,15 @@ func runHTTP(args []string) {
 		j, _ := json.Marshal(r)
 		fmt.Println("JSON " + string(j))
 	}
+}
+
+// freshUUIDs replaces every {{uuid}} with its own new UUID (a batch template carries one
+// placeholder per item, and each item needs a distinct id).
+func freshUUIDs(t string) string {
+	for strings.Contains(t, "{{uuid}}") {
+		t = strings.Replace(t, "{{uuid}}", uuid(), 1)
+	}
+	return t
 }
 
 func uuid() string {

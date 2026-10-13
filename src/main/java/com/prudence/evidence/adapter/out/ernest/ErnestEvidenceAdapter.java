@@ -12,6 +12,10 @@ import org.springframework.web.client.RestClientResponseException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -66,16 +70,8 @@ public class ErnestEvidenceAdapter {
     /// id), so a retried delivery carries the same id and can be reconciled. Failures propagate
     /// for the caller to classify with [ErnestHttp#classify].
     public void publishDecision(String inferenceId, DecisionContext context, PolicyDecision decision) {
-        String verdict = switch (decision) {
-            case PolicyDecision.Allow ignored -> "ALLOW";
-            case PolicyDecision.ApprovalRequired ignored -> "APPROVAL_REQUIRED";
-            case PolicyDecision.Deny ignored -> "DENY";
-        };
-        String reason = switch (decision) {
-            case PolicyDecision.ApprovalRequired ar -> ar.reason();
-            case PolicyDecision.Deny d -> d.reason();
-            case PolicyDecision.Allow ignored -> null;
-        };
+        String verdict = verdictOf(decision);
+        String reason = reasonOf(decision);
 
         if (ingestor != null) {
             enqueueDecision(inferenceId, context, verdict, reason);
@@ -127,6 +123,108 @@ public class ErnestEvidenceAdapter {
         registeredModels.add(aiSystemId);
     }
 
+    /// One decision waiting to be published, under its stable outbox id.
+    public record DecisionToPublish(String inferenceId, DecisionContext context, PolicyDecision decision) {}
+
+    /// Ernest answered 404 to the batch endpoint once: it predates it, so publish one by one.
+    private volatile boolean batchUnsupported;
+
+    /// Whether [#publishDecisions] sends real batches (direct transport, Ernest supports it).
+    public boolean batchCapable() {
+        return ingestor == null && !batchUnsupported;
+    }
+
+    /// Publishes several decisions in one POST /api/inferences/batch call. Returns one entry
+    /// per input, in order: null when delivered, otherwise the failure — an HTTP status error
+    /// carrying the status Ernest reported for that item, so [ErnestHttp#classify] treats it
+    /// exactly as it would a single submission. Falls back to one-by-one when batching is not
+    /// available (ingestor transport, or an Ernest without the batch endpoint).
+    public List<Exception> publishDecisions(List<DecisionToPublish> items) {
+        List<Exception> outcomes = new ArrayList<>(Collections.nCopies(items.size(), (Exception) null));
+        if (!batchCapable()) {
+            for (int i = 0; i < items.size(); i++) outcomes.set(i, publishOne(items.get(i)));
+            return outcomes;
+        }
+        if (!enabled) throw new IllegalStateException("Ernest evidence endpoint is not configured");
+
+        // Register each AI system's model once; a failure there fails only that system's items.
+        Map<String, Exception> modelFailures = new HashMap<>();
+        for (DecisionToPublish item : items) {
+            String system = item.context().aiSystemId();
+            if (modelFailures.containsKey(system)) continue;
+            try {
+                ensureModel(system);
+                modelFailures.put(system, null);
+            } catch (Exception e) {
+                modelFailures.put(system, e);
+            }
+        }
+        List<Map<String, Object>> bodies = new ArrayList<>();
+        List<Integer> positions = new ArrayList<>();
+        for (int i = 0; i < items.size(); i++) {
+            DecisionToPublish item = items.get(i);
+            Exception modelFailure = modelFailures.get(item.context().aiSystemId());
+            if (modelFailure != null) {
+                outcomes.set(i, modelFailure);
+                continue;
+            }
+            bodies.add(inferenceBody(item.inferenceId(), item.context(), verdictOf(item.decision()), reasonOf(item.decision())));
+            positions.add(i);
+        }
+        if (bodies.isEmpty()) return outcomes;
+
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> resp = ernest.post().uri("/api/inferences/batch").body(Map.of("items", bodies)).retrieve().body(Map.class);
+            List<?> results = resp != null && resp.get("results") instanceof List<?> l ? l : List.of();
+            for (int j = 0; j < positions.size(); j++) {
+                Map<?, ?> r = j < results.size() && results.get(j) instanceof Map<?, ?> m ? m : Map.of();
+                int status = r.get("status") instanceof Number n ? n.intValue() : 500;
+                if (status != 200) {
+                    Object err = r.get("error");
+                    String error = err == null ? "no result reported" : err.toString();
+                    outcomes.set(positions.get(j), new RestClientResponseException(error, status, "", null, null, null));
+                }
+            }
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                batchUnsupported = true;
+                log.info("Ernest has no /api/inferences/batch; publishing decisions one by one");
+                for (int i : positions) outcomes.set(i, publishOne(items.get(i)));
+            } else {
+                for (int i : positions) outcomes.set(i, e);
+            }
+        } catch (Exception e) {
+            for (int i : positions) outcomes.set(i, e);
+        }
+        return outcomes;
+    }
+
+    private Exception publishOne(DecisionToPublish item) {
+        try {
+            publishDecision(item.inferenceId(), item.context(), item.decision());
+            return null;
+        } catch (Exception e) {
+            return e;
+        }
+    }
+
+    private static String verdictOf(PolicyDecision decision) {
+        return switch (decision) {
+            case PolicyDecision.Allow ignored -> "ALLOW";
+            case PolicyDecision.ApprovalRequired ignored -> "APPROVAL_REQUIRED";
+            case PolicyDecision.Deny ignored -> "DENY";
+        };
+    }
+
+    private static String reasonOf(PolicyDecision decision) {
+        return switch (decision) {
+            case PolicyDecision.ApprovalRequired ar -> ar.reason();
+            case PolicyDecision.Deny d -> d.reason();
+            case PolicyDecision.Allow ignored -> null;
+        };
+    }
+
     /// Ingestor transport: the decision id is the source event id, so the ingestor discards a
     /// re-sent decision as a duplicate. 202 means "durably queued", not yet "appended"; no
     /// model registration is needed (the ingestor maintains the model record itself).
@@ -145,6 +243,11 @@ public class ErnestEvidenceAdapter {
     }
 
     private void sealAndSubmitDecision(String inferenceId, DecisionContext ctx, String verdict, String reason) {
+        ernest.post().uri("/api/inferences").body(inferenceBody(inferenceId, ctx, verdict, reason)).retrieve().toBodilessEntity();
+    }
+
+    /// The submission for one decision (qualified-sealed when a QTSP is configured).
+    private Map<String, Object> inferenceBody(String inferenceId, DecisionContext ctx, String verdict, String reason) {
         String inputHash = sha256Hex(ctx.subject() + "|" + ctx.pipeline() + "|" + ctx.action());
         String outputHash = sha256Hex(verdict + "|" + (reason == null ? "" : reason));
 
@@ -166,7 +269,7 @@ public class ErnestEvidenceAdapter {
         body.put("metadata", metadata);
         if (sealer != null) body.put("signature", sealer.seal(signed));
 
-        ernest.post().uri("/api/inferences").body(body).retrieve().toBodilessEntity();
+        return body;
     }
 
     /// What a decision record says, identical on both transports.

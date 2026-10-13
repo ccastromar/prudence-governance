@@ -1,5 +1,6 @@
 package com.prudence.evidence.delivery;
 
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,9 +12,16 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /// Delivers every kind of pending outbound record: governance evidence to Ernest, alerts by
@@ -34,19 +42,25 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
     private static final Duration LEASE = Duration.ofMinutes(5);
     /// Retry cadence while Ernest refuses Prudence's credentials or is not configured.
     private static final Duration CONFIGURATION_RETRY = Duration.ofMinutes(5);
-    private static final int BATCH = 50;
+    /// Records fetched per pass; a run keeps passing while passes come back full (drain), up
+    /// to MAX_PASSES so one busy target cannot starve the others for long.
+    private static final int BATCH = 500;
+    private static final int MAX_PASSES = 40;
 
     private final List<DeliveryTarget<?>> targets;
     private final List<DeliveryListener> listeners;
     private final TransactionTemplate tx;
     private final int maxAttempts;
+    /// Sends run on this pool: chunks (or single records) of one pass go out concurrently.
+    private final ExecutorService senders;
     /// Targets whose configuration is currently failing, so the operator gets one ERROR (and
     /// one alert) when it starts and one INFO when it recovers, not one per record.
     private final Set<String> configurationFailing = ConcurrentHashMap.newKeySet();
 
     public EvidenceDeliveryWorker(List<DeliveryTarget<?>> targets, List<DeliveryListener> listeners,
                                   PlatformTransactionManager transactionManager,
-                                  @Value("${prudence.evidence.max-attempts:20}") int maxAttempts) {
+                                  @Value("${prudence.evidence.max-attempts:20}") int maxAttempts,
+                                  @Value("${prudence.evidence.delivery-concurrency:8}") int concurrency) {
         this.targets = targets;
         this.listeners = listeners;
         this.tx = new TransactionTemplate(transactionManager);
@@ -54,9 +68,20 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         // finished transaction's resources are still bound to the thread.
         this.tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         this.maxAttempts = maxAttempts;
+        AtomicInteger n = new AtomicInteger();
+        this.senders = Executors.newFixedThreadPool(Math.max(1, concurrency), r -> {
+            Thread t = new Thread(r, "evidence-sender-" + n.incrementAndGet());
+            t.setDaemon(true);
+            return t;
+        });
     }
 
-    @Scheduled(fixedDelayString = "${prudence.evidence.outbox-delay-ms:30000}")
+    @PreDestroy
+    void shutdown() {
+        senders.shutdown();
+    }
+
+    @Scheduled(fixedDelayString = "${prudence.evidence.outbox-delay-ms:2000}")
     public void deliverPending() {
         targets.forEach(this::runSafely);
     }
@@ -76,19 +101,61 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
     }
 
     private <E> void run(DeliveryTarget<E> target) {
-        String now = Delivery.stamp(Instant.now());
-        for (E due : target.due(now, BATCH)) {
-            String id = target.id(due);
-            if (!claim(target, id, target.delivery(due).getNextAttemptAt())) continue; // another worker holds it
-            Consumer<E> receipt;
-            try {
-                receipt = target.send(due);
-            } catch (Exception e) {
-                handleFailure(target, id, e);
+        for (int pass = 0; pass < MAX_PASSES; pass++) {
+            List<E> due = target.due(Delivery.stamp(Instant.now()), BATCH);
+            if (due.isEmpty()) return;
+            List<E> claimed = new ArrayList<>(due.size());
+            for (E record : due) {
+                if (claim(target, target.id(record), target.delivery(record).getNextAttemptAt())) claimed.add(record);
+            }
+            deliver(target, claimed);
+            if (due.size() < BATCH) return; // drained
+        }
+    }
+
+    /// Splits the claimed records into the target's batch size and sends the chunks
+    /// concurrently; each record is then marked delivered or failed on its own.
+    private <E> void deliver(DeliveryTarget<E> target, List<E> claimed) {
+        int size = Math.max(1, target.batchSize());
+        List<Callable<Void>> chunks = new ArrayList<>();
+        for (int i = 0; i < claimed.size(); i += size) {
+            List<E> chunk = claimed.subList(i, Math.min(i + size, claimed.size()));
+            chunks.add(() -> {
+                sendChunk(target, chunk);
+                return null;
+            });
+        }
+        try {
+            for (Future<Void> f : senders.invokeAll(chunks)) {
+                try {
+                    f.get();
+                } catch (ExecutionException e) {
+                    log.warn("{} delivery chunk failed: {}", target.name(), e.getCause().getMessage());
+                }
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    private <E> void sendChunk(DeliveryTarget<E> target, List<E> chunk) {
+        List<DeliveryTarget.Outcome<E>> outcomes;
+        try {
+            outcomes = target.sendBatch(chunk);
+        } catch (Exception e) {
+            chunk.forEach(record -> handleFailure(target, target.id(record), e));
+            return;
+        }
+        for (int i = 0; i < chunk.size(); i++) {
+            String id = target.id(chunk.get(i));
+            DeliveryTarget.Outcome<E> outcome = i < outcomes.size() ? outcomes.get(i)
+                    : DeliveryTarget.Outcome.failed(new IllegalStateException("no outcome reported for " + id));
+            if (outcome.failure() != null) {
+                handleFailure(target, id, outcome.failure());
                 continue;
             }
             update(target, id, record -> {
-                receipt.accept(record);
+                outcome.receipt().accept(record);
                 target.delivery(record).delivered();
             });
             if (configurationFailing.remove(target.name())) {

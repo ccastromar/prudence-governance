@@ -96,7 +96,8 @@ def main() -> None:
     print(f"model registration: HTTP {ms}")
 
     graph = build_graph(gate, evidence)
-    before = evidence.verify().get("blocksVerified")
+    v = evidence.verify()
+    before = v.get("chainLength", v.get("blocksVerified"))  # chainLength on Ernest with incremental verify
     print(f"approved system: {approved}")
     print(f"pending  system: {pending}")
     print(f"Ernest chain before: {before} blocks\n")
@@ -106,7 +107,7 @@ def main() -> None:
     run_once(graph, "APPROVAL", "alice@bank.eu", pending, model_id)    # unapproved system -> stops at gate
 
     after = evidence.verify()
-    print(f"\nErnest chain after:  {after.get('blocksVerified')} blocks  (valid={after.get('isValid')})")
+    print(f"\nErnest chain after:  {after.get('chainLength', after.get('blocksVerified'))} blocks  (valid={after.get('isValid')})")
     print("Same shared core as the Pydantic AI adapter — only the hook point changed.")
 
 

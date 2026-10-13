@@ -30,9 +30,6 @@ public final class ErnestHttp {
         return b.build();
     }
 
-    /// Maps an Ernest write error onto the delivery contract:
-    /// 401/403 or not configured → CONFIGURATION; 408/409/429, 5xx, I/O → RETRYABLE;
-    /// any other 4xx (e.g. invalid signature) → PERMANENT.
     /// A RestClient for Ernest's event-ingestor, with the same timeouts and its own credential.
     public static RestClient ingestorClient(String ingestorUrl, String ingestorKey) {
         SimpleClientHttpRequestFactory timeouts = new SimpleClientHttpRequestFactory();
@@ -43,6 +40,9 @@ public final class ErnestHttp {
         return b.build();
     }
 
+    /// Maps an Ernest write error onto the delivery contract:
+    /// 401/403 or not configured → CONFIGURATION; 408/409/429, 5xx, I/O → RETRYABLE;
+    /// any other 4xx (e.g. invalid signature) → PERMANENT.
     public static DeliveryFailure classify(Throwable error) {
         if (error instanceof RestClientResponseException e) {
             int status = e.getStatusCode().value();

@@ -2,6 +2,7 @@ package com.prudence.evidence.delivery;
 
 import com.prudence.evidence.adapter.out.ernest.ErnestHttp;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -41,6 +42,31 @@ public interface DeliveryTarget<E> {
     /// Sends the record under a stable id. Throws on failure (see [#classify]); on success
     /// returns the receipt to apply to the record (e.g. Ernest's block index).
     Consumer<E> send(E record) throws Exception;
+
+    /// How many records [#sendBatch] takes per call; 1 means one at a time.
+    default int batchSize() {
+        return 1;
+    }
+
+    /// Sends several records in one call and reports one outcome per record, in order.
+    /// Targets whose transport has a batch endpoint override it; the default sends one by one.
+    default List<Outcome<E>> sendBatch(List<E> records) {
+        List<Outcome<E>> outcomes = new ArrayList<>(records.size());
+        for (E record : records) {
+            try {
+                outcomes.add(Outcome.delivered(send(record)));
+            } catch (Exception e) {
+                outcomes.add(Outcome.failed(e));
+            }
+        }
+        return outcomes;
+    }
+
+    /// The result of sending one record: a receipt to apply, or the failure to classify.
+    record Outcome<E>(Consumer<E> receipt, Exception failure) {
+        public static <E> Outcome<E> delivered(Consumer<E> receipt) { return new Outcome<>(receipt, null); }
+        public static <E> Outcome<E> failed(Exception failure) { return new Outcome<>(null, failure); }
+    }
 
     /// Maps a [#send] failure onto the delivery contract. Defaults to Ernest's HTTP contract.
     default DeliveryFailure classify(Exception error) {

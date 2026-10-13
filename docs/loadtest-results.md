@@ -1,10 +1,40 @@
 # Load test — Prudence + Ernest (2026-10-13)
 
+Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
+The "after" table comes first.
+
 Run with `loadtest/run-local.sh` on one laptop (10 cores, 16 GB). **Every component shares the
 same host**, so absolute numbers are indicative; the shape is what matters. Ernest's external
 integrations (EVM anchoring, webhooks, MLflow) were forced off.
 
-## Results
+## After phase 0
+
+| Path | Before | After |
+|---|---|---|
+| PDP decision | ~8,600/s | ~8,800/s (unchanged — never the bottleneck) |
+| Prudence outbox → Ernest, direct | 1.6/s | **1,418/s** (batches of 200, 8 concurrent senders) |
+| Prudence outbox → Ernest, ingestor | 148/s | **2,110/s** |
+| Ernest append via `POST /api/inferences/batch` | — | **2,804 blocks/s** |
+| Ernest append via ingestor worker | ~240/s | **~1,300/s** |
+| `GET /api/verify` | full re-scan every call (1.17 s at 64k) | incremental: 0.002–0.2 s; `?mode=full` 5.3 s at 318k, on demand |
+| Model integrity | 4.8 s at 64k (scan + 1 query/block) | 0.76–1.05 s for ~70k blocks of that model |
+| Drift check | ~1 s and **incomplete** past 20k blocks | **0.11 s**, complete, at 318k blocks (`/api/stats/executions`) |
+| Ingestor with worker stopped | **34 % of accepted events lost** | 10,008 accepted, 9,992 refused with 503 + `Retry-After`, **0 lost** |
+| Ernest log volume | 2.9 GB in 20 min | 240 MB |
+
+Why the chain itself got faster: every append ran `hasRegistrationBlock`, a query on
+`data.modelId` with no index (a collection scan per write), and the ingestor dialed Redis for
+every command. Both were fixed alongside the throttle.
+
+Still open:
+- **Posture 3 s** at ~230k decision blocks for one system: it calls per-model integrity, which
+  is O(blocks of that model). Next: an existence/checkpointed integrity read instead.
+- Single `POST /api/inferences` is capped by design at `THROTTLE_AUTHENTICATED_LIMIT`
+  (6,000/min per credential per route); batch submissions are the high-volume path.
+- Append races under concurrency (409, retried) — 12 % of single writes at 8 clients.
+- The serialized chain remains the structural ceiling; Merkle-batched blocks (phase 1) lift it.
+
+## Before phase 0
 
 | Path | Measured | Notes |
 |---|---|---|

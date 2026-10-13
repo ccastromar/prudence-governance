@@ -72,7 +72,8 @@ def main() -> None:
     evidence.ensure_model(model_id, f"Credit risk scoring agent (Pydantic AI) {run}", "1.0.0",
                           metadata={"framework": "pydantic-ai", "aiSystemId": approved})
 
-    before = evidence.verify().get("blocksVerified")
+    v = evidence.verify()
+    before = v.get("chainLength", v.get("blocksVerified"))  # chainLength on Ernest with incremental verify
     print(f"approved system: {approved}")
     print(f"pending  system: {pending}")
     print(f"Ernest chain before: {before} blocks\n")
@@ -85,7 +86,7 @@ def main() -> None:
     run_once("APPROVAL", "alice@bank.eu", pending, model_id, gate, evidence)
 
     after = evidence.verify()
-    print(f"\nErnest chain after:  {after.get('blocksVerified')} blocks  (valid={after.get('isValid')})")
+    print(f"\nErnest chain after:  {after.get('chainLength', after.get('blocksVerified'))} blocks  (valid={after.get('isValid')})")
     print("Every governed step above is now sealed in the hashchain — offline-verifiable.")
 
 

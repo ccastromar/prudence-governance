@@ -154,3 +154,13 @@ delivers it immediately (`read-write` role; the operator is logged). The same li
 button, is at the bottom of the *Posture* tab. Retrying a record that is not dead-lettered
 returns 409. There is deliberately no "discard": giving up on a piece of evidence should be a
 recorded decision, which is not built yet.
+
+## Evidence delivery throughput
+
+The delivery worker drains the outbox continuously (`PRUDENCE_EVIDENCE_OUTBOX_DELAY_MS`, default
+2 s, only matters when idle), with `prudence.evidence.delivery-concurrency` (8) concurrent
+senders. PDP decisions go to Ernest in batches of `prudence.ernest.batch-size` (200, max 500)
+through `POST /api/inferences/batch`; an Ernest without that endpoint is detected (404) and
+decisions fall back to one-by-one. Ernest counts quotas per credential
+(`THROTTLE_AUTHENTICATED_LIMIT`, Ernest side). Measured on one host: ~1,400 decisions/s direct,
+~2,100/s through the ingestor (see `docs/loadtest-results.md`).
