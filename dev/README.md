@@ -13,6 +13,7 @@ and unpack it next to this repo. Then, each in its own terminal:
 ./dev/opa.sh           # policy engine on :8181
 ./dev/backend-sso.sh   # Prudence secured (JWT + PostgreSQL/Flyway) on :8099
 ./dev/ui-sso.sh        # console with SSO login on :5200
+./dev/seed.sh          # optional: the sample AI systems functional-tests/ uses
 ```
 
 `backend-sso.sh` runs the production security configuration with local values: a
