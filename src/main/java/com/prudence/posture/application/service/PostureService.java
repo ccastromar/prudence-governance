@@ -10,6 +10,7 @@ import com.prudence.posture.application.port.out.SystemInventoryPort;
 import com.prudence.posture.domain.Posture;
 import com.prudence.posture.domain.Posture.PostureStatus;
 import com.prudence.posture.domain.Posture.SystemPosture;
+import com.prudence.registry.domain.ApprovalStatus;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -45,8 +46,13 @@ public class PostureService implements PostureQuery {
         Map<String, Exposure> exposure = incidents.bySystem();
 
         List<SystemInventoryPort.GovernedSystem> governed = inventory.all();
+        // One lookup for every approved system (only they can be GREEN), not one per system.
+        Set<String> withEvidence = !health.healthy() ? Set.of() : evidence.systemsWithEvidence(governed.stream()
+                .filter(s -> s.approvalStatus() == ApprovalStatus.APPROVED && !lapsed(s))
+                .map(SystemInventoryPort.GovernedSystem::id).toList());
         List<SystemPosture> systems = governed.stream()
-                .map(s -> withIncidents(withDelivery(score(s, health.healthy()), backlog.get(s.id())), exposure.get(s.id())))
+                .map(s -> withIncidents(withDelivery(score(s, health.healthy(), withEvidence.contains(s.id())),
+                        backlog.get(s.id())), exposure.get(s.id())))
                 .toList();
 
         PostureStatus overall = systems.stream()
@@ -69,7 +75,7 @@ public class PostureService implements PostureQuery {
         return new Posture(overall, health.healthy(), detail, systems);
     }
 
-    private SystemPosture score(SystemInventoryPort.GovernedSystem s, boolean evidenceHealthy) {
+    private SystemPosture score(SystemInventoryPort.GovernedSystem s, boolean evidenceHealthy, boolean hasEvidence) {
         PostureStatus status;
         String detail;
 
@@ -92,7 +98,7 @@ public class PostureService implements PostureQuery {
                     status = PostureStatus.RED; detail = "Approval expired " + s.approvalExpiresAt() + " — must not run.";
                 } else if (!evidenceHealthy) {
                     status = PostureStatus.AMBER; detail = "Approved, but the evidence layer is unavailable.";
-                } else if (evidence.hasEvidence(s.id())) {
+                } else if (hasEvidence) {
                     status = PostureStatus.GREEN; detail = "Approved and attested by Ernest.";
                 } else {
                     // Approved and the chain is healthy, but nothing has been proved for this

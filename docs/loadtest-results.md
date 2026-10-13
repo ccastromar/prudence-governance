@@ -27,8 +27,10 @@ Why the chain itself got faster: every append ran `hasRegistrationBlock`, a quer
 every command. Both were fixed alongside the throttle.
 
 Still open:
-- **Posture 3 s** at ~230k decision blocks for one system: it calls per-model integrity, which
-  is O(blocks of that model). Next: an existence/checkpointed integrity read instead.
+- ~~Posture 3 s~~ **fixed**: posture now asks Ernest for evidence counts of all approved systems in
+  one indexed call (`GET /api/stats/models`); chain integrity comes from the incremental verify.
+  Measured on the same 318k-block chain (237k blocks for the one system): **0.18–0.26 s**
+  (per-model integrity for that system alone took 5.2 s).
 - Single `POST /api/inferences` is capped by design at `THROTTLE_AUTHENTICATED_LIMIT`
   (6,000/min per credential per route); batch submissions are the high-volume path.
 - Append races under concurrency (409, retried) — 12 % of single writes at 8 clients.

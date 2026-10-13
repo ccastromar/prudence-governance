@@ -10,7 +10,11 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.List;
 import java.util.Map;
 
@@ -52,6 +56,34 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
         } catch (Exception e) {
             log.warn("could not read evidence health from Ernest: {}", e.getMessage());
             return new EvidenceHealth(false, "Ernest evidence layer is unreachable.");
+        }
+    }
+
+    @Override
+    public Set<String> systemsWithEvidence(Collection<String> aiSystemIds) {
+        List<String> ids = List.copyOf(new LinkedHashSet<>(aiSystemIds));
+        Set<String> found = new HashSet<>();
+        try {
+            for (int i = 0; i < ids.size(); i += 500) {
+                List<String> chunk = ids.subList(i, Math.min(i + 500, ids.size()));
+                Map<?, ?> body = client.get().uri(b -> b.path("/api/stats/models")
+                        .queryParam("ids", String.join(",", chunk)).build()).retrieve().body(Map.class);
+                if (body != null && body.get("counts") instanceof Map<?, ?> counts) {
+                    counts.forEach((k, v) -> { if (k instanceof String id && v instanceof Number n && n.longValue() > 0) found.add(id); });
+                }
+            }
+            return found;
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                // Ernest without /api/stats/models: one integrity call per system.
+                ids.stream().filter(this::hasEvidence).forEach(found::add);
+                return found;
+            }
+            log.warn("could not read evidence counts from Ernest: {}", e.getMessage());
+            return Set.of();
+        } catch (Exception e) {
+            log.warn("could not read evidence counts from Ernest: {}", e.getMessage());
+            return Set.of();
         }
     }
 
