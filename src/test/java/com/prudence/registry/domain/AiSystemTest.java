@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.List;
+
 class AiSystemTest {
 
     private static final AiSystemId SYSTEM_ID = new AiSystemId("system-1");
@@ -15,19 +17,19 @@ class AiSystemTest {
     private static final AiSystem.Owner OWNER = new AiSystem.Owner("owner", "owner@example.test");
 
     @Test
-    void registrationLeavesHighRiskSystemPendingApproval() {
+    void registrationLeavesHighRiskSystemUnderAssessment() {
         AiSystem system = register(RiskTier.HIGH);
 
-        assertEquals(ApprovalStatus.PENDING_APPROVAL, system.approvalStatus());
+        assertEquals(ApprovalStatus.UNDER_ASSESSMENT, system.approvalStatus());
         assertFalse(system.isApproved());
     }
 
     @Test
-    void registrationApprovesLimitedRiskSystem() {
+    void registrationDoesNotAutoApproveLimitedRiskSystem() {
         AiSystem system = register(RiskTier.LIMITED);
 
-        assertEquals(ApprovalStatus.APPROVED, system.approvalStatus());
-        assertTrue(system.isApproved());
+        assertEquals(ApprovalStatus.UNDER_ASSESSMENT, system.approvalStatus());
+        assertFalse(system.isApproved());
     }
 
     @Test
@@ -41,19 +43,25 @@ class AiSystemTest {
     @Test
     void reviewerCanApprovePendingSystem() {
         AiSystem system = register(RiskTier.HIGH);
+        system.submitForReview();
 
-        system.approve();
+        system.approve("risk-reviewer", 365);
+        system.approve("dpo-reviewer", 365);
 
         assertEquals(ApprovalStatus.APPROVED, system.approvalStatus());
         assertTrue(system.isApproved());
     }
 
     @Test
-    void reviewerCanReapproveRejectedSystem() {
-        AiSystem system = AiSystem.rehydrate(
-                SYSTEM_ID, "assistant", PURPOSE, OWNER, RiskTier.HIGH, ApprovalStatus.REJECTED);
+    void rejectedSystemMustBeResubmittedBeforeApproval() {
+        AiSystem system = register(RiskTier.HIGH);
+        system.submitForReview();
+        system.reject();
 
-        system.approve();
+        assertThrows(DomainException.class, () -> system.approve("risk-reviewer", 365));
+        system.submitForReview();
+        system.approve("risk-reviewer", 365);
+        system.approve("dpo-reviewer", 365);
 
         assertTrue(system.isApproved());
     }
@@ -62,19 +70,22 @@ class AiSystemTest {
     void prohibitedSystemCannotBeApproved() {
         AiSystem system = register(RiskTier.PROHIBITED);
 
-        assertThrows(DomainException.class, system::approve);
+        assertThrows(DomainException.class, () -> system.approve("risk-reviewer", 365));
     }
 
     @Test
     void alreadyApprovedSystemCannotBeApprovedAgain() {
         AiSystem system = register(RiskTier.LIMITED);
+        system.submitForReview();
+        system.approve("risk-reviewer", 365);
 
-        assertThrows(DomainException.class, system::approve);
+        assertThrows(DomainException.class, () -> system.approve("risk-reviewer", 365));
     }
 
     @Test
     void reviewerCanRejectPendingSystem() {
         AiSystem system = register(RiskTier.HIGH);
+        system.submitForReview();
 
         system.reject();
 
@@ -94,16 +105,21 @@ class AiSystemTest {
         AiSystem system = register(RiskTier.LIMITED);
 
         system.reclassify(RiskTier.HIGH);
-        assertEquals(ApprovalStatus.PENDING_APPROVAL, system.approvalStatus());
+        assertEquals(ApprovalStatus.UNDER_ASSESSMENT, system.approvalStatus());
 
         system.reclassify(RiskTier.PROHIBITED);
         assertEquals(ApprovalStatus.BLOCKED, system.approvalStatus());
 
         system.reclassify(RiskTier.MINIMAL);
-        assertEquals(ApprovalStatus.APPROVED, system.approvalStatus());
+        assertEquals(ApprovalStatus.UNDER_ASSESSMENT, system.approvalStatus());
     }
 
     private static AiSystem register(RiskTier riskTier) {
-        return AiSystem.register(SYSTEM_ID, "assistant", PURPOSE, OWNER, riskTier);
+        return AiSystem.register(SYSTEM_ID, "assistant", PURPOSE, OWNER, riskTier, classification());
+    }
+
+    private static ClassificationAssessment classification() {
+        return new ClassificationAssessment(RegulatoryRole.DEPLOYER, "1.0", "a".repeat(64), false,
+                true, "European Union", "test users", "Documented assessment", List.of("Article 9"), null);
     }
 }

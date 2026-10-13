@@ -3,8 +3,10 @@ package com.prudence.policy.adapter.out.registry;
 import com.prudence.policy.application.port.out.RegisteredSystemLookup;
 import com.prudence.registry.application.port.out.AiSystemRepository;
 import com.prudence.registry.domain.AiSystemId;
+import com.prudence.registry.domain.ApprovalStatus;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Optional;
 
 /// ACL adapter: satisfies the policy context's lookup port by delegating to the registry
@@ -21,6 +23,8 @@ public class RegisteredSystemLookupAdapter implements RegisteredSystemLookup {
     @Override
     public Optional<SystemRiskView> find(String aiSystemId) {
         return registry.findById(new AiSystemId(aiSystemId))
-                .map(s -> new SystemRiskView(s.id().value(), s.riskTier(), s.isApproved()));
+                .map(s -> new SystemRiskView(s.id().value(), s.riskTier(), s.isApproved(),
+                        s.classification().systemVersion(), s.classification().modelHash(),
+                        s.approvalStatus() == ApprovalStatus.EXPIRED || s.hasLapsed(Instant.now())));
     }
 }

@@ -1,7 +1,8 @@
 """The LangGraph Policy Enforcement Point: wrap a node with the Prudence gate.
 
 `governed_node(fn, ...)` returns a node that consults the Prudence PDP before `fn` runs and
-seals both the decision and the execution in Ernest. `gate_route` is a routing function for
+seals the execution in Ernest. The decision itself is recorded by Prudence (the PDP seals
+every decision it makes), so the node does not record it a second time. `gate_route` is a routing function for
 a conditional edge, so the graph itself stops at the gate on DENY / APPROVAL_REQUIRED — the
 gate doesn't just annotate state, it gates the flow.
 
@@ -31,16 +32,6 @@ def governed_node(fn: Callable[[dict], dict], *, pipeline: str, action: str = "r
         model_id = state.get(model_key)
 
         decision = gate.decide(subject, pipeline, ai_system, action)
-
-        if evidence is not None and model_id:
-            evidence.log_step(
-                model_id,
-                inputs={"subject": subject, "action": action, "input": _tool_io(state)},
-                output={"gate": decision.decision},
-                metadata={"stage": "governance_decision", "pipeline": pipeline, "action": action,
-                          "subject": subject, "aiSystemId": ai_system,
-                          "decision": decision.decision, "reason": decision.reason},
-            )
 
         if not decision.allowed:
             return {"gate": decision.decision, "reason": decision.reason,

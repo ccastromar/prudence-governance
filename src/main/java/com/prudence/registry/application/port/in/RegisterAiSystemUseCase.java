@@ -2,6 +2,7 @@ package com.prudence.registry.application.port.in;
 
 import com.prudence.registry.domain.AiSystem;
 import com.prudence.registry.domain.RiskTier;
+import com.prudence.registry.domain.ClassificationAssessment;
 
 /// Driving port: register a new AI system in the governance registry.
 public interface RegisterAiSystemUseCase {
@@ -12,5 +13,6 @@ public interface RegisterAiSystemUseCase {
             String intendedPurpose,
             String ownerName,
             String ownerEmail,
-            RiskTier riskTier) {}
+            RiskTier riskTier,
+            ClassificationAssessment classification) {}
 }

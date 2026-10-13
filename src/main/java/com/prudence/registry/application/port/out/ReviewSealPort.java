@@ -2,10 +2,12 @@ package com.prudence.registry.application.port.out;
 
 import com.prudence.registry.domain.ReviewEvent;
 
-/// Driven port: seal a review event into the evidence plane (Ernest). Fail-soft — returns an
-/// unsealed result when the evidence plane is unavailable; never blocks the review.
+/// Driven port: record a review event in the evidence plane (Ernest) under its id. Throws on
+/// failure so the evidence delivery worker can classify and retry it; it is only ever called
+/// from that worker, never from the review itself.
 public interface ReviewSealPort {
-    SealResult seal(ReviewEvent event);
+    SealResult seal(ReviewEvent event) throws Exception;
 
-    record SealResult(boolean sealed, Long blockIndex) {}
+    /// `qualified`: carries a QTSP seal (false when recorded without one).
+    record SealResult(boolean qualified, Long blockIndex) {}
 }

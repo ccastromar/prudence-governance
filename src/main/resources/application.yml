@@ -2,33 +2,83 @@ spring:
   application:
     name: prudence
   datasource:
-    # Durable by default: an H2 database file under ./data, so the registry and approvals
-    # survive restarts (the in-memory DB lost them). Override the three vars to point at a
-    # managed database in production (e.g. Postgres) — add its driver and set PRUDENCE_DB_URL;
-    # no code changes. AUTO_SERVER lets a second process (a DB tool) attach while the app runs.
-    url: ${PRUDENCE_DB_URL:jdbc:h2:file:./data/prudence;AUTO_SERVER=TRUE}
-    username: ${PRUDENCE_DB_USER:sa}
-    password: ${PRUDENCE_DB_PASSWORD:}
+    # Production is explicit: do not fall back to a local, unauthenticated H2 store.
+    url: ${PRUDENCE_DB_URL}
+    username: ${PRUDENCE_DB_USER}
+    password: ${PRUDENCE_DB_PASSWORD}
+  mail:
+    # Host/port/credentials come from SPRING_MAIL_HOST, _PORT, _USERNAME, _PASSWORD. These
+    # bound every SMTP call well below the delivery lease.
+    properties:
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 10000
+      mail.smtp.writetimeout: 10000
   jpa:
     hibernate:
-      # `update` evolves the schema without dropping data across restarts.
-      ddl-auto: update
+      # Schema is owned by Flyway (db/migration); Hibernate only checks it matches.
+      ddl-auto: validate
     open-in-view: false
 
 server:
   port: 8099
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
 # Prudence integrations (control plane): the OPA policy engine (PDP sidecar) and Ernest
 # (evidence + attestation sealing). Fail-closed when unreachable.
 prudence:
+  governance:
+    # Approval expires unless it is deliberately renewed through review.
+    approval-validity-days: ${PRUDENCE_APPROVAL_VALIDITY_DAYS:365}
+    # The renewal notice is issued this many days before an approval expires; reviewers can
+    # renew any time before expiry without the system stopping. A lapsed approval becomes
+    # EXPIRED and must be resubmitted.
+    review-window-days: ${PRUDENCE_REVIEW_WINDOW_DAYS:30}
+    lifecycle-sweep-ms: ${PRUDENCE_LIFECYCLE_SWEEP_MS:3600000}
+  incidents:
+    # Art. 73 deadlines can be 2 days: check often. "Due" alerts go out 24h before the deadline.
+    deadline-check-ms: ${PRUDENCE_INCIDENT_DEADLINE_CHECK_MS:900000}
+  alerts:
+    # Expiry, renewal and drift alerts go to governance (plus the system owner); dead-lettered
+    # evidence and configuration failures go to operations. Comma-separated addresses.
+    governance-recipients: ${PRUDENCE_ALERTS_GOVERNANCE_TO:}
+    operations-recipients: ${PRUDENCE_ALERTS_OPERATIONS_TO:}
+    from: ${PRUDENCE_ALERTS_FROM:prudence@localhost}
+    console-url: ${PRUDENCE_CONSOLE_URL:}
+    drift-check-ms: ${PRUDENCE_DRIFT_CHECK_MS:900000}
+  evidence:
+    outbox-delay-ms: ${PRUDENCE_EVIDENCE_OUTBOX_DELAY_MS:30000}
+    # Transient failures back off exponentially (capped at 1h); at this limit the event is
+    # dead-lettered and posture turns RED. Permanent rejections dead-letter immediately.
+    max-attempts: ${PRUDENCE_EVIDENCE_MAX_ATTEMPTS:20}
+    # Undelivered evidence older than this makes the system AMBER in posture.
+    overdue-after-minutes: ${PRUDENCE_EVIDENCE_OVERDUE_AFTER_MINUTES:15}
   opa:
     base-url: http://127.0.0.1:8181
     decision-path: /v1/data/prudence/allow
+    # Deployment supplies the immutable bundle identity used to reproduce a decision.
+    policy-version: ${PRUDENCE_OPA_POLICY_VERSION:local-dev}
+    policy-hash: ${PRUDENCE_OPA_POLICY_HASH:unverified}
   ernest:
     base-url: http://127.0.0.1:3001
     # Credential presented to Ernest (X-Ernest-Api-Key) for reads and evidence writes.
     # Supplied via the environment; blank when Ernest runs with open access.
     api-key: ${PRUDENCE_ERNEST_API_KEY:}
+    # How PDP decisions (one per governed agent step) reach Ernest: `direct` appends each via
+    # /api/inferences; `ingestor` queues them on Ernest's event-ingestor (Redis Streams,
+    # deduped by decision id) for volume. Ingestor records carry no qualified seal, so it
+    # cannot be combined with a QTSP. Reviews/attestations/incidents always go direct.
+    decision-transport: ${PRUDENCE_ERNEST_DECISION_TRANSPORT:direct}
+    ingestor-url: ${PRUDENCE_ERNEST_INGESTOR_URL:}
+    ingestor-key: ${PRUDENCE_ERNEST_INGESTOR_KEY:}
   qtsp:
     # QTSP CSC remote-signing endpoint to qualify-seal evidence (ADR-002 B2). Blank disables
     # sealing (decisions are then only logged). e.g. http://127.0.0.1:4600/csc/sign

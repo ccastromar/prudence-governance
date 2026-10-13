@@ -106,6 +106,7 @@ final class OscalMapper {
         List<Map<String, Object>> props = new ArrayList<>();
         props.add(prop("content-hash", a.contentHash()));
         props.add(prop("sealed", String.valueOf(a.evidence().sealed())));
+        props.add(prop("evidence-delivery", a.evidence().delivery()));
         props.add(prop("evidence-model", a.evidence().modelId()));
         if (a.evidence().blockIndex() != null) props.add(prop("ernest-block", String.valueOf(a.evidence().blockIndex())));
         resource.put("props", props);

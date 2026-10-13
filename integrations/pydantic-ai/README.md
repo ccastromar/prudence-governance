@@ -24,8 +24,10 @@ without changing its code.
 ## What gets sealed
 
 Per governed call, Ernest records:
-- a **governance-decision** block (who asked what, under which verdict), and
 - an **execution** block (when the call was allowed).
+
+The governance decision itself is recorded by Prudence, which seals every decision it makes
+under the AI system's registry id — the tool does not record it a second time.
 
 Only SHA-256 hashes of inputs/outputs are sent — raw data never leaves the process.
 

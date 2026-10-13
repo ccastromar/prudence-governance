@@ -1,5 +1,6 @@
 package com.prudence.shared.web;
 
+import com.prudence.incident.domain.IncidentNotFoundException;
 import com.prudence.registry.domain.AiSystemNotFoundException;
 import com.prudence.shared.exception.DomainException;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,17 @@ public class GovernanceExceptionHandler {
     @ExceptionHandler(AiSystemNotFoundException.class)
     ProblemDetail onNotFound(AiSystemNotFoundException e) {
         return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    @ExceptionHandler(IncidentNotFoundException.class)
+    ProblemDetail onIncidentNotFound(IncidentNotFoundException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+    }
+
+    /// Invalid input the domain rejects (missing fields, impossible dates) is the caller's error.
+    @ExceptionHandler(IllegalArgumentException.class)
+    ProblemDetail onInvalidInput(IllegalArgumentException e) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
     @ExceptionHandler(DomainException.class)

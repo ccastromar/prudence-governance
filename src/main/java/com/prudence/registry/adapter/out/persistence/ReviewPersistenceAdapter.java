@@ -18,8 +18,10 @@ public class ReviewPersistenceAdapter implements ReviewLog {
 
     @Override
     public void append(ReviewEvent e) {
+        // Appended PENDING, in the review's own transaction; the evidence delivery worker
+        // records it in Ernest afterwards.
         jpa.save(new ReviewEventJpaEntity(e.id(), e.aiSystemId(), e.action(), e.reviewer(), e.reason(),
-                e.at(), e.previousStatus(), e.newStatus(), e.sealed(), e.blockIndex()));
+                e.at(), e.previousStatus(), e.newStatus()));
     }
 
     @Override
@@ -32,8 +34,9 @@ public class ReviewPersistenceAdapter implements ReviewLog {
         return jpa.findAllByOrderByAtDesc().stream().map(ReviewPersistenceAdapter::toDomain).toList();
     }
 
-    private static ReviewEvent toDomain(ReviewEventJpaEntity e) {
+    public static ReviewEvent toDomain(ReviewEventJpaEntity e) {
         return new ReviewEvent(e.getId(), e.getAiSystemId(), e.getAction(), e.getReviewer(), e.getReason(),
-                e.getAt(), e.getPreviousStatus(), e.getNewStatus(), e.isSealed(), e.getBlockIndex());
+                e.getAt(), e.getPreviousStatus(), e.getNewStatus(), e.getDelivery().status().name(),
+                e.isSealed(), e.getBlockIndex());
     }
 }

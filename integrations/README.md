@@ -14,8 +14,10 @@ langgraph/            prudence_langgraph — governed_node + gate_route for a La
 ```
 
 Every adapter does the same two things at its framework's natural hook point: consult the
-PDP before a step runs (allow / deny / approval-required), and seal the decision **and** the
-execution in Ernest afterwards. Adding a runtime (OpenAI Agents SDK, CrewAI, …) is a new
+PDP before a step runs (allow / deny / approval-required), and seal the execution in Ernest
+afterwards. The decision is sealed by Prudence itself (the PDP records every decision it
+makes), so adapters never record it twice: per governed call that is one PDP call and one
+Ernest write from the agent. Adding a runtime (OpenAI Agents SDK, CrewAI, …) is a new
 thin adapter, not a new core.
 
 ## Qualified seals (eIDAS B2) — optional
@@ -42,3 +44,14 @@ governed step is sealed. See each folder's README / example.
 
 **Strategic note.** AOS is one reference enforcement point among these — not the product. The
 defensible layer is govern + prove, portable across whatever runtime a team already uses.
+
+## High-volume evidence (Ernest event-ingestor)
+
+Set `ERNEST_INGESTOR_URL` (and `ERNEST_INGESTOR_KEY`) and `ErnestEvidence.log_step` queues step
+records on Ernest's event-ingestor instead of appending them directly: requests return 202 once
+queued, and the inference id doubles as the ingestor's dedupe key. Ingestor records carry no
+qualified seal, so a `QtspSealer` with an ingestor URL is rejected. See
+`docs/deployment.md` → "High-volume evidence".
+
+Note: `log_step` is still synchronous and does not retry; a failed write returns
+`(None, {"error": …})` and is not re-sent.

@@ -1,0 +1,60 @@
+name: prudence
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: prudence
+      POSTGRES_USER: prudence
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - prudence-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prudence -d prudence"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  opa:
+    image: openpolicyagent/opa:1.7.1-static
+    command: ["run", "--server", "--addr", ":8181", "/policy"]
+    volumes:
+      - ./policy/opa:/policy:ro
+
+  prudence:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opa:
+        condition: service_started
+    environment:
+      PRUDENCE_DB_URL: jdbc:postgresql://postgres:5432/prudence
+      PRUDENCE_DB_USER: prudence
+      PRUDENCE_DB_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PRUDENCE_ERNEST_API_KEY: ${PRUDENCE_ERNEST_API_KEY:?set PRUDENCE_ERNEST_API_KEY in .env}
+      PRUDENCE_CORS_ORIGINS: ${PRUDENCE_CORS_ORIGINS:-http://localhost:8080}
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${OIDC_ISSUER_URI:?set OIDC_ISSUER_URI in .env}
+      PRUDENCE_ERNEST_BASE_URL: ${PRUDENCE_ERNEST_BASE_URL:?set PRUDENCE_ERNEST_BASE_URL in .env}
+      PRUDENCE_OPA_BASE_URL: http://opa:8181
+      PRUDENCE_OPA_POLICY_VERSION: ${PRUDENCE_OPA_POLICY_VERSION:-compose-dev}
+      PRUDENCE_OPA_POLICY_HASH: ${PRUDENCE_OPA_POLICY_HASH:?set PRUDENCE_OPA_POLICY_HASH in .env}
+      SPRING_MAIL_HOST: ${SMTP_HOST:?set SMTP_HOST in .env}
+      SPRING_MAIL_PORT: ${SMTP_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD:-}
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS:-true}
+      PRUDENCE_ALERTS_FROM: ${PRUDENCE_ALERTS_FROM:?set PRUDENCE_ALERTS_FROM in .env}
+      PRUDENCE_ALERTS_GOVERNANCE_TO: ${PRUDENCE_ALERTS_GOVERNANCE_TO:?set PRUDENCE_ALERTS_GOVERNANCE_TO in .env}
+      PRUDENCE_ALERTS_OPERATIONS_TO: ${PRUDENCE_ALERTS_OPERATIONS_TO:?set PRUDENCE_ALERTS_OPERATIONS_TO in .env}
+      PRUDENCE_CONSOLE_URL: ${PRUDENCE_CONSOLE_URL:-}
+
+  ui:
+    build: ./ui
+    depends_on:
+      - prudence
+    ports:
+      - "8080:8080"
+
+volumes:
+  prudence-postgres:

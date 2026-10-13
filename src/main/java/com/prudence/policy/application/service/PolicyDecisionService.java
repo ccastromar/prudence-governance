@@ -7,6 +7,9 @@ import com.prudence.policy.application.port.out.RegisteredSystemLookup;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Optional;
 
 /// The PDP. Composes governance facts (is the system registered, approved, high-risk?)
 /// with the external policy engine, returns a typed decision, and records it as evidence.
@@ -24,18 +27,31 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
     }
 
     @Override
+    @Transactional
     public PolicyDecision decide(DecisionContext context) {
-        PolicyDecision decision = evaluate(context);
-        evidence.recordDecision(context, decision); // best-effort; sealed by Ernest
+        var view = registry.find(context.aiSystemId());
+        // Evidence carries the registered system version/model hash, so the decision can be
+        // reproduced against the exact build it governed (not the caller's "unknown").
+        DecisionContext effective = view.map(system -> new DecisionContext(context.subject(), context.pipeline(),
+                context.aiSystemId(), context.action(), context.policyVersion(), context.policyHash(),
+                system.systemVersion(), system.modelHash())).orElse(context);
+        PolicyDecision decision = evaluate(effective, view);
+        evidence.recordDecision(effective, decision); // durable outbox, delivered to Ernest
         return decision;
     }
 
-    private PolicyDecision evaluate(DecisionContext context) {
-        var view = registry.find(context.aiSystemId());
+    private PolicyDecision evaluate(DecisionContext context, Optional<RegisteredSystemLookup.SystemRiskView> view) {
         if (view.isEmpty()) {
             return PolicyDecision.deny("unknown AI system: " + context.aiSystemId());
         }
         var system = view.get();
+        if (!system.approved() && system.approvalExpired()) {
+            // Not "awaiting approval": it had one and let it lapse — a renewal is what's needed.
+            return switch (system.riskTier()) {
+                case HIGH -> PolicyDecision.approval("risk-officer", "high-risk system approval expired; renewal review required");
+                default -> PolicyDecision.deny("AI system approval expired; renewal review required");
+            };
+        }
         if (!system.approved()) {
             return switch (system.riskTier()) {
                 case HIGH -> PolicyDecision.approval("risk-officer", "high-risk system awaiting governance approval");

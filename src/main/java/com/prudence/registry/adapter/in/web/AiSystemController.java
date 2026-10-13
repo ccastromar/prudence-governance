@@ -62,6 +62,17 @@ public class AiSystemController {
         return AiSystemResponse.from(review.approve(new AiSystemId(id), reviewerOf(principal)));
     }
 
+    @PostMapping("/{id}/submit")
+    public AiSystemResponse submitForReview(@PathVariable String id) {
+        return AiSystemResponse.from(review.submitForReview(new AiSystemId(id)));
+    }
+
+    /// Periodic review: renew a still-valid approval (two independent sign-offs for high risk).
+    @PostMapping("/{id}/renew")
+    public AiSystemResponse renew(@PathVariable String id, Principal principal) {
+        return AiSystemResponse.from(review.renew(new AiSystemId(id), reviewerOf(principal)));
+    }
+
     @PostMapping("/{id}/reject")
     public AiSystemResponse reject(@PathVariable String id,
                                    @RequestBody(required = false) ReviewRequest body,

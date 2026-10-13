@@ -20,7 +20,8 @@ public class SystemInventoryAdapter implements SystemInventoryPort {
     @Override
     public List<GovernedSystem> all() {
         return registry.findAll().stream()
-                .map(s -> new GovernedSystem(s.id().value(), s.name(), s.riskTier(), s.approvalStatus()))
+                .map(s -> new GovernedSystem(s.id().value(), s.name(), s.riskTier(), s.approvalStatus(),
+                        s.approvalExpiresAt(), s.reviewDue()))
                 .toList();
     }
 }

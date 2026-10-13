@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { api, type Attestation, type AttestationSummary, type Verification } from '../api';
-import { RiskBadge, StatusBadge, PostureBadge } from '../components';
+import { EvidenceState, RiskBadge, StatusBadge, PostureBadge } from '../components';
 
 const verdictColor: Record<string, string> = {
-  VERIFIED: 'var(--ok)', ALTERED: 'var(--danger)', UNSEALED: 'var(--warn)', UNCONFIRMED: 'var(--warn)',
+  VERIFIED: 'var(--ok)', ALTERED: 'var(--danger)', PENDING: 'var(--warn)', UNSEALED: 'var(--warn)', UNCONFIRMED: 'var(--warn)',
 };
 
 /// Attestations: generate a tamper-evident report of the estate and see it sealed in Ernest.
@@ -65,9 +65,7 @@ export default function Attestations() {
               <td>{when(a.generatedAt)}</td>
               <td><PostureBadge status={a.overallPosture} /></td>
               <td><code>{shortHash(a.contentHash)}</code></td>
-              <td>{a.sealed
-                ? <span style={{ color: 'var(--ok)' }}>● sealed · Ernest block {a.blockIndex}</span>
-                : <span style={{ color: 'var(--warn)' }}>● unsealed</span>}</td>
+              <td><EvidenceState delivery={a.delivery} sealed={a.sealed} blockIndex={a.blockIndex} /></td>
             </tr>
           ))}
         </tbody>
@@ -92,16 +90,15 @@ export default function Attestations() {
               <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{verification.detail}</div>
               <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>
                 hash recomputed {verification.hashMatches ? '✓ matches' : '✗ differs'}
-                {verification.sealed && <> · Ernest {verification.ernestConfirmed ? '✓ confirmed' : '✗ not found'} · chain {verification.chainValid ? '✓ valid' : '✗ invalid'}{verification.blockIndex != null && <> · block {verification.blockIndex}</>}</>}
+                {(verification.verdict === 'VERIFIED' || verification.verdict === 'UNCONFIRMED') && <> · qualified seal {verification.sealed ? '✓' : '✗'} · Ernest {verification.ernestConfirmed ? '✓ confirmed' : '✗ not found'} · chain {verification.chainValid ? '✓ valid' : '✗ invalid'}{verification.blockIndex != null && <> · block {verification.blockIndex}</>}</>}
               </div>
             </div>
           )}
           <div className="mut" style={{ fontSize: 'var(--fs-sm)', marginBottom: 'var(--sp-4)' }}>
             <div>Issued: <b>{when(selected.generatedAt)}</b></div>
             <div>Content hash: <code>{selected.contentHash}</code></div>
-            <div>Evidence: {selected.evidence.sealed
-              ? <span style={{ color: 'var(--ok)' }}>{selected.evidence.detail} (model <code>{selected.evidence.modelId}</code>)</span>
-              : <span style={{ color: 'var(--warn)' }}>{selected.evidence.detail}</span>}</div>
+            <div>Evidence: <EvidenceState delivery={selected.evidence.delivery} sealed={selected.evidence.sealed} blockIndex={selected.evidence.blockIndex} />
+              {' — '}{selected.evidence.detail} (model <code>{selected.evidence.modelId}</code>)</div>
           </div>
 
           <table>

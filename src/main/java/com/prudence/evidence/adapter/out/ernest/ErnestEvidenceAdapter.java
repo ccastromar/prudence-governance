@@ -1,7 +1,6 @@
 package com.prudence.evidence.adapter.out.ernest;
 
 import com.prudence.config.IntegrationProperties;
-import com.prudence.evidence.application.port.out.EvidencePort;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
 import org.slf4j.Logger;
@@ -16,19 +15,18 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /// Driven adapter to Ernest. Records each governance decision as a tamper-evident provenance
-/// block — and, when a QTSP is configured (ADR-002 B2), qualify-seals it, so the control
+/// block — and, when a QTSP is configured (ADR-002 B2), additionally qualify-seals it, so the control
 /// plane proves its own decisions exactly as the runtime agents prove their steps. The AI
 /// system's registry id is used as the Ernest model id, tying the governance record to the
 /// system it governs (and letting posture read evidence back per system).
 ///
-/// Best-effort: evidence recording never blocks or fails a decision. Without an Ernest key
-/// or QTSP endpoint it falls back to logging (dev/tests stay offline).
+/// Called only by the evidence outbox worker, so recording never blocks or fails a decision.
+/// A QTSP is optional for recording; without it, Ernest still receives an unsigned record.
 @Component
-public class ErnestEvidenceAdapter implements EvidencePort {
+public class ErnestEvidenceAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(ErnestEvidenceAdapter.class);
 
@@ -36,23 +34,38 @@ public class ErnestEvidenceAdapter implements EvidencePort {
     private final ErnestSealer sealer;
     private final boolean enabled;
     private final Set<String> registeredModels = ConcurrentHashMap.newKeySet();
+    /// Non-null when decisions are queued on Ernest's event-ingestor instead of appended directly.
+    private final RestClient ingestor;
 
     public ErnestEvidenceAdapter(IntegrationProperties props) {
-        String apiKey = props.ernest().apiKey();
-        RestClient.Builder b = RestClient.builder().baseUrl(props.ernest().baseUrl());
-        if (apiKey != null && !apiKey.isBlank()) {
-            b.defaultHeader("X-Ernest-Api-Key", apiKey);
-        }
-        this.ernest = b.build();
+        this.ernest = ErnestHttp.client(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
-        boolean canSeal = apiKey != null && !apiKey.isBlank() && cscUrl != null && !cscUrl.isBlank();
+        boolean canSeal = cscUrl != null && !cscUrl.isBlank();
         this.sealer = canSeal ? new ErnestSealer(cscUrl) : null;
-        this.enabled = canSeal;
+        this.enabled = props.ernest().baseUrl() != null && !props.ernest().baseUrl().isBlank();
+
+        if (props.ernest().decisionsViaIngestor()) {
+            String url = props.ernest().ingestorUrl();
+            if (url == null || url.isBlank()) {
+                throw new IllegalStateException("prudence.ernest.decision-transport=ingestor needs prudence.ernest.ingestor-url");
+            }
+            if (sealer != null) {
+                // The ingestor stores its own event envelope in the block, so a seal over the
+                // direct block-data would not verify. Refuse rather than silently drop seals.
+                throw new IllegalStateException("qualified seals (prudence.qtsp.csc-url) need decision-transport=direct");
+            }
+            this.ingestor = ErnestHttp.ingestorClient(url, props.ernest().ingestorKey());
+            log.info("PDP decisions are queued on Ernest's event-ingestor at {}", url);
+        } else {
+            this.ingestor = null;
+        }
     }
 
-    @Override
-    public void recordDecision(DecisionContext context, PolicyDecision decision) {
+    /// Delivers one decision under a caller-supplied, stable `inferenceId` (the outbox event
+    /// id), so a retried delivery carries the same id and can be reconciled. Failures propagate
+    /// for the caller to classify with [ErnestHttp#classify].
+    public void publishDecision(String inferenceId, DecisionContext context, PolicyDecision decision) {
         String verdict = switch (decision) {
             case PolicyDecision.Allow ignored -> "ALLOW";
             case PolicyDecision.ApprovalRequired ignored -> "APPROVAL_REQUIRED";
@@ -64,22 +77,18 @@ public class ErnestEvidenceAdapter implements EvidencePort {
             case PolicyDecision.Allow ignored -> null;
         };
 
-        if (!enabled) {
-            // No Ernest key / QTSP configured: log the intent (dev / offline / tests).
-            log.info("governance decision (unsealed): subject={} pipeline={} system={} -> {}",
-                    context.subject(), context.pipeline(), context.aiSystemId(), verdict);
+        if (ingestor != null) {
+            enqueueDecision(inferenceId, context, verdict, reason);
+            log.info("governance decision queued on Ernest's ingestor: system={} -> {}", context.aiSystemId(), verdict);
             return;
         }
-
-        try {
-            ensureModel(context.aiSystemId());
-            sealAndSubmitDecision(context, verdict, reason);
-            log.info("governance decision sealed in Ernest: system={} -> {}", context.aiSystemId(), verdict);
-        } catch (Exception e) {
-            // Never block a decision on evidence recording.
-            log.warn("could not seal decision evidence in Ernest (system={}): {}",
-                    context.aiSystemId(), e.getMessage());
+        if (!enabled) {
+            throw new IllegalStateException("Ernest evidence endpoint is not configured");
         }
+
+        ensureModel(context.aiSystemId());
+        sealAndSubmitDecision(inferenceId, context, verdict, reason);
+        log.info("governance decision delivered to Ernest: system={} -> {}", context.aiSystemId(), verdict);
     }
 
     /// Register an Ernest model for this AI system once (idempotent across the process).
@@ -105,32 +114,41 @@ public class ErnestEvidenceAdapter implements EvidencePort {
         body.put("version", "1");
         body.put("mlflow", Map.of("modelHash", sha256Hex(aiSystemId), "gitCommit", "0000000"));
         body.put("metadata", metadata);
-        body.put("signature", sealer.seal(signed));
+        if (sealer != null) body.put("signature", sealer.seal(signed));
 
         try {
             ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
             // A model for this system may already exist from a prior run — fine, the
-            // registration block is on-chain. Any other 4xx we let the caller log.
-            if (e.getStatusCode().value() != 400) throw e;
-            log.debug("model {} already registered (or rejected): {}", aiSystemId, e.getResponseBodyAsString());
+            // registration block is on-chain. Any other rejection must surface.
+            if (!ErnestHttp.isAlreadyRegistered(e)) throw e;
+            log.debug("model {} already registered", aiSystemId);
         }
         registeredModels.add(aiSystemId);
     }
 
-    private void sealAndSubmitDecision(DecisionContext ctx, String verdict, String reason) {
-        String inferenceId = UUID.randomUUID().toString();
+    /// Ingestor transport: the decision id is the source event id, so the ingestor discards a
+    /// re-sent decision as a duplicate. 202 means "durably queued", not yet "appended"; no
+    /// model registration is needed (the ingestor maintains the model record itself).
+    private void enqueueDecision(String inferenceId, DecisionContext ctx, String verdict, String reason) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("modelId", ctx.aiSystemId());
+        body.put("inferenceId", inferenceId);
+        body.put("inputHash", sha256Hex(ctx.subject() + "|" + ctx.pipeline() + "|" + ctx.action()));
+        body.put("outputHash", sha256Hex(verdict + "|" + (reason == null ? "" : reason)));
+        body.put("metadata", decisionMetadata(ctx, verdict, reason));
+        ingestor.post().uri("/events")
+                .header("X-Ernest-Event-Source", "prudence-pdp")
+                .header("X-Ernest-Event-Type", "inference.logged")
+                .header("X-Ernest-Source-Event-Id", inferenceId)
+                .body(body).retrieve().toBodilessEntity();
+    }
+
+    private void sealAndSubmitDecision(String inferenceId, DecisionContext ctx, String verdict, String reason) {
         String inputHash = sha256Hex(ctx.subject() + "|" + ctx.pipeline() + "|" + ctx.action());
         String outputHash = sha256Hex(verdict + "|" + (reason == null ? "" : reason));
 
-        Map<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put("stage", "governance_decision");
-        metadata.put("subject", ctx.subject());
-        metadata.put("pipeline", ctx.pipeline());
-        metadata.put("action", ctx.action());
-        metadata.put("aiSystemId", ctx.aiSystemId());
-        metadata.put("decision", verdict);
-        if (reason != null) metadata.put("reason", reason);
+        Map<String, Object> metadata = decisionMetadata(ctx, verdict, reason);
 
         Map<String, Object> signed = new LinkedHashMap<>();
         signed.put("type", "inference");
@@ -146,9 +164,26 @@ public class ErnestEvidenceAdapter implements EvidencePort {
         body.put("inputHash", inputHash);
         body.put("outputHash", outputHash);
         body.put("metadata", metadata);
-        body.put("signature", sealer.seal(signed));
+        if (sealer != null) body.put("signature", sealer.seal(signed));
 
         ernest.post().uri("/api/inferences").body(body).retrieve().toBodilessEntity();
+    }
+
+    /// What a decision record says, identical on both transports.
+    private static Map<String, Object> decisionMetadata(DecisionContext ctx, String verdict, String reason) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        metadata.put("stage", "governance_decision");
+        metadata.put("subject", ctx.subject());
+        metadata.put("pipeline", ctx.pipeline());
+        metadata.put("action", ctx.action());
+        metadata.put("aiSystemId", ctx.aiSystemId());
+        metadata.put("policyVersion", ctx.policyVersion());
+        metadata.put("policyHash", ctx.policyHash());
+        metadata.put("systemVersion", ctx.systemVersion());
+        metadata.put("modelHash", ctx.modelHash());
+        metadata.put("decision", verdict);
+        if (reason != null) metadata.put("reason", reason);
+        return metadata;
     }
 
     private static String sha256Hex(String s) {

@@ -28,11 +28,13 @@ TOKEN=$(curl -s -X POST \
   -d client_secret=pdp-dev-secret -d scope=pdp.decide | jq -r .access_token)
 curl -X POST http://localhost:8099/api/policy/decisions \
   -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-  -d '{"subject":"alice@bank.eu","pipeline":"credit-risk-scoring","aiSystemId":"<id>","action":"run"}'
+  -d '{"subject":"ignored-in-secured-mode","pipeline":"credit-risk-scoring","aiSystemId":"<id>","action":"run"}'
 ```
 
 The Python adapters do this automatically when `PRUDENCE_PDP_TOKEN_URL` / `_CLIENT_ID` /
-`_CLIENT_SECRET` are set (see `prudence_governance.M2MAuth`). A token without the
+`_CLIENT_SECRET` are set (see `prudence_governance.M2MAuth`). In secured mode the PDP takes
+the subject from the token; the JSON `subject` is ignored, so a caller cannot impersonate a
+different principal. A token without the
 `pdp.decide` scope (e.g. a human SSO token) gets 403; no token gets 401.
 
 ## Point the apps at it (dev)
@@ -45,6 +47,18 @@ The Python adapters do this automatically when `PRUDENCE_PDP_TOKEN_URL` / `_CLIE
 - AOS UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=aos-spa`
 
 ## Production
+
+For a local unauthenticated backend, explicitly activate the dev profile:
+
+```bash
+SPRING_PROFILES_ACTIVE=dev mvn spring-boot:run
+```
+
+Outside `dev`/`test`, Prudence refuses to start without a JWT issuer and requires
+`PRUDENCE_DB_URL`, `PRUDENCE_DB_USER`, `PRUDENCE_DB_PASSWORD`, `PRUDENCE_ERNEST_API_KEY`,
+SMTP (`SPRING_MAIL_HOST`) with both alert recipient lists (`PRUDENCE_ALERTS_GOVERNANCE_TO`,
+`PRUDENCE_ALERTS_OPERATIONS_TO`), and an explicit `PRUDENCE_CORS_ORIGINS`; it uses schema validation, not automatic schema mutation.
+Use PostgreSQL plus a migration tool in production.
 
 Swap Keycloak for Azure Entra ID (or any OIDC IdP) with no code changes: set the issuer to
 the Entra v2.0 endpoint, register the three apps, and model roles as **App Roles** so they

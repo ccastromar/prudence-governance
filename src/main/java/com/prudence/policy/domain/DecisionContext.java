@@ -6,4 +6,12 @@ public record DecisionContext(
         String subject,
         String pipeline,
         String aiSystemId,
-        String action) {}
+        String action,
+        String policyVersion,
+        String policyHash,
+        String systemVersion,
+        String modelHash) {
+    public DecisionContext(String subject, String pipeline, String aiSystemId, String action) {
+        this(subject, pipeline, aiSystemId, action, "unversioned", "unknown", "unknown", "unknown");
+    }
+}

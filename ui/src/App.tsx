@@ -4,10 +4,11 @@ import Decisions from './pages/Decisions';
 import Approvals from './pages/Approvals';
 import Posture from './pages/Posture';
 import Attestations from './pages/Attestations';
+import Incidents from './pages/Incidents';
 import { APPS, CURRENT } from './chestertown';
 import { ssoEnabled, getToken, login, completeLoginIfPresent, clearToken } from './auth';
 
-type Tab = 'registry' | 'approvals' | 'decisions' | 'posture' | 'attestations';
+type Tab = 'registry' | 'approvals' | 'decisions' | 'posture' | 'incidents' | 'attestations';
 
 function Switcher() {
   return (
@@ -72,6 +73,7 @@ export default function App() {
         <button className={tab === 'approvals' ? 'active' : ''} onClick={() => setTab('approvals')}>Approvals</button>
         <button className={tab === 'decisions' ? 'active' : ''} onClick={() => setTab('decisions')}>Policy decisions</button>
         <button className={tab === 'posture' ? 'active' : ''} onClick={() => setTab('posture')}>Posture</button>
+        <button className={tab === 'incidents' ? 'active' : ''} onClick={() => setTab('incidents')}>Incidents</button>
         <button className={tab === 'attestations' ? 'active' : ''} onClick={() => setTab('attestations')}>Attestations</button>
       </nav>
       <main>
@@ -79,6 +81,7 @@ export default function App() {
         {tab === 'approvals' && <Approvals />}
         {tab === 'decisions' && <Decisions />}
         {tab === 'posture' && <Posture />}
+        {tab === 'incidents' && <Incidents />}
         {tab === 'attestations' && <Attestations />}
       </main>
     </div>

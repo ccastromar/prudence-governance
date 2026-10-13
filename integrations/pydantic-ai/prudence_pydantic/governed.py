@@ -2,7 +2,8 @@
 
 Wrap any Pydantic AI tool with it and the tool becomes governed: before it runs, the
 Prudence PDP is consulted (allow / deny / approval-required); after it runs, the step is
-sealed in Ernest. The agent framework never sees the policy. This is the AOS gate as a
+sealed in Ernest. The decision itself is recorded by Prudence (the PDP seals every decision
+it makes), so the tool does not record it a second time. The agent framework never sees the policy. This is the AOS gate as a
 library primitive — proof that govern+prove is portable to any runtime, not tied to AOS.
 
 The governed subject (caller identity), the registry system id and the evidence clients
@@ -41,17 +42,6 @@ def governed(pipeline: str, action: str = "run", *, raise_on_deny: bool = False)
         def wrapper(ctx: RunContext[GovDeps], *args, **kwargs):
             deps: GovDeps = ctx.deps
             decision = deps.gate.decide(deps.subject, pipeline, deps.ai_system_id, action)
-
-            # Seal the governance decision itself (who asked what, under which verdict).
-            if deps.evidence is not None:
-                deps.evidence.log_step(
-                    deps.model_id,
-                    inputs={"subject": deps.subject, "action": action, "args": args, "kwargs": kwargs},
-                    output={"gate": decision.decision},
-                    metadata={"stage": "governance_decision", "pipeline": pipeline, "action": action,
-                              "subject": deps.subject, "aiSystemId": deps.ai_system_id,
-                              "decision": decision.decision, "reason": decision.reason},
-                )
 
             if not decision.allowed:
                 if raise_on_deny:

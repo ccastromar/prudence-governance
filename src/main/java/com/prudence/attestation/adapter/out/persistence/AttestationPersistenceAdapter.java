@@ -3,6 +3,7 @@ package com.prudence.attestation.adapter.out.persistence;
 import tools.jackson.databind.json.JsonMapper;
 import com.prudence.attestation.application.port.out.AttestationRepository;
 import com.prudence.attestation.domain.Attestation;
+import com.prudence.evidence.delivery.Delivery;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -23,9 +24,10 @@ public class AttestationPersistenceAdapter implements AttestationRepository {
 
     @Override
     public void save(Attestation a, String reportJson) {
+        // Stored PENDING; the evidence delivery worker records the hash in Ernest afterwards.
         Attestation.Evidence ev = a.evidence();
         jpa.save(new AttestationJpaEntity(a.id(), a.generatedAt(), a.overallPosture(), a.contentHash(),
-                ev.sealed(), ev.blockIndex(), ev.modelId(), ev.detail(), reportJson));
+                ev.modelId(), ev.detail(), reportJson));
     }
 
     @Override
@@ -42,8 +44,12 @@ public class AttestationPersistenceAdapter implements AttestationRepository {
 
     private Attestation toAttestation(AttestationJpaEntity e, boolean withSystems) {
         List<Attestation.Entry> systems = withSystems ? parseSystems(e.getReportJson()) : List.of();
+        Delivery.Status delivery = e.getDelivery().status();
+        String detail = delivery == Delivery.Status.DEAD
+                ? "Ernest did not record this report: " + e.getDelivery().getLastError()
+                : e.getSealDetail();
         Attestation.Evidence ev = new Attestation.Evidence(
-                e.isSealed(), e.getBlockIndex(), e.getModelId(), e.getSealDetail());
+                e.isSealed(), e.getBlockIndex(), e.getModelId(), detail, delivery.name());
         return new Attestation(e.getId(), e.getGeneratedAt(), e.getOverallPosture(),
                 e.getContentHash(), systems, ev);
     }

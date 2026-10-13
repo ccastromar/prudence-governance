@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api, type AiSystem, type ReviewEvent } from '../api';
-import { RiskBadge, StatusBadge } from '../components';
+import { EvidenceState, RiskBadge, StatusBadge } from '../components';
 
-const actionColor: Record<string, string> = { APPROVE: 'var(--ok)', REJECT: 'var(--danger)' };
+const actionColor: Record<string, string> = {
+  APPROVE: 'var(--ok)', FIRST_APPROVAL: 'var(--ok)', RENEW: 'var(--ok)', FIRST_RENEWAL_APPROVAL: 'var(--ok)',
+  REJECT: 'var(--danger)', EXPIRE: 'var(--danger)', REVIEW_DUE: 'var(--warn)',
+};
 const when = (iso: string) => iso.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '');
 
 /// The reviewer's inbox: every system awaiting a governance decision. Approving one here flips
@@ -26,12 +29,30 @@ export default function Approvals() {
     catch { setError('Could not load the audit trail'); }
   };
 
-  const pending = systems.filter(s => s.approvalStatus === 'PENDING_APPROVAL');
-  const recent = systems.filter(s => s.approvalStatus === 'APPROVED' || s.approvalStatus === 'REJECTED');
+  const pending = systems.filter(s => s.approvalStatus === 'PENDING_APPROVAL' || s.approvalStatus === 'PENDING_SECOND_APPROVAL');
+  const assessed = systems.filter(s => s.approvalStatus === 'UNDER_ASSESSMENT' || s.approvalStatus === 'REJECTED'
+    || s.approvalStatus === 'EXPIRED');
+  const renewalDue = systems.filter(s => s.approvalStatus === 'APPROVED' && s.reviewDue);
+  const recent = systems.filter(s => s.approvalStatus === 'APPROVED' || s.approvalStatus === 'REJECTED'
+    || s.approvalStatus === 'EXPIRED');
 
   const approve = async (s: AiSystem) => {
     setBusyId(s.id); setError('');
     try { await api.approveSystem(s.id); await load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusyId(''); }
+  };
+
+  const renew = async (s: AiSystem) => {
+    setBusyId(s.id); setError('');
+    try { await api.renewSystem(s.id); await load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusyId(''); }
+  };
+
+  const submit = async (s: AiSystem) => {
+    setBusyId(s.id); setError('');
+    try { await api.submitSystem(s.id); await load(); }
     catch (e) { setError((e as Error).message); }
     finally { setBusyId(''); }
   };
@@ -51,6 +72,22 @@ export default function Approvals() {
 
       {error && <div className="card" style={{ marginBottom: 'var(--sp-6)' }}><span className="err">{error}</span></div>}
 
+      <h2 style={{ fontSize: 'var(--fs-lg)' }}>Ready to submit — assessed, rejected or expired ({assessed.length})</h2>
+      <table style={{ marginBottom: 'var(--sp-8)' }}>
+        <thead><tr><th>AI system</th><th>Classification</th><th>Evidence</th><th style={{ textAlign: 'right' }}>Action</th></tr></thead>
+        <tbody>
+          {assessed.length === 0 && <tr><td colSpan={4} className="mut">Nothing awaiting (re)submission.</td></tr>}
+          {assessed.map(s => (
+            <tr key={s.id}>
+              <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code></td>
+              <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /><div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{s.regulatoryRole} · v{s.systemVersion}</div></td>
+              <td className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{s.obligations.length} obligations · {s.annexI ? 'Annex I' : 'No Annex I'}</td>
+              <td style={{ textAlign: 'right' }}><button className="btn btn-primary" disabled={busyId === s.id} onClick={() => submit(s)}>{busyId === s.id ? '…' : 'Submit for review'}</button></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
       <h2 style={{ fontSize: 'var(--fs-lg)' }}>Awaiting decision ({pending.length})</h2>
       <table style={{ marginBottom: 'var(--sp-8)' }}>
         <thead><tr><th>AI system</th><th>Risk tier</th><th>Owner</th><th style={{ textAlign: 'right' }}>Decision</th></tr></thead>
@@ -60,13 +97,30 @@ export default function Approvals() {
             <tr key={s.id}>
               <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code><div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{s.intendedPurpose}</div></td>
               <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /></td>
-              <td className="mut">{s.ownerName}</td>
+              <td className="mut">{s.ownerName}{s.firstApprover && <div style={{ fontSize: 'var(--fs-sm)' }}>First sign-off: {s.firstApprover}</div>}</td>
               <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                 <button className="btn btn-primary" disabled={busyId === s.id} onClick={() => approve(s)} style={{ marginRight: 'var(--sp-2)' }}>
                   {busyId === s.id ? '…' : 'Approve'}
                 </button>
                 <button className="btn btn-outline" disabled={busyId === s.id} onClick={() => { setRejecting(s); setReason(''); }}>Reject</button>
               </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <h2 style={{ fontSize: 'var(--fs-lg)' }}>Renewal due ({renewalDue.length})</h2>
+      <p className="mut" style={{ fontSize: 'var(--fs-sm)', marginTop: 0 }}>Periodic review: renew before expiry and the system keeps running. High-risk renewals need two independent sign-offs.</p>
+      <table style={{ marginBottom: 'var(--sp-8)' }}>
+        <thead><tr><th>AI system</th><th>Risk tier</th><th>Expires</th><th style={{ textAlign: 'right' }}>Review</th></tr></thead>
+        <tbody>
+          {renewalDue.length === 0 && <tr><td colSpan={4} className="mut">No approvals inside their review window.</td></tr>}
+          {renewalDue.map(s => (
+            <tr key={s.id}>
+              <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code></td>
+              <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /></td>
+              <td className="mut">{s.approvalExpiresAt && when(s.approvalExpiresAt)}{s.renewalFirstApprover && <div style={{ fontSize: 'var(--fs-sm)' }}>First renewal sign-off: {s.renewalFirstApprover}</div>}</td>
+              <td style={{ textAlign: 'right' }}><button className="btn btn-primary" disabled={busyId === s.id} onClick={() => renew(s)}>{busyId === s.id ? '…' : 'Renew'}</button></td>
             </tr>
           ))}
         </tbody>
@@ -83,7 +137,7 @@ export default function Approvals() {
                 className={trailFor?.id === s.id ? 'active-row' : ''}>
               <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code></td>
               <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /></td>
-              <td><StatusBadge status={s.approvalStatus} /></td>
+              <td><StatusBadge status={s.approvalStatus} />{s.approvalExpiresAt && <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>Expires {when(s.approvalExpiresAt)}</div>}</td>
               <td className="mut">{s.ownerName}</td>
             </tr>
           ))}
@@ -108,9 +162,7 @@ export default function Approvals() {
                     </div>
                     <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>
                       {e.previousStatus} → {e.newStatus} · by <b>{e.reviewer}</b>
-                      {e.sealed
-                        ? <span style={{ color: 'var(--ok)' }}> · ● sealed{e.blockIndex != null ? ` · Ernest block ${e.blockIndex}` : ''}</span>
-                        : <span style={{ color: 'var(--warn)' }}> · ● unsealed</span>}
+                      {' · '}<EvidenceState delivery={e.evidence} sealed={e.sealed} blockIndex={e.blockIndex} />
                     </div>
                     {e.reason && <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>“{e.reason}”</div>}
                   </li>

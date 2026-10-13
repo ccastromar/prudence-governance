@@ -1,11 +1,10 @@
 package com.prudence.registry.adapter.out.ernest;
 
 import com.prudence.config.IntegrationProperties;
+import com.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import com.prudence.registry.application.port.out.ReviewSealPort;
 import com.prudence.registry.domain.ReviewEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -13,13 +12,12 @@ import org.springframework.web.client.RestClientResponseException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/// ACL adapter: seals a governance review event into Ernest (model "prudence-reviews"),
-/// qualify-sealed (ADR-002 B2) when a QTSP is configured. Fail-soft — review audit is never
-/// blocked by the evidence plane.
+/// ACL adapter: records a governance review event in Ernest (model "prudence-reviews") and
+/// additionally qualify-seals it (ADR-002 B2) when a QTSP is configured. Failures propagate to
+/// the evidence delivery worker, which retries them under ErnestHttp's contract.
 @Component
 public class ReviewSealAdapter implements ReviewSealPort {
 
-    private static final Logger log = LoggerFactory.getLogger(ReviewSealAdapter.class);
     private static final String MODEL_ID = "prudence-reviews";
 
     private final RestClient ernest;
@@ -28,56 +26,48 @@ public class ReviewSealAdapter implements ReviewSealPort {
     private volatile boolean modelEnsured = false;
 
     public ReviewSealAdapter(IntegrationProperties props) {
-        String apiKey = props.ernest().apiKey();
-        RestClient.Builder b = RestClient.builder().baseUrl(props.ernest().baseUrl());
-        if (apiKey != null && !apiKey.isBlank()) b.defaultHeader("X-Ernest-Api-Key", apiKey);
-        this.ernest = b.build();
+        this.ernest = ErnestHttp.client(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
-        boolean canSeal = apiKey != null && !apiKey.isBlank() && cscUrl != null && !cscUrl.isBlank();
+        boolean canSeal = cscUrl != null && !cscUrl.isBlank();
         this.sealer = canSeal ? new ErnestSealer(cscUrl) : null;
-        this.enabled = canSeal;
+        this.enabled = props.ernest().baseUrl() != null && !props.ernest().baseUrl().isBlank();
     }
 
     @Override
     public SealResult seal(ReviewEvent e) {
-        if (!enabled) return new SealResult(false, null);
-        try {
-            ensureModel();
+        if (!enabled) throw new IllegalStateException("Ernest evidence endpoint is not configured");
+        ensureModel();
 
-            Map<String, Object> content = new LinkedHashMap<>();
-            content.put("aiSystemId", e.aiSystemId());
-            content.put("action", e.action());
-            content.put("reviewer", e.reviewer());
-            content.put("reason", e.reason());
-            content.put("at", e.at());
-            content.put("previousStatus", e.previousStatus());
-            content.put("newStatus", e.newStatus());
-            String contentHash = ErnestSealer.sha256Canonical(content);
+        Map<String, Object> content = new LinkedHashMap<>();
+        content.put("aiSystemId", e.aiSystemId());
+        content.put("action", e.action());
+        content.put("reviewer", e.reviewer());
+        content.put("reason", e.reason());
+        content.put("at", e.at());
+        content.put("previousStatus", e.previousStatus());
+        content.put("newStatus", e.newStatus());
+        String contentHash = ErnestSealer.sha256Canonical(content);
 
-            Map<String, Object> metadata = new LinkedHashMap<>(content);
-            metadata.put("stage", "governance_review");
-            metadata.put("reviewId", e.id());
+        Map<String, Object> metadata = new LinkedHashMap<>(content);
+        metadata.put("stage", "governance_review");
+        metadata.put("reviewId", e.id());
 
-            Map<String, Object> signed = new LinkedHashMap<>();
-            signed.put("type", "inference");
-            signed.put("modelId", MODEL_ID);
-            signed.put("inferenceId", e.id());
-            signed.put("inputHash", contentHash);
-            signed.put("outputHash", contentHash);
-            signed.put("metadata", metadata);
+        Map<String, Object> signed = new LinkedHashMap<>();
+        signed.put("type", "inference");
+        signed.put("modelId", MODEL_ID);
+        signed.put("inferenceId", e.id());
+        signed.put("inputHash", contentHash);
+        signed.put("outputHash", contentHash);
+        signed.put("metadata", metadata);
 
-            Map<String, Object> body = new LinkedHashMap<>(signed);
-            body.remove("type");
-            body.put("signature", sealer.seal(signed));
+        Map<String, Object> body = new LinkedHashMap<>(signed);
+        body.remove("type");
+        if (sealer != null) body.put("signature", sealer.seal(signed));
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> resp = ernest.post().uri("/api/inferences").body(body).retrieve().body(Map.class);
-            return new SealResult(true, extractBlockIndex(resp));
-        } catch (Exception ex) {
-            log.warn("could not seal review event {} in Ernest: {}", e.id(), ex.getMessage());
-            return new SealResult(false, null);
-        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resp = ernest.post().uri("/api/inferences").body(body).retrieve().body(Map.class);
+        return new SealResult(sealer != null, extractBlockIndex(resp));
     }
 
     private void ensureModel() {
@@ -95,11 +85,11 @@ public class ReviewSealAdapter implements ReviewSealPort {
         body.put("modelName", "Prudence governance reviews");
         body.put("version", "1");
         body.put("mlflow", Map.of("modelHash", ErnestSealer.sha256Canonical(MODEL_ID), "gitCommit", "0000000"));
-        body.put("signature", sealer.seal(signed));
+        if (sealer != null) body.put("signature", sealer.seal(signed));
         try {
             ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
-            if (e.getStatusCode().value() != 400) throw e;
+            if (!ErnestHttp.isAlreadyRegistered(e)) throw e; // only a duplicate is benign
         }
         modelEnsured = true;
     }

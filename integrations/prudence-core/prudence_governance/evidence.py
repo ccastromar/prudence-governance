@@ -2,8 +2,16 @@
 
 Emits tamper-evident provenance to Ernest: a *model* block per governed agent, an
 *inference* block per governed step. Only SHA-256 hashes of inputs/outputs are sent —
-raw data never leaves the process. This is the "prove" leg of the loop: the governance
-decision and the execution are both sealed into Ernest's hashchain.
+raw data never leaves the process. This is the "prove" leg of the loop: the execution is
+sealed into Ernest's hashchain (the governance decision is sealed by Prudence itself).
+
+Two transports for step records:
+  - direct (default): POST /api/inferences on the Ernest backend — synchronous append, block
+    index in the response, and the only path that carries a qualified seal.
+  - ingestor: POST /events on Ernest's event-ingestor (set `ingestor_url` or
+    ERNEST_INGESTOR_URL) — the request is queued (202) and appended asynchronously, deduped by
+    the inference id. Built for volume; it does not carry qualified seals, so it cannot be
+    combined with a `QtspSealer`. Model registration always goes direct.
 
 When a `QtspSealer` is supplied (ADR-002 B2), each submission is additionally signed with a
 qualified electronic seal over the exact block-data Ernest canonicalizes, so the evidence
@@ -35,11 +43,20 @@ def _safe_json(r: httpx.Response):
 
 class ErnestEvidence:
     def __init__(self, base_url: str | None = None, api_key: str | None = None,
-                 timeout: float = 5.0, sealer: QtspSealer | None = None):
+                 timeout: float = 5.0, sealer: QtspSealer | None = None,
+                 ingestor_url: str | None = None, ingestor_key: str | None = None,
+                 source: str = "prudence-agent"):
         self.base_url = (base_url or os.getenv("ERNEST_URL", "http://127.0.0.1:3001")).rstrip("/")
         self.api_key = api_key if api_key is not None else os.getenv("ERNEST_API_KEY", "")
         self.timeout = timeout
         self.sealer = sealer
+        self.ingestor_url = (ingestor_url or os.getenv("ERNEST_INGESTOR_URL", "")).rstrip("/")
+        self.ingestor_key = ingestor_key if ingestor_key is not None else os.getenv("ERNEST_INGESTOR_KEY", "")
+        self.source = source
+        if self.ingestor_url and self.sealer is not None:
+            # The ingestor stores its own event envelope in the block, so a seal over the
+            # direct block-data would not verify. Refuse rather than silently drop the seal.
+            raise ValueError("qualified seals need the direct transport: unset ERNEST_INGESTOR_URL or drop the sealer")
 
     def _headers(self) -> dict[str, str]:
         h = {"Content-Type": "application/json"}
@@ -81,6 +98,8 @@ class ErnestEvidence:
         }
         if metadata:
             body["metadata"] = metadata
+        if self.ingestor_url:
+            return self._enqueue(body)
         if self.sealer is not None:
             signed = {"type": "inference", "modelId": model_id, "inferenceId": body["inferenceId"],
                       "inputHash": body["inputHash"], "outputHash": body["outputHash"]}
@@ -89,6 +108,21 @@ class ErnestEvidence:
             body["signature"] = self.sealer.seal(signed)
         try:
             r = httpx.post(f"{self.base_url}/api/inferences", json=body, headers=self._headers(), timeout=self.timeout)
+            return r.status_code, _safe_json(r)
+        except Exception as e:  # noqa: BLE001
+            return None, {"error": str(e)}
+
+    def _enqueue(self, body: dict):
+        """Queue a step record on the event-ingestor. The inference id doubles as the
+        ingestor's source event id, so a re-sent record is recognised as a duplicate."""
+        headers = {"Content-Type": "application/json",
+                   "X-Ernest-Event-Source": self.source,
+                   "X-Ernest-Event-Type": "inference.logged",
+                   "X-Ernest-Source-Event-Id": body["inferenceId"]}
+        if self.ingestor_key:
+            headers["X-Ernest-Ingest-Key"] = self.ingestor_key
+        try:
+            r = httpx.post(f"{self.ingestor_url}/events", json=body, headers=headers, timeout=self.timeout)
             return r.status_code, _safe_json(r)
         except Exception as e:  # noqa: BLE001
             return None, {"error": str(e)}

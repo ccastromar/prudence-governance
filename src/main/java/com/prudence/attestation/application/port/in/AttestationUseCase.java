@@ -23,5 +23,5 @@ public interface AttestationUseCase {
     Optional<Verification> verify(String id);
 
     record Summary(String id, String generatedAt, String overallPosture,
-                   String contentHash, boolean sealed, Long blockIndex) {}
+                   String contentHash, boolean sealed, Long blockIndex, String delivery) {}
 }

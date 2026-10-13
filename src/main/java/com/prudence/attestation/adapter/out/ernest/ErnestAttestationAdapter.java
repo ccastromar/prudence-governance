@@ -2,8 +2,8 @@ package com.prudence.attestation.adapter.out.ernest;
 
 import com.prudence.attestation.application.port.out.AttestationEvidenceQueryPort;
 import com.prudence.attestation.application.port.out.AttestationSealPort;
-import com.prudence.attestation.domain.Attestation;
 import com.prudence.config.IntegrationProperties;
+import com.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +15,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/// ACL adapter: seals an attestation's content hash into Ernest as a provenance block under
-/// a well-known model ("prudence-attestations"), qualify-sealed (ADR-002 B2) when a QTSP is
-/// configured. Fail-soft — if Ernest/QTSP is unavailable the report is returned unsealed.
+/// ACL adapter: records an attestation's content hash in Ernest under a well-known model
+/// ("prudence-attestations") and additionally qualify-seals it (ADR-002 B2) when a QTSP is
+/// configured. Failures propagate to the evidence delivery worker, which retries them.
 @Component
 public class ErnestAttestationAdapter implements AttestationSealPort, AttestationEvidenceQueryPort {
 
@@ -30,51 +30,42 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     private volatile boolean modelEnsured = false;
 
     public ErnestAttestationAdapter(IntegrationProperties props) {
-        String apiKey = props.ernest().apiKey();
-        RestClient.Builder b = RestClient.builder().baseUrl(props.ernest().baseUrl());
-        if (apiKey != null && !apiKey.isBlank()) b.defaultHeader("X-Ernest-Api-Key", apiKey);
-        this.ernest = b.build();
+        this.ernest = ErnestHttp.client(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
-        boolean canSeal = apiKey != null && !apiKey.isBlank() && cscUrl != null && !cscUrl.isBlank();
+        boolean canSeal = cscUrl != null && !cscUrl.isBlank();
         this.sealer = canSeal ? new ErnestSealer(cscUrl) : null;
-        this.enabled = canSeal;
+        this.enabled = props.ernest().baseUrl() != null && !props.ernest().baseUrl().isBlank();
     }
 
     @Override
-    public Attestation.Evidence seal(String attestationId, String contentHash, Map<String, Object> summary) {
-        if (!enabled) {
-            return new Attestation.Evidence(false, null, MODEL_ID,
-                    "Evidence plane not configured — report issued unsealed.");
-        }
-        try {
-            ensureModel();
+    public Receipt seal(String attestationId, String contentHash, Map<String, Object> summary) {
+        if (!enabled) throw new IllegalStateException("Ernest evidence endpoint is not configured");
+        ensureModel();
 
-            Map<String, Object> metadata = new LinkedHashMap<>(summary);
-            metadata.put("stage", "attestation");
-            metadata.put("attestationId", attestationId);
+        Map<String, Object> metadata = new LinkedHashMap<>(summary);
+        metadata.put("stage", "attestation");
+        metadata.put("attestationId", attestationId);
 
-            Map<String, Object> signed = new LinkedHashMap<>();
-            signed.put("type", "inference");
-            signed.put("modelId", MODEL_ID);
-            signed.put("inferenceId", attestationId);
-            signed.put("inputHash", contentHash);
-            signed.put("outputHash", contentHash);
-            signed.put("metadata", metadata);
+        Map<String, Object> signed = new LinkedHashMap<>();
+        signed.put("type", "inference");
+        signed.put("modelId", MODEL_ID);
+        signed.put("inferenceId", attestationId);
+        signed.put("inputHash", contentHash);
+        signed.put("outputHash", contentHash);
+        signed.put("metadata", metadata);
 
-            Map<String, Object> body = new LinkedHashMap<>(signed);
-            body.remove("type");
-            body.put("signature", sealer.seal(signed));
+        Map<String, Object> body = new LinkedHashMap<>(signed);
+        body.remove("type");
+        if (sealer != null) body.put("signature", sealer.seal(signed));
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> resp = ernest.post().uri("/api/inferences").body(body).retrieve().body(Map.class);
-            Long blockIndex = extractBlockIndex(resp);
-            return new Attestation.Evidence(true, blockIndex, MODEL_ID,
-                    "Sealed in Ernest" + (blockIndex != null ? " (block " + blockIndex + ")" : "") + ".");
-        } catch (Exception e) {
-            log.warn("could not seal attestation {} in Ernest: {}", attestationId, e.getMessage());
-            return new Attestation.Evidence(false, null, MODEL_ID, "Ernest seal failed: " + e.getMessage());
-        }
+        @SuppressWarnings("unchecked")
+        Map<String, Object> resp = ernest.post().uri("/api/inferences").body(body).retrieve().body(Map.class);
+        Long blockIndex = extractBlockIndex(resp);
+        boolean qualified = sealer != null;
+        return new Receipt(qualified, blockIndex,
+                (qualified ? "Qualified-sealed" : "Recorded without qualified seal") + " in Ernest"
+                        + (blockIndex != null ? " (block " + blockIndex + ")" : "") + ".");
     }
 
     @Override
@@ -118,11 +109,11 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
         body.put("modelName", "Prudence attestations");
         body.put("version", "1");
         body.put("mlflow", Map.of("modelHash", ErnestSealer.sha256Canonical(MODEL_ID), "gitCommit", "0000000"));
-        body.put("signature", sealer.seal(signed));
+        if (sealer != null) body.put("signature", sealer.seal(signed));
         try {
             ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();
         } catch (RestClientResponseException e) {
-            if (e.getStatusCode().value() != 400) throw e; // 400 == already registered
+            if (!ErnestHttp.isAlreadyRegistered(e)) throw e; // only a duplicate is benign
         }
         modelEnsured = true;
     }

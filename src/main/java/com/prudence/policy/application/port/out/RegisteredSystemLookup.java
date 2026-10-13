@@ -9,5 +9,11 @@ import java.util.Optional;
 public interface RegisteredSystemLookup {
     Optional<SystemRiskView> find(String aiSystemId);
 
-    record SystemRiskView(String aiSystemId, RiskTier riskTier, boolean approved) {}
+    /// `approvalExpired`: the system had an approval whose validity ran out (not renewed).
+    record SystemRiskView(String aiSystemId, RiskTier riskTier, boolean approved,
+                          String systemVersion, String modelHash, boolean approvalExpired) {
+        public SystemRiskView(String aiSystemId, RiskTier riskTier, boolean approved) {
+            this(aiSystemId, riskTier, approved, "unknown", "unknown", false);
+        }
+    }
 }

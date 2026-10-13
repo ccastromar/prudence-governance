@@ -10,7 +10,23 @@ public record AiSystemResponse(
         String ownerEmail,
         String riskTier,
         boolean annexIII,
-        String approvalStatus) {
+        String approvalStatus,
+        String regulatoryRole,
+        String systemVersion,
+        String modelHash,
+        boolean annexI,
+        String operatingGeography,
+        String affectedPopulation,
+        String classificationJustification,
+        java.util.List<String> obligations,
+        String assessedAt,
+        String approvedAt,
+        String approvalExpiresAt,
+        String firstApprover,
+        String firstApprovedAt,
+        String renewalFirstApprover,
+        String renewalFirstApprovedAt,
+        boolean reviewDue) {
 
     public static AiSystemResponse from(AiSystem s) {
         return new AiSystemResponse(
@@ -20,7 +36,13 @@ public record AiSystemResponse(
                 s.owner().name(),
                 s.owner().email(),
                 s.riskTier().name(),
-                s.riskTier().isAnnexIII(),
-                s.approvalStatus().name());
+                s.classification().annexIII(),
+                s.approvalStatus().name(),
+                s.classification().regulatoryRole().name(), s.classification().systemVersion(),
+                s.classification().modelHash(), s.classification().annexI(),
+                s.classification().operatingGeography(), s.classification().affectedPopulation(),
+                s.classification().justification(), s.classification().obligations(), s.classification().assessedAt(),
+                s.approvedAt(), s.approvalExpiresAt(), s.firstApprover(), s.firstApprovedAt(),
+                s.renewalFirstApprover(), s.renewalFirstApprovedAt(), s.reviewDue());
     }
 }

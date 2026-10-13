@@ -1,0 +1,15 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    # Development only. Production requires a managed database through application.yml.
+    url: jdbc:h2:file:./data/prudence;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+  flyway:
+    # Dev evolves the local H2 file with ddl-auto=update; migrations target PostgreSQL.
+    enabled: false

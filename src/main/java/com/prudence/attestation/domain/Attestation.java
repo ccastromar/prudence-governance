@@ -21,7 +21,8 @@ public record Attestation(
     public record Entry(String aiSystemId, String name, String riskTier,
                         String approvalStatus, String posture, String detail) {}
 
-    /// Where the report hash was sealed. `sealed=false` means Ernest was not configured or
-    /// unreachable — the report still stands, but without a qualified seal.
-    public record Evidence(boolean sealed, Long blockIndex, String modelId, String detail) {}
+    /// Where the report hash was recorded. `delivery` is PENDING until Ernest has it (retried
+    /// in the background), DELIVERED once recorded, DEAD if Ernest rejected it for good.
+    /// `sealed` means qualified-sealed (QTSP): a DELIVERED report may be recorded unsealed.
+    public record Evidence(boolean sealed, Long blockIndex, String modelId, String detail, String delivery) {}
 }

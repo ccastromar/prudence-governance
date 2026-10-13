@@ -4,10 +4,10 @@ import tools.jackson.databind.json.JsonMapper;
 import com.prudence.attestation.application.port.in.AttestationUseCase;
 import com.prudence.attestation.application.port.out.AttestationEvidenceQueryPort;
 import com.prudence.attestation.application.port.out.AttestationRepository;
-import com.prudence.attestation.application.port.out.AttestationSealPort;
 import com.prudence.attestation.domain.Attestation;
 import com.prudence.attestation.domain.Verification;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
+import com.prudence.evidence.delivery.DeliverEvidence;
 import com.prudence.posture.application.port.in.PostureQuery;
 import com.prudence.posture.domain.Posture;
 import org.springframework.stereotype.Service;
@@ -29,15 +29,15 @@ public class AttestationService implements AttestationUseCase {
     private static final String ATTESTATION_MODEL = "prudence-attestations";
 
     private final PostureQuery posture;
-    private final AttestationSealPort sealPort;
+    private final DeliverEvidence delivery;
     private final AttestationEvidenceQueryPort evidenceQuery;
     private final AttestationRepository repository;
     private final JsonMapper mapper = JsonMapper.builder().build();
 
-    public AttestationService(PostureQuery posture, AttestationSealPort sealPort,
+    public AttestationService(PostureQuery posture, DeliverEvidence delivery,
                               AttestationEvidenceQueryPort evidenceQuery, AttestationRepository repository) {
         this.posture = posture;
-        this.sealPort = sealPort;
+        this.delivery = delivery;
         this.evidenceQuery = evidenceQuery;
         this.repository = repository;
     }
@@ -65,16 +65,13 @@ public class AttestationService implements AttestationUseCase {
 
         String contentHash = ErnestSealer.sha256Canonical(report);
 
-        Map<String, Object> summary = new LinkedHashMap<>();
-        summary.put("generatedAt", generatedAt);
-        summary.put("overallPosture", overall);
-        summary.put("systemCount", String.valueOf(entries.size()));
-
-        Attestation.Evidence evidence = sealPort.seal(id, contentHash, summary);
-
-        Attestation attestation = new Attestation(id, generatedAt, overall, contentHash, entries, evidence);
-        repository.save(attestation, toJson(report));
-        return attestation;
+        // Stored first, then delivered: the report is durable before any network call, and a
+        // failed delivery is retried in the background instead of issuing it unsealed for good.
+        Attestation.Evidence pending = new Attestation.Evidence(false, null, ATTESTATION_MODEL,
+                "Queued for recording in Ernest.", "PENDING");
+        repository.save(new Attestation(id, generatedAt, overall, contentHash, entries, pending), toJson(report));
+        delivery.deliverNow("attestations");
+        return repository.findById(id).map(AttestationRepository.Stored::attestation).orElseThrow();
     }
 
     @Override
@@ -83,7 +80,8 @@ public class AttestationService implements AttestationUseCase {
                 .map(s -> {
                     Attestation a = s.attestation();
                     return new Summary(a.id(), a.generatedAt(), a.overallPosture(),
-                            a.contentHash(), a.evidence().sealed(), a.evidence().blockIndex());
+                            a.contentHash(), a.evidence().sealed(), a.evidence().blockIndex(),
+                            a.evidence().delivery());
                 })
                 .toList();
     }
@@ -109,26 +107,34 @@ public class AttestationService implements AttestationUseCase {
             }
             boolean hashMatches = !recomputed.isEmpty() && recomputed.equals(a.contentHash());
 
-            boolean sealed = a.evidence().sealed();
+            boolean sealed = a.evidence().sealed(); // qualified seal
+            String delivery = a.evidence().delivery();
+            boolean recorded = "DELIVERED".equals(delivery);
             boolean confirmed = false, chainValid = false;
             Long blockIndex = a.evidence().blockIndex();
             String detail;
-            if (sealed) {
+            // A report recorded without a qualified seal is still confirmable in Ernest.
+            if (recorded) {
                 AttestationEvidenceQueryPort.Confirmation c = evidenceQuery.confirm(ATTESTATION_MODEL, a.contentHash());
                 confirmed = c.present();
                 chainValid = c.chainValid();
                 if (c.blockIndex() != null) blockIndex = c.blockIndex();
                 if (!c.reachable()) detail = "Evidence plane unreachable — the seal could not be confirmed.";
-                else if (c.present() && c.chainValid()) detail = "Report hash is sealed in Ernest and the chain verifies.";
+                else if (c.present() && c.chainValid()) detail = sealed
+                        ? "Report hash is qualified-sealed in Ernest and the chain verifies."
+                        : "Report hash is recorded in Ernest (no qualified seal) and the chain verifies.";
                 else if (c.present()) detail = "Seal present, but the Ernest chain does not verify.";
                 else detail = "No Ernest block carries this report hash.";
+            } else if ("PENDING".equals(delivery)) {
+                detail = "Report is queued for recording in Ernest; delivery is being retried.";
             } else {
-                detail = "Attestation was issued without a seal.";
+                detail = a.evidence().detail();
             }
 
             String verdict;
             if (!hashMatches) verdict = "ALTERED";
-            else if (!sealed) verdict = "UNSEALED";
+            else if ("PENDING".equals(delivery)) verdict = "PENDING";
+            else if (!recorded) verdict = "UNSEALED";
             else if (confirmed && chainValid) verdict = "VERIFIED";
             else verdict = "UNCONFIRMED";
 

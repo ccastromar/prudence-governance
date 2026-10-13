@@ -10,5 +10,7 @@ import java.util.List;
 public interface SystemInventoryPort {
     List<GovernedSystem> all();
 
-    record GovernedSystem(String id, String name, RiskTier riskTier, ApprovalStatus approvalStatus) {}
+    /// `approvalExpiresAt` is null when not approved; `reviewDue` = renewal notice issued.
+    record GovernedSystem(String id, String name, RiskTier riskTier, ApprovalStatus approvalStatus,
+                          String approvalExpiresAt, boolean reviewDue) {}
 }

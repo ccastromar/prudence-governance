@@ -18,4 +18,8 @@ The three form a closed control loop: **decide → enforce → prove → oversee
 See [docs/adr-000-prudence-the-governance-vertex.md](docs/adr-000-prudence-the-governance-vertex.md)
 for the founding architecture.
 
-> Status: founding design. Named 2026-10-10. Not yet implemented.
+> Status: active implementation. The current vertical slice covers a classification dossier
+> (role, Annex I/III, version/hash, geography, affected population, justification and
+> obligations), policy decisions, review audit, approval expiry and periodic review, posture/drift,
+> an AI incident register with AI Act Art. 73 deadlines, email alerts and attestations. It is a
+> governance-readiness platform, not a legal declaration of EU AI Act conformity.
