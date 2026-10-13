@@ -5,7 +5,12 @@ import java.util.Map;
 /// ACL over the evidence plane: how many runtime *execution* evidence blocks are tagged with
 /// each AI system id. Lets oversight detect executions that happened outside governance.
 public interface ExecutionEvidencePort {
-    /// aiSystemId -> count of execution-stage evidence blocks referencing it. Empty on error
-    /// (fail-closed: unknown is not evidence of a run).
-    Map<String, Long> executionCountsBySystem();
+
+    /// Scans the evidence plane. A scan that could not read everything (Ernest unreachable,
+    /// throttled, failed mid-way) says so: partial counts must never pass for a clean result.
+    ExecutionScan scan();
+
+    /// `counts`: aiSystemId -> execution-stage blocks seen. `complete` is false when the scan
+    /// stopped early; `detail` explains why.
+    record ExecutionScan(Map<String, Long> counts, boolean complete, String detail) {}
 }

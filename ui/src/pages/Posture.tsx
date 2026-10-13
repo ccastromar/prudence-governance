@@ -68,6 +68,13 @@ export default function Posture() {
         </>
       )}
 
+      {drift && !drift.complete && (
+        <div className="card" style={{ marginTop: 'var(--sp-6)', borderColor: 'var(--danger)' }}>
+          <span className="err">● Policy-drift scan incomplete — results below cannot be trusted.</span>
+          <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{drift.scanDetail}</div>
+        </div>
+      )}
+
       {drift && drift.findings.length > 0 && (
         <div className="card" style={{ marginTop: 'var(--sp-6)', borderColor: drift.hasViolations ? 'var(--danger)' : 'var(--border)' }}>
           <div className="row between">

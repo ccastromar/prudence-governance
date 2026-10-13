@@ -57,7 +57,8 @@ export interface DriftFinding {
   aiSystemId: string; name: string; approvalStatus: string;
   executionCount: number; severity: 'VIOLATION' | 'OK'; detail: string;
 }
-export interface Drift { generatedAt: string; hasViolations: boolean; findings: DriftFinding[]; }
+/// `complete` false: the evidence scan stopped early, so "no violations" proves nothing.
+export interface Drift { generatedAt: string; hasViolations: boolean; complete: boolean; scanDetail: string | null; findings: DriftFinding[]; }
 
 export interface RegisterInput {
   name: string; intendedPurpose: string; ownerName: string; ownerEmail: string; riskTier: RiskTier;

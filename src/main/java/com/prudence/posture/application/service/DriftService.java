@@ -31,7 +31,8 @@ public class DriftService implements DriftQuery {
 
     @Override
     public Drift compute() {
-        Map<String, Long> counts = new HashMap<>(executions.executionCountsBySystem()); // scanned once
+        ExecutionEvidencePort.ExecutionScan scan = executions.scan(); // scanned once
+        Map<String, Long> counts = new HashMap<>(scan.counts());
         List<Finding> findings = new ArrayList<>();
         Set<String> known = new HashSet<>();
 
@@ -58,6 +59,6 @@ public class DriftService implements DriftQuery {
         }
 
         boolean hasViolations = findings.stream().anyMatch(f -> "VIOLATION".equals(f.severity()));
-        return new Drift(Instant.now().toString(), hasViolations, findings);
+        return new Drift(Instant.now().toString(), hasViolations, scan.complete(), scan.detail(), findings);
     }
 }

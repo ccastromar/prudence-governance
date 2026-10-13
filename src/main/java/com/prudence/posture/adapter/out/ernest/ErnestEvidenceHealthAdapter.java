@@ -71,7 +71,7 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
     }
 
     @Override
-    public Map<String, Long> executionCountsBySystem() {
+    public ExecutionScan scan() {
         Map<String, Long> counts = new HashMap<>();
         try {
             int page = 1, totalPages = 1;
@@ -95,9 +95,11 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
                 page++;
             } while (page <= totalPages);
         } catch (Exception e) {
+            // Fail-closed: report what was read, flagged incomplete, never as a full scan.
             log.warn("could not scan execution evidence from Ernest: {}", e.getMessage());
+            return new ExecutionScan(counts, false, "Evidence scan stopped early: " + e.getMessage());
         }
-        return counts;
+        return new ExecutionScan(counts, true, null);
     }
 
     private static org.springframework.http.client.ClientHttpRequestFactory timeoutFactory() {

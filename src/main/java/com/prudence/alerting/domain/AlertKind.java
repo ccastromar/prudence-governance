@@ -18,5 +18,7 @@ public enum AlertKind {
     /// An Art. 73 report is due within the next 24 hours and has not been filed.
     INCIDENT_REPORT_DUE,
     /// An Art. 73 reporting deadline has passed without a report.
-    INCIDENT_REPORT_OVERDUE
+    INCIDENT_REPORT_OVERDUE,
+    /// The drift check could not read all execution evidence, so it cannot vouch for anything.
+    DRIFT_SCAN_INCOMPLETE
 }

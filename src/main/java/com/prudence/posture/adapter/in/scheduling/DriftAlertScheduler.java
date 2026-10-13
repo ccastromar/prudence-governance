@@ -40,6 +40,20 @@ public class DriftAlertScheduler {
             log.warn("drift check failed: {}", e.getMessage());
             return;
         }
+        if (!report.complete()) {
+            // A blind drift check must not pass for a clean one: tell operations, once a day.
+            String day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString();
+            try {
+                alerts.raise(new AlertRequest(AlertKind.DRIFT_SCAN_INCOMPLETE, "DRIFT_INCOMPLETE:" + day,
+                        Audience.OPERATIONS, List.of(), null, "Policy-drift check is incomplete",
+                        "The drift check could not read all execution evidence from Ernest, so executions by "
+                                + "non-approved systems may be going undetected. Fix the cause (Ernest reachable, not "
+                                + "throttling Prudence) — until then the absence of drift alerts means nothing.\n\n"
+                                + "Detail: " + report.scanDetail()));
+            } catch (Exception e) {
+                log.warn("could not raise drift-incomplete alert: {}", e.getMessage());
+            }
+        }
         for (Drift.Finding f : report.findings()) {
             if (!"VIOLATION".equals(f.severity())) continue;
             try {
