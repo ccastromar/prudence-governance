@@ -27,12 +27,15 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     private static final String MODEL_ID = "prudence-attestations";
 
     private final RestClient ernest;
+    /// Proofs and verification are reads: they go to any Ernest replica.
+    private final RestClient reader;
     private final ErnestSealer sealer;
     private final boolean enabled;
     private volatile boolean modelEnsured = false;
 
     public ErnestAttestationAdapter(IntegrationProperties props) {
-        this.ernest = ErnestHttp.client(props);
+        this.ernest = ErnestHttp.writeClient(props);
+        this.reader = ErnestHttp.readClient(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
         boolean canSeal = cscUrl != null && !cscUrl.isBlank();
@@ -79,7 +82,7 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     public Confirmation confirm(String modelId, String eventId, String contentHash) {
         try {
             @SuppressWarnings("unchecked")
-            ResponseEntity<Map> resp = ernest.get()
+            ResponseEntity<Map> resp = reader.get()
                     .uri("/api/events/{source}/{eventId}/proof", "api/" + modelId, eventId)
                     .retrieve().toEntity(Map.class);
             Map<String, Object> proof = resp.getBody();
@@ -109,7 +112,7 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     private boolean chainVerifies() {
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> body = ernest.get().uri("/api/verify").retrieve().body(Map.class);
+            Map<String, Object> body = reader.get().uri("/api/verify").retrieve().body(Map.class);
             return body != null && Boolean.TRUE.equals(body.get("isValid"));
         } catch (Exception e) {
             return false;
@@ -119,7 +122,7 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     private Confirmation confirmByProvenance(String modelId, String contentHash) {
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> body = ernest.get()
+            Map<String, Object> body = reader.get()
                     .uri("/api/provenances/{m}", modelId).retrieve().body(Map.class);
             if (body == null) return new Confirmation(true, false, false, null);
             boolean chainValid = Boolean.TRUE.equals(body.get("chainValid"));

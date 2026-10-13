@@ -19,12 +19,22 @@ public final class ErnestHttp {
 
     private ErnestHttp() {}
 
-    /// A RestClient for Ernest with timeouts and the X-Ernest-Api-Key credential.
-    public static RestClient client(IntegrationProperties props) {
+    /// A RestClient for Ernest's write side (the writer when the deployment is split), with
+    /// timeouts and the X-Ernest-Api-Key credential.
+    public static RestClient writeClient(IntegrationProperties props) {
+        return client(props.ernest().writeUrl(), props);
+    }
+
+    /// A RestClient for Ernest's read side (any replica).
+    public static RestClient readClient(IntegrationProperties props) {
+        return client(props.ernest().baseUrl(), props);
+    }
+
+    private static RestClient client(String baseUrl, IntegrationProperties props) {
         SimpleClientHttpRequestFactory timeouts = new SimpleClientHttpRequestFactory();
         timeouts.setConnectTimeout(CONNECT_TIMEOUT);
         timeouts.setReadTimeout(READ_TIMEOUT);
-        RestClient.Builder b = RestClient.builder().baseUrl(props.ernest().baseUrl()).requestFactory(timeouts);
+        RestClient.Builder b = RestClient.builder().baseUrl(baseUrl).requestFactory(timeouts);
         String apiKey = props.ernest().apiKey();
         if (apiKey != null && !apiKey.isBlank()) b.defaultHeader("X-Ernest-Api-Key", apiKey);
         return b.build();

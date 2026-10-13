@@ -25,7 +25,7 @@ public class ErnestRecordWriter {
     private final Set<String> ensuredModels = ConcurrentHashMap.newKeySet();
 
     public ErnestRecordWriter(IntegrationProperties props) {
-        this.ernest = ErnestHttp.client(props);
+        this.ernest = ErnestHttp.writeClient(props);
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
         this.sealer = cscUrl != null && !cscUrl.isBlank() ? new ErnestSealer(cscUrl) : null;
         this.enabled = props.ernest().baseUrl() != null && !props.ernest().baseUrl().isBlank();

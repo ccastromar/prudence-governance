@@ -42,7 +42,7 @@ public class ErnestEvidenceAdapter {
     private final RestClient ingestor;
 
     public ErnestEvidenceAdapter(IntegrationProperties props) {
-        this.ernest = ErnestHttp.client(props);
+        this.ernest = ErnestHttp.writeClient(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
         boolean canSeal = cscUrl != null && !cscUrl.isBlank();

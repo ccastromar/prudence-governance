@@ -68,7 +68,10 @@ prudence:
     policy-version: ${PRUDENCE_OPA_POLICY_VERSION:local-dev}
     policy-hash: ${PRUDENCE_OPA_POLICY_HASH:unverified}
   ernest:
-    base-url: http://127.0.0.1:3001
+    # Reads (posture, drift, proofs). With Ernest split into roles (ERNEST_ROLE), point this at
+    # the read replicas and write-base-url at a writer; leave write-base-url blank otherwise.
+    base-url: ${PRUDENCE_ERNEST_BASE_URL:http://127.0.0.1:3001}
+    write-base-url: ${PRUDENCE_ERNEST_WRITE_BASE_URL:}
     # Credential presented to Ernest (X-Ernest-Api-Key) for reads and evidence writes.
     # Supplied via the environment; blank when Ernest runs with open access.
     api-key: ${PRUDENCE_ERNEST_API_KEY:}

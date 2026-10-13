@@ -16,15 +16,24 @@ public record IntegrationProperties(Opa opa, Ernest ernest, Qtsp qtsp) {
     /// `ingestor` (POST /events on Ernest's event-ingestor at `ingestorUrl`, presenting
     /// `ingestorKey` as X-Ernest-Ingest-Key: queued and deduped by the decision id, never
     /// qualified-sealed). Reviews, attestations and incidents always go direct.
-    public record Ernest(String baseUrl, String apiKey, String decisionTransport, String ingestorUrl,
-                         String ingestorKey) {
+    ///
+    /// `baseUrl` serves reads (posture, drift, proofs, verification). `writeBaseUrl`, when set,
+    /// receives the direct writes instead — an Ernest deployment split into read replicas
+    /// (`ERNEST_ROLE=reader`) and writers; blank means one Ernest serves both.
+    public record Ernest(String baseUrl, String writeBaseUrl, String apiKey, String decisionTransport,
+                         String ingestorUrl, String ingestorKey) {
         /// The constructor configuration binds through (the convenience one below would
         /// otherwise make binding ambiguous and leave `prudence.ernest` unbound).
         @ConstructorBinding
         public Ernest {}
 
         public Ernest(String baseUrl, String apiKey) {
-            this(baseUrl, apiKey, "direct", null, null);
+            this(baseUrl, null, apiKey, "direct", null, null);
+        }
+
+        /// Where direct writes go: the dedicated writer when configured, else `baseUrl`.
+        public String writeUrl() {
+            return writeBaseUrl == null || writeBaseUrl.isBlank() ? baseUrl : writeBaseUrl.strip();
         }
 
         public boolean decisionsViaIngestor() {

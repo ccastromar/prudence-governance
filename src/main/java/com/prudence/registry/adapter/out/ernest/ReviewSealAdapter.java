@@ -26,7 +26,7 @@ public class ReviewSealAdapter implements ReviewSealPort {
     private volatile boolean modelEnsured = false;
 
     public ReviewSealAdapter(IntegrationProperties props) {
-        this.ernest = ErnestHttp.client(props);
+        this.ernest = ErnestHttp.writeClient(props);
 
         String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
         boolean canSeal = cscUrl != null && !cscUrl.isBlank();
