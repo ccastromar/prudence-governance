@@ -12,14 +12,19 @@
 set -u
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$(cd "$HERE/.." && pwd)"
 ERNEST_REPO="${ERNEST_REPO:-$REPO/../ai-blockchain-provenance}"
-PG="${PG_BIN:-$(pg_config --bindir 2>/dev/null)}"
+# A PostgreSQL *server* install (initdb + postgres side by side). pg_config may belong to a
+# client-only libpq, so look for the server binary itself; override with PG_BIN.
+pg_server_bin(){ local d; for d in "${PG_BIN:-}" $(ls -d "$(brew --prefix 2>/dev/null)"/opt/postgresql@*/bin 2>/dev/null | sort -rV) "$(dirname "$(command -v postgres 2>/dev/null)")"; do [ -n "$d" ] && [ -x "$d/postgres" ] && [ -x "$d/initdb" ] && { echo "$d"; return; }; done; }
+PG="$(pg_server_bin)"; [ -n "$PG" ] || { echo "no PostgreSQL server found (brew install postgresql@16, or set PG_BIN)" >&2; exit 1; }
 WORK="${WORK:-$(mktemp -d)}"; mkdir -p "$WORK"
 STEP="${STEP_SECONDS:-15}"            # seconds per load step
 PIDS=()
 cleanup(){ for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; LC_ALL=C "$PG/pg_ctl" -D "$WORK/pg" -m fast stop >/dev/null 2>&1; wait 2>/dev/null; }
 trap cleanup EXIT
 log(){ echo "$*" | tee -a "$WORK/results.txt"; }
-blocks(){ mongosh --quiet --port 27117 ernest --eval 'db.provenanceblocks.countDocuments()'; }
+# Evidence recorded on the chain: blocks, or (ADR-004 batching) chained events — with batching
+# one block holds a whole batch, so counting blocks would understate throughput.
+blocks(){ if [ "${EVIDENCE_BATCHING:-off}" = on ]; then mongosh --quiet --port 27117 ernest --eval 'db.evidence_events.countDocuments({state:"chained"})'; else mongosh --quiet --port 27117 ernest --eval 'db.provenanceblocks.countDocuments()'; fi; }
 pending(){ PGPASSWORD=pw "$PG/psql" -h 127.0.0.1 -p 54329 -U prudence -d prudence -At -c "select count(*) from evidence_outbox where delivered_at is null and dead_at is null"; }
 timed(){ curl -s -o /dev/null -w "%{time_total}s[%{http_code}]" -H "X-Ernest-Api-Key: ernest-key" "$1"; }
 wait_drained(){ local t0 last=-1 stable=0 n; t0=$(date +%s); while :; do n=$(blocks); [ "$n" = "$last" ] && stable=$((stable+1)) || stable=0; last=$n; [ $stable -ge 3 ] && break; [ $(( $(date +%s) - t0 )) -gt 900 ] && break; sleep 2; done; echo "$last $(( $(date +%s) - t0 - 6 ))"; }
@@ -74,7 +79,7 @@ SYS=$(curl -s -X POST $B/registry/systems -H 'Content-Type: application/json' -d
 curl -s -o /dev/null -X POST $B/registry/systems/$SYS/submit; curl -s -o /dev/null -X POST $B/registry/systems/$SYS/approve
 curl -s -o /dev/null -H "X-Ernest-Api-Key: ernest-key" -H 'Content-Type: application/json' -X POST http://127.0.0.1:3101/api/models \
   -d '{"modelId":"loadtest-model","modelName":"Load test","version":"1","mlflow":{"modelHash":"'$H64'","gitCommit":"0000000"}}'
-log "machine: $(sysctl -n hw.ncpu) cores, $(( $(sysctl -n hw.memsize) / 1073741824 )) GB · all components on one host · ${STEP}s per step"
+log "machine: $(sysctl -n hw.ncpu) cores, $(( $(sysctl -n hw.memsize) / 1073741824 )) GB · all components on one host · ${STEP}s per step · EVIDENCE_BATCHING=${EVIDENCE_BATCHING:-off}"
 
 # ---------------------------------------------------------------- 1. PDP
 log ""; log "## 1. PDP decisions (registry lookup + OPA hop + outbox insert)"

@@ -3,6 +3,32 @@
 Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
 The "after" table comes first.
 
+## With ADR-004 batching (`EVIDENCE_BATCHING=on`, 2026-10-13)
+
+Same host and script (`EVIDENCE_BATCHING=on ./loadtest/run-local.sh`), Ernest with the Merkle
+batcher and a single backend process holding all roles. Throughput counts *chained events*.
+
+| Path | After phase 0 | Batching on |
+|---|---|---|
+| PDP decision | ~8,800/s | ~8,600/s (unchanged) |
+| Prudence outbox → Ernest, direct | 1,418/s | **1,525/s** |
+| Prudence outbox → Ernest, ingestor | 2,110/s | **2,249/s** |
+| Ernest `POST /api/inferences/batch` | 2,804/s | **3,360/s** |
+| Ingestor worker | ~1,300/s | ~1,330/s |
+| **Chain size for 350k events** | 350k blocks | **417 blocks** (~840 events per block) |
+| `verify` incremental / `mode=full` | 0.002–0.2 s / 5.3 s at 318k | 0.003–0.24 s / 6.7 s at 350k |
+| Prudence posture / drift | 0.18–0.26 s / 0.11 s | 0.16–0.23 s / 0.06 s |
+| Ingestor, worker stopped | 0 lost | 0 lost (10,013 accepted = 10,013 chained) |
+| Ernest log volume | 240 MB | 96 MB |
+
+Reading: batching changes the *shape* — chain-wide work (anchoring, audit bundles, prune) now
+scales with ~400 blocks instead of 350k — but write throughput moved only ~10–20 %. The ceiling
+is no longer the serialized append; it is one Node process admitting events (validation,
+canonicalization, dedup insert). That is what the role split (`ERNEST_ROLE=writer`, N
+replicas) addresses; the ADR-004 target of ≥ 5,000 events/s is not reached by one process.
+Full verification still re-derives every leaf, so it stays linear in events.
+
+
 Run with `loadtest/run-local.sh` on one laptop (10 cores, 16 GB). **Every component shares the
 same host**, so absolute numbers are indicative; the shape is what matters. Ernest's external
 integrations (EVM anchoring, webhooks, MLflow) were forced off.
