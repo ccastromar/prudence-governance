@@ -20,4 +20,7 @@ public interface AttestationJpaRepository extends JpaRepository<AttestationJpaEn
     @Query("update AttestationJpaEntity e set e.delivery.nextAttemptAt = :leaseUntil where e.id = :id "
             + "and e.delivery.deliveredAt is null and e.delivery.deadAt is null and e.delivery.nextAttemptAt = :expected")
     int claim(@Param("id") String id, @Param("expected") String expected, @Param("leaseUntil") String leaseUntil);
+
+    @Query("select e from AttestationJpaEntity e where e.delivery.deadAt is not null order by e.delivery.deadAt desc")
+    List<AttestationJpaEntity> deadLettered(Limit limit);
 }

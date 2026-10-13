@@ -31,6 +31,8 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
     @Override public Delivery delivery(EvidenceOutboxJpaEntity e) { return e.getDelivery(); }
     @Override public int claim(String id, String expected, String leaseUntil) { return outbox.claim(id, expected, leaseUntil); }
     @Override public Optional<EvidenceOutboxJpaEntity> find(String id) { return outbox.findById(id); }
+    @Override public List<EvidenceOutboxJpaEntity> deadLettered(int limit) { return outbox.deadLettered(Limit.of(limit)); }
+    @Override public String aiSystemId(EvidenceOutboxJpaEntity e) { return e.getAiSystemId(); }
     @Override public void save(EvidenceOutboxJpaEntity e) { outbox.save(e); }
 
     @Override

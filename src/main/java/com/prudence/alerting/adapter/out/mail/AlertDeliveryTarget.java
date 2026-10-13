@@ -35,6 +35,8 @@ public class AlertDeliveryTarget implements DeliveryTarget<AlertJpaEntity> {
     @Override public Delivery delivery(AlertJpaEntity e) { return e.getDelivery(); }
     @Override public int claim(String id, String expected, String leaseUntil) { return alerts.claim(id, expected, leaseUntil); }
     @Override public Optional<AlertJpaEntity> find(String id) { return alerts.findById(id); }
+    @Override public List<AlertJpaEntity> deadLettered(int limit) { return alerts.deadLettered(Limit.of(limit)); }
+    @Override public String aiSystemId(AlertJpaEntity e) { return e.getAiSystemId(); }
     @Override public void save(AlertJpaEntity e) { alerts.save(e); }
 
     @Override

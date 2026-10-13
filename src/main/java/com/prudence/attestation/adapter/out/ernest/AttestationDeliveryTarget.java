@@ -36,6 +36,7 @@ public class AttestationDeliveryTarget implements DeliveryTarget<AttestationJpaE
     @Override public Delivery delivery(AttestationJpaEntity e) { return e.getDelivery(); }
     @Override public int claim(String id, String expected, String leaseUntil) { return attestations.claim(id, expected, leaseUntil); }
     @Override public Optional<AttestationJpaEntity> find(String id) { return attestations.findById(id); }
+    @Override public List<AttestationJpaEntity> deadLettered(int limit) { return attestations.deadLettered(Limit.of(limit)); }
     @Override public void save(AttestationJpaEntity e) { attestations.save(e); }
 
     @Override

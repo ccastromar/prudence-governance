@@ -35,7 +35,7 @@ by an explicit contract:
 | other 4xx (e.g. invalid signature) | dead-lettered immediately | ERROR |
 
 Posture reflects the decision and review backlog: a system with dead-lettered evidence is
-**RED** (that proof is missing until someone re-drives it); evidence still undelivered after
+**RED** (that proof is missing until someone re-drives it — see below); evidence still undelivered after
 `PRUDENCE_EVIDENCE_OVERDUE_AFTER_MINUTES` (15) makes it **AMBER**. An attestation's own
 delivery state shows in its verification (`PENDING` while queued, `UNSEALED` if dead-lettered).
 "Recorded" and "qualified-sealed" are distinct: without a QTSP, evidence is recorded in Ernest
@@ -143,3 +143,14 @@ Check on the Ernest side before relying on it: the ingestor trims its stream at
 `REDIS_STREAM_MAXLEN` (10 000, approximate), which can drop **unprocessed** events if the worker
 falls that far behind; and it rate-limits per client IP (`RATE_LIMIT_RPS` 20, burst 40), so many
 agents behind one NAT share that budget (Prudence retries 429s; the SDK does not yet).
+
+## Re-driving dead-lettered records
+
+`GET /api/evidence/dead-letters` lists every record the delivery worker gave up on — decisions,
+reviews, attestations, incident events and alert emails — with its last error. Once the cause is
+fixed (Ernest reachable, credentials or payload corrected),
+`POST /api/evidence/dead-letters/{target}/{id}/retry` requeues it with a fresh attempt budget and
+delivers it immediately (`read-write` role; the operator is logged). The same list, with a Retry
+button, is at the bottom of the *Posture* tab. Retrying a record that is not dead-lettered
+returns 409. There is deliberately no "discard": giving up on a piece of evidence should be a
+recorded decision, which is not built yet.

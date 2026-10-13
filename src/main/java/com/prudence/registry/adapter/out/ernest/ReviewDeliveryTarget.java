@@ -33,6 +33,8 @@ public class ReviewDeliveryTarget implements DeliveryTarget<ReviewEventJpaEntity
     @Override public Delivery delivery(ReviewEventJpaEntity e) { return e.getDelivery(); }
     @Override public int claim(String id, String expected, String leaseUntil) { return reviews.claim(id, expected, leaseUntil); }
     @Override public Optional<ReviewEventJpaEntity> find(String id) { return reviews.findById(id); }
+    @Override public List<ReviewEventJpaEntity> deadLettered(int limit) { return reviews.deadLettered(Limit.of(limit)); }
+    @Override public String aiSystemId(ReviewEventJpaEntity e) { return e.getAiSystemId(); }
     @Override public void save(ReviewEventJpaEntity e) { reviews.save(e); }
 
     @Override

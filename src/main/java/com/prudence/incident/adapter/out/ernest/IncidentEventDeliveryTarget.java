@@ -35,6 +35,8 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
     @Override public Delivery delivery(IncidentEventJpaEntity e) { return e.getDelivery(); }
     @Override public int claim(String id, String expected, String leaseUntil) { return events.claim(id, expected, leaseUntil); }
     @Override public Optional<IncidentEventJpaEntity> find(String id) { return events.findById(id); }
+    @Override public List<IncidentEventJpaEntity> deadLettered(int limit) { return events.deadLettered(Limit.of(limit)); }
+    @Override public String aiSystemId(IncidentEventJpaEntity e) { return e.getAiSystemId(); }
     @Override public void save(IncidentEventJpaEntity e) { events.save(e); }
 
     @Override

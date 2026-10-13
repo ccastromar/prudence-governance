@@ -28,6 +28,14 @@ public interface DeliveryTarget<E> {
 
     Optional<E> find(String id);
 
+    /// Most recently dead-lettered records first, for operators to inspect and re-drive.
+    List<E> deadLettered(int limit);
+
+    /// The AI system the record concerns, when it concerns one (null for estate-wide records).
+    default String aiSystemId(E record) {
+        return null;
+    }
+
     void save(E record);
 
     /// Sends the record under a stable id. Throws on failure (see [#classify]); on success

@@ -26,4 +26,7 @@ public interface EvidenceOutboxJpaRepository extends JpaRepository<EvidenceOutbo
             + "sum(case when e.delivery.deadAt is null and e.createdAt < :overdueBefore then 1 else 0 end) "
             + "from EvidenceOutboxJpaEntity e where e.delivery.deliveredAt is null group by e.aiSystemId")
     List<Object[]> undeliveredBySystem(@Param("overdueBefore") String overdueBefore);
+
+    @Query("select e from EvidenceOutboxJpaEntity e where e.delivery.deadAt is not null order by e.delivery.deadAt desc")
+    List<EvidenceOutboxJpaEntity> deadLettered(Limit limit);
 }

@@ -22,4 +22,7 @@ public interface AlertJpaRepository extends JpaRepository<AlertJpaEntity, String
     @Query("update AlertJpaEntity e set e.delivery.nextAttemptAt = :leaseUntil where e.id = :id "
             + "and e.delivery.deliveredAt is null and e.delivery.deadAt is null and e.delivery.nextAttemptAt = :expected")
     int claim(@Param("id") String id, @Param("expected") String expected, @Param("leaseUntil") String leaseUntil);
+
+    @Query("select e from AlertJpaEntity e where e.delivery.deadAt is not null order by e.delivery.deadAt desc")
+    List<AlertJpaEntity> deadLettered(Limit limit);
 }

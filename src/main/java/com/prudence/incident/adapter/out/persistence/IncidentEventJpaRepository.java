@@ -27,4 +27,7 @@ public interface IncidentEventJpaRepository extends JpaRepository<IncidentEventJ
             + "sum(case when e.delivery.deadAt is null and e.at < :overdueBefore then 1 else 0 end) "
             + "from IncidentEventJpaEntity e where e.delivery.deliveredAt is null group by e.aiSystemId")
     List<Object[]> undeliveredBySystem(@Param("overdueBefore") String overdueBefore);
+
+    @Query("select e from IncidentEventJpaEntity e where e.delivery.deadAt is not null order by e.delivery.deadAt desc")
+    List<IncidentEventJpaEntity> deadLettered(Limit limit);
 }

@@ -125,6 +125,13 @@ export interface OpenIncidentInput {
   suspendSystem: boolean;
 }
 
+/// A record the delivery worker gave up on: evidence (decisions/reviews/attestations/incidents)
+/// that never reached Ernest, or an alert email that never went out.
+export interface DeadLetter {
+  target: 'decisions' | 'reviews' | 'attestations' | 'incidents' | 'alerts' | string;
+  id: string; aiSystemId: string | null; attempts: number; deadAt: string; lastError: string | null;
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok && res.status >= 500) throw new Error(`${res.status}`);
   return res.json() as Promise<T>;
@@ -147,6 +154,10 @@ const post = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify(body) }).then(ok<T>);
 
 export const api = {
+  deadLetters: () => fetch('/api/evidence/dead-letters', { headers: withAuth() }).then(ok<DeadLetter[]>),
+  retryDeadLetter: (target: string, id: string) =>
+    fetch(`/api/evidence/dead-letters/${target}/${id}/retry`, { method: 'POST', headers: withAuth(json_ct) })
+      .then(async r => { if (!r.ok) await ok<unknown>(r); }),
   incidents: () => fetch('/api/incidents', { headers: withAuth() }).then(ok<Incident[]>),
   incident: (id: string) => fetch(`/api/incidents/${id}`, { headers: withAuth() }).then(ok<Incident>),
   openIncident: (body: OpenIncidentInput) => post<Incident>('/api/incidents', body),

@@ -74,6 +74,15 @@ public class Delivery {
         return status();
     }
 
+    /// Put a dead-lettered record back in the queue (an operator fixed the cause). It gets a
+    /// fresh attempt budget; the last error is kept until the next attempt replaces it.
+    public void requeue() {
+        if (status() != Status.DEAD) throw new IllegalStateException("only a dead-lettered record can be requeued");
+        deadAt = null;
+        attempts = 0;
+        nextAttemptAt = stamp(Instant.now());
+    }
+
     private static String describe(Exception error) {
         String message = error.getMessage() == null ? error.getClass().getSimpleName() : error.getMessage();
         return message.length() > 2000 ? message.substring(0, 2000) : message;

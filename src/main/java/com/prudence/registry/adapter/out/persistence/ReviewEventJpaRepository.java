@@ -29,4 +29,7 @@ public interface ReviewEventJpaRepository extends JpaRepository<ReviewEventJpaEn
             + "sum(case when e.delivery.deadAt is null and e.at < :overdueBefore then 1 else 0 end) "
             + "from ReviewEventJpaEntity e where e.delivery.deliveredAt is null group by e.aiSystemId")
     List<Object[]> undeliveredBySystem(@Param("overdueBefore") String overdueBefore);
+
+    @Query("select e from ReviewEventJpaEntity e where e.delivery.deadAt is not null order by e.delivery.deadAt desc")
+    List<ReviewEventJpaEntity> deadLettered(Limit limit);
 }

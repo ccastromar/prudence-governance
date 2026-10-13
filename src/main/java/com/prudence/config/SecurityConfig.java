@@ -56,6 +56,8 @@ public class SecurityConfig {
             // Registering an incident and recording its reports change the register (and may
             // suspend a system); reading it only needs authentication.
             .requestMatchers(HttpMethod.POST, "/api/incidents", "/api/incidents/**").hasRole("read-write")
+            // Re-driving dead-lettered evidence is an operator act.
+            .requestMatchers(HttpMethod.POST, "/api/evidence/**").hasRole("read-write")
             // Approving/rejecting/renewing a system and issuing an attestation are reviewer acts.
             .requestMatchers(HttpMethod.POST, "/api/registry/systems/*/approve", "/api/registry/systems/*/reject",
                     "/api/registry/systems/*/renew", "/api/attestations")

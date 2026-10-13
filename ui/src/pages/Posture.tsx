@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type Posture as PostureData, type Drift } from '../api';
+import { api, type Posture as PostureData, type Drift, type DeadLetter } from '../api';
 import { RiskBadge, StatusBadge, PostureBadge } from '../components';
 
 /// Oversight dashboard: the step that closes the control loop. Prudence reads Ernest's evidence
@@ -9,10 +9,20 @@ export default function Posture() {
   const [data, setData] = useState<PostureData | null>(null);
   const [drift, setDrift] = useState<Drift | null>(null);
   const [error, setError] = useState('');
+  const [dead, setDead] = useState<DeadLetter[]>([]);
+  const [busy, setBusy] = useState('');
 
   const load = () => {
     api.posture().then(setData).catch(() => setError('Could not load posture (is the backend on :8099?)'));
     api.drift().then(setDrift).catch(() => { /* drift is best-effort */ });
+    api.deadLetters().then(setDead).catch(() => { /* best-effort */ });
+  };
+
+  const retry = async (d: DeadLetter) => {
+    setBusy(d.id); setError('');
+    try { await api.retryDeadLetter(d.target, d.id); load(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(''); }
   };
   useEffect(() => { load(); }, []);
 
@@ -79,6 +89,26 @@ export default function Posture() {
                     <span style={{ fontWeight: 700, color: f.severity === 'VIOLATION' ? 'var(--danger)' : 'var(--ok)' }}>● {f.severity}</span>
                     <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{f.detail}</div>
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {dead.length > 0 && (
+        <div className="card" style={{ marginTop: 'var(--sp-6)', borderColor: 'var(--danger)' }}>
+          <h2 style={{ marginTop: 0, fontSize: 'var(--fs-lg)' }}>Undelivered records ({dead.length})</h2>
+          <p className="mut" style={{ fontSize: 'var(--fs-sm)', marginTop: 0 }}>Evidence that never reached Ernest, or alerts that were never sent. Fix the cause (Ernest reachable, credentials, payload), then retry: the record is requeued and delivered at once.</p>
+          <table>
+            <thead><tr><th>Kind</th><th>Record</th><th>Last error</th><th style={{ textAlign: 'right' }}>Action</th></tr></thead>
+            <tbody>
+              {dead.map(d => (
+                <tr key={d.target + d.id}>
+                  <td>{d.target}{d.aiSystemId && <div className="mut" style={{ fontSize: 'var(--fs-sm)' }}><code>{d.aiSystemId}</code></div>}</td>
+                  <td><code>{d.id}</code><div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{d.attempts} attempt(s) · gave up {d.deadAt.replace('T', ' ').replace(/\.\d+Z$/, '')}</div></td>
+                  <td className="mut" style={{ fontSize: 'var(--fs-sm)', maxWidth: 360, overflowWrap: 'anywhere' }}>{d.lastError}</td>
+                  <td style={{ textAlign: 'right' }}><button className="btn btn-primary" disabled={busy === d.id} onClick={() => retry(d)}>{busy === d.id ? '…' : 'Retry'}</button></td>
                 </tr>
               ))}
             </tbody>
