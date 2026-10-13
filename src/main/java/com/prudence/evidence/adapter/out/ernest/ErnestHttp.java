@@ -65,6 +65,14 @@ public final class ErnestHttp {
             if (status == 408 || status == 409 || status == 429 || status >= 500) return DeliveryFailure.RETRYABLE;
             return status >= 400 ? DeliveryFailure.PERMANENT : DeliveryFailure.RETRYABLE;
         }
+        // Kafka transport (ADR-005): the broker refusing the credential or topic is configuration;
+        // a record it can never accept is permanent; everything else (broker unavailable,
+        // timeouts, not-enough-replicas) is retryable.
+        if (error instanceof org.apache.kafka.common.errors.AuthenticationException
+                || error instanceof org.apache.kafka.common.errors.AuthorizationException) return DeliveryFailure.CONFIGURATION;
+        if (error instanceof org.apache.kafka.common.errors.RecordTooLargeException
+                || error instanceof org.apache.kafka.common.errors.SerializationException
+                || error instanceof org.apache.kafka.common.errors.InvalidTopicException) return DeliveryFailure.PERMANENT;
         if (error instanceof ResourceAccessException) return DeliveryFailure.RETRYABLE; // I/O, timeout
         if (error instanceof IllegalStateException) return DeliveryFailure.CONFIGURATION; // not configured
         return DeliveryFailure.RETRYABLE;

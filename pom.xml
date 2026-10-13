@@ -22,6 +22,11 @@
     </properties>
 
     <dependencies>
+        <!-- Ernest ADR-005: PDP decisions over Kafka (decision-transport=kafka). Version managed by Boot. -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>kafka-clients</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

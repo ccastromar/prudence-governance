@@ -3,6 +3,32 @@
 Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
 The "after" table comes first.
 
+## Kafka transport and outbox drain (Ernest ADR-005, 2026-10-13)
+
+`decision-transport=kafka`: Prudence publishes decisions to a topic (idempotent producer,
+`acks=all`, keyed by AI system) and `event-ingestor kafka` records them in bulk. On the way three
+Prudence-side limits showed up, each capping every transport at ~3,000/s:
+
+1. **Fixed pause inside a drain.** A run delivered at most 40 passes × 500 records and then slept
+   `outbox-delay-ms` (2 s): ~20,000 records per ~6 s. Runs now keep going, round-robin over the
+   targets, while any has a backlog; the delay is only the idle poll interval.
+2. **Per-record transactions.** Each record was claimed and marked delivered in its own
+   transaction. Claims of a pass and marks of a chunk now share one transaction (each row keeps
+   its compare-and-set; on a failed bulk mark, records are marked one by one).
+3. **Sorting the whole backlog per pass.** `due()` orders by `created_at`, which the pending index
+   did not cover: every pass sorted 400–500k pending rows to take 500. Migration V8 adds a
+   partial index on pending rows in `created_at` order.
+
+| Transport (one host) | Start of day | Now |
+|---|---|---|
+| Ingestor over HTTP (one event per request) | 1,500–2,300/s | ~2,500/s (legacy path) |
+| Direct, batched HTTP | 1,525/s | ~4,500–5,200/s |
+| **Kafka, 8 partitions, 1 consumer** | — | **≥ 7,090/s** — drained the whole 425k backlog inside the 60 s window; Ernest chained at the same rate |
+
+The broker itself (`kafka-producer-perf-test`, same producer settings) takes ~308,000 records/s on
+this host, so neither Kafka nor Ernest is the limit; more consumers (up to the partition count)
+and more Prudence instances are the next levers.
+
 ## Bulk write path (Ernest batch endpoint + ingestor worker in bulk, 2026-10-13)
 
 Batching on. The batch endpoint and the ingestor worker now store a whole request/read in a few

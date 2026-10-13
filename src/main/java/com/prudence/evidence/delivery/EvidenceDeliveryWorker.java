@@ -13,7 +13,9 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -81,9 +83,18 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         senders.shutdown();
     }
 
+    /// One scheduled run keeps going, round-robin over the targets, while any of them still has
+    /// a backlog: the outbox delay is the idle poll interval, not a pause inside a drain. Each
+    /// round gives every target at most MAX_PASSES, so one busy target cannot starve the rest.
     @Scheduled(fixedDelayString = "${prudence.evidence.outbox-delay-ms:2000}")
     public void deliverPending() {
-        targets.forEach(this::runSafely);
+        boolean backlog;
+        do {
+            backlog = false;
+            for (DeliveryTarget<?> target : targets) {
+                backlog |= runSafely(target);
+            }
+        } while (backlog && !Thread.currentThread().isInterrupted());
     }
 
     @Override
@@ -91,26 +102,27 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         targets.stream().filter(t -> t.name().equals(target)).forEach(this::runSafely);
     }
 
-    private void runSafely(DeliveryTarget<?> target) {
+    /// Returns true when the target stopped at MAX_PASSES with records still due.
+    private boolean runSafely(DeliveryTarget<?> target) {
         try {
-            run(target);
+            return run(target);
         } catch (Exception e) {
             // A database problem in one target must not stop the others, nor fail a caller.
             log.warn("evidence delivery pass for {} failed: {}", target.name(), e.getMessage());
+            return false;
         }
     }
 
-    private <E> void run(DeliveryTarget<E> target) {
+    private <E> boolean run(DeliveryTarget<E> target) {
         for (int pass = 0; pass < MAX_PASSES; pass++) {
             List<E> due = target.due(Delivery.stamp(Instant.now()), BATCH);
-            if (due.isEmpty()) return;
-            List<E> claimed = new ArrayList<>(due.size());
-            for (E record : due) {
-                if (claim(target, target.id(record), target.delivery(record).getNextAttemptAt())) claimed.add(record);
-            }
+            if (due.isEmpty()) return false;
+            List<E> claimed = claimAll(target, due);
             deliver(target, claimed);
-            if (due.size() < BATCH) return; // drained
+            // Drained, or every due record was taken by another instance: nothing more for us.
+            if (due.size() < BATCH || claimed.isEmpty()) return false;
         }
+        return true;
     }
 
     /// Splits the claimed records into the target's batch size and sends the chunks
@@ -146,6 +158,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
             chunk.forEach(record -> handleFailure(target, target.id(record), e));
             return;
         }
+        Map<String, Consumer<E>> delivered = new LinkedHashMap<>();
         for (int i = 0; i < chunk.size(); i++) {
             String id = target.id(chunk.get(i));
             DeliveryTarget.Outcome<E> outcome = i < outcomes.size() ? outcomes.get(i)
@@ -154,20 +167,48 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
                 handleFailure(target, id, outcome.failure());
                 continue;
             }
-            update(target, id, record -> {
-                outcome.receipt().accept(record);
-                target.delivery(record).delivered();
-            });
-            if (configurationFailing.remove(target.name())) {
-                log.info("{} delivery recovered", target.name());
-            }
+            delivered.put(id, outcome.receipt());
+        }
+        if (delivered.isEmpty()) return;
+        markDelivered(target, delivered);
+        if (configurationFailing.remove(target.name())) {
+            log.info("{} delivery recovered", target.name());
         }
     }
 
-    private <E> boolean claim(DeliveryTarget<E> target, String id, String expected) {
+    /// Marks a chunk's delivered records in one transaction. Should that transaction fail, the
+    /// records are marked one by one, so one bad row cannot hold the rest back (a record left
+    /// unmarked is re-sent after its lease and deduplicated by its stable id).
+    private <E> void markDelivered(DeliveryTarget<E> target, Map<String, Consumer<E>> delivered) {
+        try {
+            tx.executeWithoutResult(s -> delivered.forEach((id, receipt) -> target.find(id).ifPresent(record -> {
+                receipt.accept(record);
+                target.delivery(record).delivered();
+                target.save(record);
+            })));
+        } catch (Exception e) {
+            log.warn("{}: marking {} records delivered together failed, marking one by one: {}",
+                    target.name(), delivered.size(), e.getMessage());
+            delivered.forEach((id, receipt) -> update(target, id, record -> {
+                receipt.accept(record);
+                target.delivery(record).delivered();
+            }));
+        }
+    }
+
+    /// Leases a pass's records in one transaction: each row is still claimed on its own
+    /// compare-and-set (only a worker that saw the same `nextAttemptAt` wins it), but the pass
+    /// pays one commit instead of one per record.
+    private <E> List<E> claimAll(DeliveryTarget<E> target, List<E> due) {
         String leaseUntil = Delivery.stamp(Instant.now().plus(LEASE));
-        Integer claimed = tx.execute(s -> target.claim(id, expected, leaseUntil));
-        return claimed != null && claimed == 1;
+        List<E> claimed = tx.execute(s -> {
+            List<E> won = new ArrayList<>(due.size());
+            for (E record : due) {
+                if (target.claim(target.id(record), target.delivery(record).getNextAttemptAt(), leaseUntil) == 1) won.add(record);
+            }
+            return won;
+        });
+        return claimed == null ? List.of() : claimed;
     }
 
     private <E> void handleFailure(DeliveryTarget<E> target, String id, Exception e) {

@@ -92,6 +92,7 @@ log ""; log "## 2. Prudence outbox drain (decisions delivered per second; chain 
 drain2(){ # $1 = label: decisions leaving the outbox and blocks added to the chain in 60 s
   local p0 p1 b0 b1; p0=$(pending); b0=$(blocks); sleep 60; p1=$(pending); b1=$(blocks)
   log "$1: $(( p0 - p1 )) delivered in 60s = $(python3 -c "print(round(($p0-$p1)/60,1))")/s · chain +$(( b1 - b0 )) blocks = $(python3 -c "print(round(($b1-$b0)/60,1))")/s · dead: $(PGPASSWORD=pw "$PG/psql" -h 127.0.0.1 -p 54329 -U prudence -d prudence -At -c 'select count(*) from evidence_outbox where dead_at is not null')"
+  [ "$p1" = 0 ] && log "   (backlog exhausted within the window: the rate above is a lower bound)"
 }
 kill $PRUDENCE; wait $PRUDENCE 2>/dev/null
 start_prudence direct --prudence.evidence.outbox-delay-ms=2000
@@ -102,6 +103,28 @@ start_prudence ingestor --prudence.evidence.outbox-delay-ms=2000 --prudence.erne
 drain2 "ingestor transport, 8 concurrent senders"
 kill $PRUDENCE; wait $PRUDENCE 2>/dev/null; start_prudence quiet --prudence.evidence.outbox-delay-ms=3600000
 read n secs <<<"$(wait_drained)"   # let the ingestor worker finish what it queued
+
+# Kafka transport (Ernest ADR-005), when a broker is reachable (./scripts/kafka.sh): a throwaway
+# topic per run, one `event-ingestor kafka` consumer. The outbox is refilled first so the 60 s
+# window measures the transport, not an empty backlog.
+KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-127.0.0.1:9092}"
+if command -v kafka-topics >/dev/null && kafka-topics --bootstrap-server "$KAFKA_BOOTSTRAP" --list >/dev/null 2>&1; then
+  KTOPIC="loadtest.decisions.$(date +%s)"
+  kafka-topics --bootstrap-server "$KAFKA_BOOTSTRAP" --create --topic "$KTOPIC" --partitions 8 --replication-factor 1 >/dev/null 2>&1
+  KAFKA_BROKERS=$KAFKA_BOOTSTRAP KAFKA_TOPICS=$KTOPIC KAFKA_GROUP=$KTOPIC PORT=3113 METRICS_PORT=9114 \
+    "$WORK/ingestor" kafka > "$WORK/kafka-source.log" 2>&1 & PIDS+=($!)
+  "$LG" http -url $B/policy/decisions -c 64 -d $(( STEP * 5 ))s -body "$DEC" -label "refill outbox" > /dev/null
+  log "outbox backlog before the kafka step: $(pending)"
+  kill $PRUDENCE; wait $PRUDENCE 2>/dev/null
+  start_prudence kafka --prudence.evidence.outbox-delay-ms=2000 --prudence.ernest.decision-transport=kafka \
+    --prudence.ernest.kafka-bootstrap-servers=$KAFKA_BOOTSTRAP --prudence.ernest.kafka-topic=$KTOPIC
+  drain2 "kafka transport (8 partitions, 1 consumer), 8 concurrent senders"
+  kill $PRUDENCE; wait $PRUDENCE 2>/dev/null; start_prudence quiet --prudence.evidence.outbox-delay-ms=3600000
+  read n secs <<<"$(wait_drained)"
+  kafka-topics --bootstrap-server "$KAFKA_BOOTSTRAP" --delete --topic "$KTOPIC" >/dev/null 2>&1
+else
+  log "kafka transport: skipped (no broker at $KAFKA_BOOTSTRAP — run ./scripts/kafka.sh)"
+fi
 
 # ---------------------------------------------------------------- 3. Ernest direct appends
 log ""; log "## 3. Ernest direct appends with a valid key (per-credential quota)"

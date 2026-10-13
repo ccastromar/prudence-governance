@@ -3,6 +3,7 @@ package com.prudence.evidence.adapter.out.ernest;
 import com.prudence.config.IntegrationProperties;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
+import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,8 @@ public class ErnestEvidenceAdapter {
     private final Set<String> registeredModels = ConcurrentHashMap.newKeySet();
     /// Non-null when decisions are queued on Ernest's event-ingestor instead of appended directly.
     private final RestClient ingestor;
+    /// Non-null when decisions are published to Kafka (Ernest ADR-005).
+    private final ErnestKafkaPublisher kafka;
 
     public ErnestEvidenceAdapter(IntegrationProperties props) {
         this.ernest = ErnestHttp.writeClient(props);
@@ -60,10 +63,31 @@ public class ErnestEvidenceAdapter {
                 throw new IllegalStateException("qualified seals (prudence.qtsp.csc-url) need decision-transport=direct");
             }
             this.ingestor = ErnestHttp.ingestorClient(url, props.ernest().ingestorKey());
+            this.kafka = null;
             log.info("PDP decisions are queued on Ernest's event-ingestor at {}", url);
+        } else if (props.ernest().decisionsViaKafka()) {
+            String servers = props.ernest().kafkaBootstrapServers();
+            String topic = props.ernest().kafkaTopic();
+            if (servers == null || servers.isBlank() || topic == null || topic.isBlank()) {
+                throw new IllegalStateException(
+                        "prudence.ernest.decision-transport=kafka needs prudence.ernest.kafka-bootstrap-servers and kafka-topic");
+            }
+            if (sealer != null) {
+                // Like the ingestor: the record is stored inside the ingestor's envelope.
+                throw new IllegalStateException("qualified seals (prudence.qtsp.csc-url) need decision-transport=direct");
+            }
+            this.ingestor = null;
+            this.kafka = new ErnestKafkaPublisher(servers, topic);
+            log.info("PDP decisions are published to Kafka topic {} at {}", topic, servers);
         } else {
             this.ingestor = null;
+            this.kafka = null;
         }
+    }
+
+    @PreDestroy
+    void close() {
+        if (kafka != null) kafka.close();
     }
 
     /// Delivers one decision under a caller-supplied, stable `inferenceId` (the outbox event
@@ -73,6 +97,11 @@ public class ErnestEvidenceAdapter {
         String verdict = verdictOf(decision);
         String reason = reasonOf(decision);
 
+        if (kafka != null) {
+            Exception failure = kafka.send(List.of(kafkaEvent(inferenceId, context, verdict, reason))).get(0);
+            if (failure != null) throw failure instanceof RuntimeException re ? re : new IllegalStateException(failure);
+            return;
+        }
         if (ingestor != null) {
             enqueueDecision(inferenceId, context, verdict, reason);
             log.info("governance decision queued on Ernest's ingestor: system={} -> {}", context.aiSystemId(), verdict);
@@ -131,7 +160,7 @@ public class ErnestEvidenceAdapter {
 
     /// Whether [#publishDecisions] sends real batches (direct transport, Ernest supports it).
     public boolean batchCapable() {
-        return ingestor == null && !batchUnsupported;
+        return kafka != null || (ingestor == null && !batchUnsupported);
     }
 
     /// Publishes several decisions in one POST /api/inferences/batch call. Returns one entry
@@ -140,6 +169,11 @@ public class ErnestEvidenceAdapter {
     /// exactly as it would a single submission. Falls back to one-by-one when batching is not
     /// available (ingestor transport, or an Ernest without the batch endpoint).
     public List<Exception> publishDecisions(List<DecisionToPublish> items) {
+        if (kafka != null) {
+            return kafka.send(items.stream()
+                    .map(i -> kafkaEvent(i.inferenceId(), i.context(), verdictOf(i.decision()), reasonOf(i.decision())))
+                    .toList());
+        }
         List<Exception> outcomes = new ArrayList<>(Collections.nCopies(items.size(), (Exception) null));
         if (!batchCapable()) {
             for (int i = 0; i < items.size(); i++) outcomes.set(i, publishOne(items.get(i)));
@@ -230,17 +264,28 @@ public class ErnestEvidenceAdapter {
     /// re-sent decision as a duplicate. 202 means "durably queued", not yet "appended"; no
     /// model registration is needed (the ingestor maintains the model record itself).
     private void enqueueDecision(String inferenceId, DecisionContext ctx, String verdict, String reason) {
+        Map<String, Object> body = eventBody(inferenceId, ctx, verdict, reason);
+        ingestor.post().uri("/events")
+                .header("X-Ernest-Event-Source", "prudence-pdp")
+                .header("X-Ernest-Event-Type", "inference.logged")
+                .header("X-Ernest-Source-Event-Id", inferenceId)
+                .body(body).retrieve().toBodilessEntity();
+    }
+
+    /// The event body Ernest's ingestor receives for a decision, over HTTP or Kafka alike.
+    private Map<String, Object> eventBody(String inferenceId, DecisionContext ctx, String verdict, String reason) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("modelId", ctx.aiSystemId());
         body.put("inferenceId", inferenceId);
         body.put("inputHash", sha256Hex(ctx.subject() + "|" + ctx.pipeline() + "|" + ctx.action()));
         body.put("outputHash", sha256Hex(verdict + "|" + (reason == null ? "" : reason)));
         body.put("metadata", decisionMetadata(ctx, verdict, reason));
-        ingestor.post().uri("/events")
-                .header("X-Ernest-Event-Source", "prudence-pdp")
-                .header("X-Ernest-Event-Type", "inference.logged")
-                .header("X-Ernest-Source-Event-Id", inferenceId)
-                .body(body).retrieve().toBodilessEntity();
+        return body;
+    }
+
+    /// Kafka record for a decision: keyed by AI system (per-system order), deduped by its id.
+    private ErnestKafkaPublisher.Event kafkaEvent(String inferenceId, DecisionContext ctx, String verdict, String reason) {
+        return new ErnestKafkaPublisher.Event(ctx.aiSystemId(), inferenceId, eventBody(inferenceId, ctx, verdict, reason));
     }
 
     private void sealAndSubmitDecision(String inferenceId, DecisionContext ctx, String verdict, String reason) {

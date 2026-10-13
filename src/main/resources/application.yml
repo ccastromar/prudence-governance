@@ -75,13 +75,17 @@ prudence:
     # Credential presented to Ernest (X-Ernest-Api-Key) for reads and evidence writes.
     # Supplied via the environment; blank when Ernest runs with open access.
     api-key: ${PRUDENCE_ERNEST_API_KEY:}
-    # How PDP decisions (one per governed agent step) reach Ernest: `direct` appends each via
-    # /api/inferences; `ingestor` queues them on Ernest's event-ingestor (Redis Streams,
-    # deduped by decision id) for volume. Ingestor records carry no qualified seal, so it
+    # How PDP decisions (one per governed agent step) reach Ernest: `direct` appends them via
+    # /api/inferences/batch; `ingestor` queues them on Ernest's event-ingestor (Redis Streams);
+    # `kafka` publishes them to a topic the ingestor consumes (Ernest ADR-005, the high-volume
+    # choice). Ingestor and Kafka are deduped by decision id. Ingestor records carry no qualified seal, so it
     # cannot be combined with a QTSP. Reviews/attestations/incidents always go direct.
     decision-transport: ${PRUDENCE_ERNEST_DECISION_TRANSPORT:direct}
     ingestor-url: ${PRUDENCE_ERNEST_INGESTOR_URL:}
     ingestor-key: ${PRUDENCE_ERNEST_INGESTOR_KEY:}
+    # decision-transport=kafka (Ernest ADR-005): the topic Ernest's ingestor consumes.
+    kafka-bootstrap-servers: ${PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS:}
+    kafka-topic: ${PRUDENCE_ERNEST_KAFKA_TOPIC:prudence.decisions}
   qtsp:
     # QTSP CSC remote-signing endpoint to qualify-seal evidence (ADR-002 B2). Blank disables
     # sealing (decisions are then only logged). e.g. http://127.0.0.1:4600/csc/sign

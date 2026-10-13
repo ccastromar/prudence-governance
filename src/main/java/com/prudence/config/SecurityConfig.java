@@ -95,6 +95,10 @@ public class SecurityConfig {
         requireNonBlank(environment, "prudence.ernest.ingestor-url");
         requireNonBlank(environment, "prudence.ernest.ingestor-key");
       }
+      if ("kafka".equals(environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
+        requireNonBlank(environment, "prudence.ernest.kafka-bootstrap-servers");
+        requireNonBlank(environment, "prudence.ernest.kafka-topic");
+      }
       // Alerts are how humans learn about expiries, drift and lost evidence: no silent channel.
       requireNonBlank(environment, "spring.mail.host");
       requireNonBlank(environment, "prudence.alerts.governance-recipients");
