@@ -63,3 +63,10 @@ Use PostgreSQL plus a migration tool in production.
 Swap Keycloak for Azure Entra ID (or any OIDC IdP) with no code changes: set the issuer to
 the Entra v2.0 endpoint, register the three apps, and model roles as **App Roles** so they
 arrive in the `roles` claim the apps already read.
+
+## Identity claims in the dev realm
+
+`chestertown-realm.json` declares its own `clientScopes`, so on import Keycloak does **not**
+create the standard `basic` / `profile` / `email` scopes. Each client therefore maps `sub`,
+`email` and `preferred_username` explicitly. Without them a token names no one — and Prudence
+rejects such tokens (401) rather than recording an anonymous reviewer.

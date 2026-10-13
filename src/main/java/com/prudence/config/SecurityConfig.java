@@ -15,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.InvalidBearerTokenException;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -143,11 +144,14 @@ public class SecurityConfig {
     };
   }
 
+  /// Fail-closed: a token that names no one is rejected (401) rather than accepted as an
+  /// anonymous actor — otherwise reviews would be signed by "" and the four-eyes and
+  /// self-approval checks would compare empty names.
   private static String principalOf(Jwt jwt) {
-    for (String claim : List.of("email", "preferred_username")) {
+    for (String claim : List.of("email", "preferred_username", "sub")) {
       String value = jwt.getClaimAsString(claim);
       if (value != null && !value.isBlank()) return value;
     }
-    return jwt.getSubject();
+    throw new InvalidBearerTokenException("token carries no identity (email, preferred_username or sub)");
   }
 }
