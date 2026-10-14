@@ -9,10 +9,12 @@ import GovernanceCases from './pages/GovernanceCases';
 import Impact from './pages/Impact';
 import Monitoring from './pages/Monitoring';
 import Oversight from './pages/Oversight';
+import Snapshots from './pages/Snapshots';
+import Changes from './pages/Changes';
 import { APPS, CURRENT } from './chestertown';
 import { ssoEnabled, getToken, login, completeLoginIfPresent, clearToken } from './auth';
 
-type Tab = 'registry' | 'approvals' | 'decisions' | 'posture' | 'incidents' | 'cases' | 'impact' | 'monitoring' | 'oversight' | 'attestations';
+type Tab = 'registry' | 'approvals' | 'decisions' | 'posture' | 'incidents' | 'cases' | 'impact' | 'monitoring' | 'oversight' | 'changes' | 'snapshots' | 'attestations';
 
 function Switcher() {
   return (
@@ -82,6 +84,8 @@ export default function App() {
         <button className={tab === 'impact' ? 'active' : ''} onClick={() => setTab('impact')}>Impact & transparency</button>
         <button className={tab === 'monitoring' ? 'active' : ''} onClick={() => setTab('monitoring')}>Monitoring</button>
         <button className={tab === 'oversight' ? 'active' : ''} onClick={() => setTab('oversight')}>Human oversight</button>
+        <button className={tab === 'changes' ? 'active' : ''} onClick={() => setTab('changes')}>Changes</button>
+        <button className={tab === 'snapshots' ? 'active' : ''} onClick={() => setTab('snapshots')}>Snapshots</button>
         <button className={tab === 'attestations' ? 'active' : ''} onClick={() => setTab('attestations')}>Attestations</button>
       </nav>
       <main>
@@ -94,6 +98,8 @@ export default function App() {
         {tab === 'impact' && <Impact />}
         {tab === 'monitoring' && <Monitoring />}
         {tab === 'oversight' && <Oversight />}
+        {tab === 'changes' && <Changes />}
+        {tab === 'snapshots' && <Snapshots />}
         {tab === 'attestations' && <Attestations />}
       </main>
     </div>

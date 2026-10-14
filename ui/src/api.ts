@@ -159,6 +159,9 @@ export interface Capa { id: string; aiSystemId: string; signalId: string; risk: 
 export type OversightRole = 'OWNER' | 'SUPERVISOR' | 'COMPLIANCE' | 'DPO' | 'SECURITY' | 'PROVIDER';
 export interface HumanAssignment { id: string; aiSystemId: string; role: OversightRole; person: string; overrideAuthority: boolean; stopAuthority: boolean; trainingEvidence: string; trainingExpiresAt: string; }
 export interface HumanOverride { id: string; aiSystemId: string; aosReference: string; supervisor: string; reason: string; outcome: string; occurredAt: string; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; }
+export interface ComplianceSnapshot { id: string; aiSystemId: string; asOf: string; sha256: string; manifest: Record<string, unknown>; }
+export type ChangeOutcome = 'MINOR' | 'CONTROL_REVIEW' | 'SUBSTANTIAL' | 'PROHIBITED';
+export interface ChangeAssessment { id: string; aiSystemId: string; proposedVersion: string; changedFields: string; outcome: ChangeOutcome; rationale: string; evidenceUri: string; evidenceSha256: string; assessedAt: string; assessedBy: string; }
 
 /// A record the delivery worker gave up on: evidence (decisions/reviews/attestations/incidents)
 /// that never reached Ernest, or an alert email that never went out.
@@ -189,6 +192,9 @@ const post = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify(body) }).then(ok<T>);
 
 export const api = {
+  assessChange: (body: { aiSystemId: string; proposedVersion: string; changedFields: string[]; evidenceUri: string; evidenceSha256: string }) => post<ChangeAssessment>('/api/governance/change-assessments', body),
+  createSnapshot: (id: string) => post<ComplianceSnapshot>(`/api/compliance-snapshots/systems/${id}`, {}),
+  snapshot: (id: string) => fetch(`/api/compliance-snapshots/${id}`, { headers: withAuth() }).then(ok<ComplianceSnapshot>),
   assignments: (id: string) => fetch(`/api/oversight/systems/${id}/assignments`, { headers: withAuth() }).then(ok<HumanAssignment[]>),
   addAssignment: (id: string, body: Omit<HumanAssignment, 'id' | 'aiSystemId'>) => post<HumanAssignment>(`/api/oversight/systems/${id}/assignments`, body),
   overrides: (id: string) => fetch(`/api/oversight/systems/${id}/overrides`, { headers: withAuth() }).then(ok<HumanOverride[]>),
