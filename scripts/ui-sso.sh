@@ -8,4 +8,4 @@ cd "$HERE/../ui"
 [ -d node_modules ] || npm install
 export VITE_OIDC_ISSUER="${VITE_OIDC_ISSUER:-http://localhost:8081/realms/chestertown}"
 export VITE_OIDC_CLIENT_ID="${VITE_OIDC_CLIENT_ID:-prudence-spa}"
-exec npm run dev
+exec npm run dev -- --host "${VITE_HOST:-127.0.0.1}"
