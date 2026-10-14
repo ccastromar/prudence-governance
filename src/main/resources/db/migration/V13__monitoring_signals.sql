@@ -1,0 +1,1 @@
+create table monitoring_signal (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), signal varchar(255) not null, value double precision not null, amber_threshold double precision not null, red_threshold double precision not null, status varchar(255) not null, observed_at varchar(255) not null, source_reference varchar(2000));
