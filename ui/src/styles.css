@@ -48,3 +48,15 @@ tbody tr.active-row td { background:var(--accent-weak, var(--surface-muted)); }
 code { font-family:var(--font-mono); font-size:var(--fs-xs); color:var(--text-muted); }
 .mut { color:var(--text-muted); }
 .err { color:var(--danger); font-size:var(--fs-sm); }
+.capa-item { border-bottom:1px solid var(--border); padding:var(--sp-3) 0; }
+.capa-item:last-child { border-bottom:0; }
+
+@media (max-width: 760px) {
+  .topbar { padding:var(--sp-3) var(--sp-4); flex-wrap:wrap; }
+  .switcher { margin-left:0; order:3; width:100%; overflow-x:auto; }
+  .tabs { overflow-x:auto; padding:0 var(--sp-4); }
+  .tabs button { white-space:nowrap; }
+  main { padding:var(--sp-4); }
+  .grid2 { grid-template-columns:1fr; }
+  table { display:block; overflow-x:auto; }
+}
