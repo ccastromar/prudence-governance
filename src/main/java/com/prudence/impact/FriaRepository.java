@@ -1,1 +1,1 @@
-package com.prudence.impact; import org.springframework.data.jpa.repository.JpaRepository; public interface FriaRepository extends JpaRepository<FriaJpaEntity,String>{}
+package com.prudence.impact; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface FriaRepository extends JpaRepository<FriaJpaEntity,String>{List<FriaJpaEntity> findByAiSystemIdOrderBySignedAtDesc(String id); boolean existsByAiSystemId(String id);}
