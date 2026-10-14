@@ -151,6 +151,14 @@ export type TransparencyKind = 'DIRECT_AI_INTERACTION' | 'DEEPFAKE' | 'EMOTION_R
 export interface Fria { id: string; aiSystemId: string; jurisdiction: string; templateVersion: string; affectedGroups: string; assumptions: string; mitigations: string; dpiaUri: string; dpiaSha256: string; signedBy: string; signedAt: string; }
 export interface ImpactRequirement { friaRequired: boolean; transparencyRequired: boolean; }
 export interface TransparencyNotice { id: string; aiSystemId: string; kind: TransparencyKind; audience: string; noticeVersion: string; deploymentEvidence: string; deployedBy: string; deployedAt: string; }
+export type RiskSignal = 'INCIDENT_RATE' | 'HUMAN_OVERRIDE_RATE' | 'COMPLAINT_RATE' | 'PERFORMANCE_DEGRADATION' | 'BIAS_DRIFT';
+export type MonitoringStatus = 'GREEN' | 'AMBER' | 'RED';
+export interface MonitoringSignal { id: string; aiSystemId: string; signal: RiskSignal; value: number; amberThreshold: number; redThreshold: number; status: MonitoringStatus; observedAt: string; sourceReference: string | null; }
+export interface MonitoringSummary { aiSystemId: string; status: MonitoringStatus; observations: number; redSignals: number; amberSignals: number; recentSignals: MonitoringSignal[]; }
+export interface Capa { id: string; aiSystemId: string; signalId: string; risk: string; mitigation: string; owner: string; dueAt: string; status: string; effectivenessEvidence: string | null; }
+export type OversightRole = 'OWNER' | 'SUPERVISOR' | 'COMPLIANCE' | 'DPO' | 'SECURITY' | 'PROVIDER';
+export interface HumanAssignment { id: string; aiSystemId: string; role: OversightRole; person: string; overrideAuthority: boolean; stopAuthority: boolean; trainingEvidence: string; trainingExpiresAt: string; }
+export interface HumanOverride { id: string; aiSystemId: string; aosReference: string; supervisor: string; reason: string; outcome: string; occurredAt: string; reviewedBy: string | null; reviewedAt: string | null; reviewNote: string | null; }
 
 /// A record the delivery worker gave up on: evidence (decisions/reviews/attestations/incidents)
 /// that never reached Ernest, or an alert email that never went out.
@@ -181,6 +189,17 @@ const post = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify(body) }).then(ok<T>);
 
 export const api = {
+  assignments: (id: string) => fetch(`/api/oversight/systems/${id}/assignments`, { headers: withAuth() }).then(ok<HumanAssignment[]>),
+  addAssignment: (id: string, body: Omit<HumanAssignment, 'id' | 'aiSystemId'>) => post<HumanAssignment>(`/api/oversight/systems/${id}/assignments`, body),
+  overrides: (id: string) => fetch(`/api/oversight/systems/${id}/overrides`, { headers: withAuth() }).then(ok<HumanOverride[]>),
+  addOverride: (id: string, body: { aosReference: string; supervisor: string; reason: string; outcome: string }) => post<HumanOverride>(`/api/oversight/systems/${id}/overrides`, body),
+  reviewOverride: (id: string, body: { reviewer: string; note: string }) => post<HumanOverride>(`/api/oversight/overrides/${id}/review`, body),
+  monitoringSummary: (id: string) => fetch(`/api/monitoring/signals/summary/${id}`, { headers: withAuth() }).then(ok<MonitoringSummary>),
+  addSignal: (body: { aiSystemId: string; signal: RiskSignal; value: number; amberThreshold: number; redThreshold: number; sourceReference: string }) => post<MonitoringSignal>('/api/monitoring/signals', body),
+  capas: (id: string) => fetch(`/api/monitoring/capas/systems/${id}`, { headers: withAuth() }).then(ok<Capa[]>),
+  openCapa: (body: { signalId: string; risk: string; mitigation: string; owner: string; dueAt: string }) => post<Capa>('/api/monitoring/capas', body),
+  implementCapa: (id: string) => post<Capa>(`/api/monitoring/capas/${id}/implement`, {}),
+  verifyCapa: (id: string, evidenceReference: string) => post<Capa>(`/api/monitoring/capas/${id}/verify`, { evidenceReference }),
   impactRequirements: (id: string) => fetch(`/api/impact/systems/${id}/requirements`, { headers: withAuth() }).then(ok<ImpactRequirement>),
   setImpactRequirements: (id: string, body: ImpactRequirement) => post<ImpactRequirement>(`/api/impact/systems/${id}/requirements`, body),
   frias: (id: string) => fetch(`/api/impact/systems/${id}/fria`, { headers: withAuth() }).then(ok<Fria[]>),
