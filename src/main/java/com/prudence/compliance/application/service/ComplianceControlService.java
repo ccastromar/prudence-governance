@@ -7,6 +7,9 @@ import com.prudence.compliance.domain.ComplianceControlStatus;
 import com.prudence.registry.domain.AiSystem;
 import com.prudence.registry.domain.RiskTier;
 import com.prudence.oversight.HumanAssignmentRepository;
+import com.prudence.impact.ImpactRequirementRepository;
+import com.prudence.impact.FriaRepository;
+import com.prudence.impact.TransparencyNoticeRepository;
 import com.prudence.shared.exception.DomainException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +24,12 @@ public class ComplianceControlService implements ComplianceControls {
     private final ComplianceControlJpaRepository controls;
     private final ComplianceProfileCatalog catalog;
     private final HumanAssignmentRepository assignments;
+    private final ImpactRequirementRepository impactRequirements;
+    private final FriaRepository frias;
+    private final TransparencyNoticeRepository transparencyNotices;
 
-    public ComplianceControlService(ComplianceControlJpaRepository controls, ComplianceProfileCatalog catalog, HumanAssignmentRepository assignments) {
-        this.controls = controls; this.catalog = catalog; this.assignments = assignments;
+    public ComplianceControlService(ComplianceControlJpaRepository controls, ComplianceProfileCatalog catalog, HumanAssignmentRepository assignments, ImpactRequirementRepository impactRequirements, FriaRepository frias, TransparencyNoticeRepository transparencyNotices) {
+        this.controls = controls; this.catalog = catalog; this.assignments = assignments; this.impactRequirements=impactRequirements; this.frias=frias; this.transparencyNotices=transparencyNotices;
     }
 
     @Override
@@ -62,6 +68,9 @@ public class ComplianceControlService implements ComplianceControls {
                         && Instant.parse(a.getTrainingExpiresAt()).isAfter(Instant.now()))) {
             throw new DomainException("a high-risk system requires a current supervisor with override or stop authority before review");
         }
+        var requirement=impactRequirements.findById(system.id().value()).orElse(null);
+        if (requirement != null && requirement.isFriaRequired() && !frias.existsByAiSystemId(system.id().value())) throw new DomainException("FRIA is required for this system before review");
+        if (requirement != null && requirement.isTransparencyRequired() && transparencyNotices.findByAiSystemIdOrderByDeployedAtDesc(system.id().value()).isEmpty()) throw new DomainException("transparency notice deployment evidence is required before review");
     }
 
     @Override

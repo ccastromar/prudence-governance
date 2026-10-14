@@ -1,0 +1,1 @@
+package com.prudence.impact; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface TransparencyNoticeRepository extends JpaRepository<TransparencyNoticeJpaEntity,String>{List<TransparencyNoticeJpaEntity> findByAiSystemIdOrderByDeployedAtDesc(String id);}

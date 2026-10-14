@@ -1,0 +1,1 @@
+create table transparency_notice (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), kind varchar(255) not null, audience varchar(1000) not null, notice_version varchar(255) not null, deployment_evidence varchar(2000) not null, deployed_by varchar(255) not null, deployed_at varchar(255) not null);
