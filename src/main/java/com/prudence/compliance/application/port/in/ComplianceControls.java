@@ -13,5 +13,6 @@ public interface ComplianceControls {
     List<ComplianceControlJpaEntity> forSystem(String aiSystemId);
     ComplianceControlJpaEntity satisfy(String aiSystemId, String controlId, Evidence evidence);
 
-    record Evidence(String uri, String sha256, String version, String owner, String expiresAt) {}
+    record Evidence(String uri, String sha256, String version, String owner, String datasetVersion, String metricsByGroup,
+                    String approver, String signedAttestation, String ernestReceipt, String expiresAt) {}
 }

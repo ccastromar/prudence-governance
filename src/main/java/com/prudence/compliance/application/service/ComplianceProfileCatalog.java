@@ -11,12 +11,13 @@ import java.util.List;
 /// reviewed release. Prudence stores the assigned profile id on every generated control.
 @Component
 final class ComplianceProfileCatalog {
-    record Definition(String key, String title, String requirement, boolean blocking) {}
+    record Definition(String key, String title, String requirement, boolean blocking, String accepts,
+                      Integer expiresAfterDays, boolean expiresOnVersionChange, boolean blocksVersionChange, String source) {}
     record Profile(String id, List<Definition> controls) {}
 
     private static final List<Definition> PROVIDER_HIGH = List.of(
             control("RISK_MANAGEMENT", "Risk management system", "Current risk assessment, mitigations and residual-risk acceptance."),
-            control("DATA_GOVERNANCE", "Data governance evidence", "Versioned data governance and quality assessment for the intended purpose."),
+            dataControl("DATA_GOVERNANCE", "Data governance evidence", "Versioned data governance and quality assessment for the intended purpose."),
             control("TECHNICAL_DOCUMENTATION", "Technical documentation", "Current technical dossier and instructions for use."),
             control("LOGGING_TRACEABILITY", "Logging and traceability", "Logging design and retained traceability evidence."),
             control("HUMAN_OVERSIGHT", "Human oversight design", "Documented human oversight measures and override/stop authority."),
@@ -43,6 +44,10 @@ final class ComplianceProfileCatalog {
     }
 
     private static Definition control(String key, String title, String requirement) {
-        return new Definition(key, title, requirement, true);
+        return new Definition(key, title, requirement, true, "URL,SHA-256,version,owner,signed-attestation", 365, true, true, "MANUAL_OR_GRC");
+    }
+    private static Definition dataControl(String key, String title, String requirement) {
+        return new Definition(key, title, requirement, true, "URL,SHA-256,dataset-version,metrics-by-group,approver,signed-attestation",
+                365, true, true, "MLOPS_OR_GRC");
     }
 }

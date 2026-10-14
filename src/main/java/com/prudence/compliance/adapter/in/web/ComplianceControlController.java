@@ -28,7 +28,8 @@ public class ComplianceControlController {
     public List<ComplianceControlResponse> list(@PathVariable String systemId) {
         var system = systems.findById(new AiSystemId(systemId))
                 .orElseThrow(() -> new AiSystemNotFoundException(new AiSystemId(systemId)));
-        return controls.initializeAndList(system).stream().map(ComplianceControlResponse::from).toList();
+        return controls.initializeAndList(system).stream()
+                .map(control -> ComplianceControlResponse.from(control, system.classification().systemVersion())).toList();
     }
 
     @PostMapping("/{controlId}/satisfy")

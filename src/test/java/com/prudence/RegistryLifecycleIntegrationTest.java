@@ -59,7 +59,7 @@ class RegistryLifecycleIntegrationTest {
 
         var controls = compliance.forSystem(created.id().value());
         assertEquals(5, controls.size());
-        assertTrue(controls.stream().allMatch(c -> c.getStatus() == ComplianceControlStatus.PENDING));
+        assertTrue(controls.stream().allMatch(c -> c.getStatus() == ComplianceControlStatus.NOT_STARTED));
         assertThrows(DomainException.class, () -> review.submitForReview(created.id()));
         controls.forEach(control -> compliance.satisfy(created.id().value(), control.getId(), evidence()));
 
@@ -97,6 +97,16 @@ class RegistryLifecycleIntegrationTest {
     }
 
     @Test
+    void dataGovernanceContractRequiresDatasetMetricsApproverAndSignedAttestation() {
+        var created = register.register(request("Data contract model", RegulatoryRole.PROVIDER).toCommand());
+        var dataControl = compliance.forSystem(created.id().value()).stream()
+                .filter(control -> control.getControlKey().equals("DATA_GOVERNANCE")).findFirst().orElseThrow();
+        var incomplete = new ComplianceControls.Evidence("https://evidence.example.eu/data.pdf", "a".repeat(64),
+                "1.0.0", "governance@bank.eu", null, null, null, null, null, null);
+        assertThrows(DomainException.class, () -> compliance.satisfy(created.id().value(), dataControl.getId(), incomplete));
+    }
+
+    @Test
     void governanceCaseKeepsReferencesAndAnAuditableDecisionWithoutStoringDocuments() {
         var system = register.register(request("Model change dossier", RegulatoryRole.DEPLOYER).toCommand());
         var c = governanceCases.open(system.id().value(), GovernanceCaseType.CHANGE, "Version 1.1 rollout",
@@ -125,6 +135,7 @@ class RegistryLifecycleIntegrationTest {
 
     private static ComplianceControls.Evidence evidence(String expiresAt) {
         return new ComplianceControls.Evidence("https://evidence.example.eu/control.pdf", "a".repeat(64),
-                "1.0", "governance@bank.eu", expiresAt);
+                "1.0.0", "governance@bank.eu", "dataset-v1", "approval-rate: group-a=0.91; group-b=0.90",
+                "risk-reviewer", "signed connector attestation", "ernest://receipt/example", expiresAt);
     }
 }

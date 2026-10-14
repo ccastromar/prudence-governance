@@ -67,15 +67,16 @@ export interface RegisterInput {
   classificationJustification: string; obligations: string[];
 }
 
-export type ComplianceControlStatus = 'PENDING' | 'SATISFIED' | 'EXPIRED';
+export type ComplianceControlStatus = 'NOT_STARTED' | 'EVIDENCE_REQUESTED' | 'SATISFIED' | 'EXPIRED' | 'FAILED' | 'WAIVED';
 export interface ComplianceControl {
-  id: string; profileId: string; key: string; title: string; requirement: string; blocking: boolean;
+  id: string; profileId: string; key: string; title: string; requirement: string; blocking: boolean; accepts: string;
+  expiresAfterDays: number | null; expiresOnVersionChange: boolean; blocksVersionChange: boolean; evidenceSource: string;
   status: ComplianceControlStatus; evidenceUri: string | null; evidenceSha256: string | null;
   evidenceVersion: string | null; evidenceOwner: string | null; satisfiedAt: string | null;
-  expiresAt: string | null; createdAt: string;
+  evidenceDatasetVersion: string | null; evidenceMetrics: string | null; evidenceApprover: string | null; evidenceAttestation: string | null; ernestReceipt: string | null; expiresAt: string | null; createdAt: string;
 }
 export interface ComplianceEvidenceInput {
-  evidenceUri: string; evidenceSha256: string; evidenceVersion: string; evidenceOwner: string; expiresAt?: string;
+  evidenceUri: string; evidenceSha256: string; evidenceVersion: string; evidenceOwner: string; datasetVersion?: string; metricsByGroup?: string; approver?: string; signedAttestation?: string; ernestReceipt?: string; expiresAt?: string;
 }
 
 export interface Decision { decision: 'ALLOW' | 'DENY' | 'APPROVAL_REQUIRED'; reason?: string; approver?: string; }

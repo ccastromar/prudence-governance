@@ -31,7 +31,8 @@ public class ComplianceControlService implements ComplianceControls {
             String now = Instant.now().toString();
             controls.saveAll(profile.controls().stream().map(definition -> new ComplianceControlJpaEntity(
                     UUID.randomUUID().toString(), system.id().value(), profile.id(), definition.key(), definition.title(),
-                    definition.requirement(), definition.blocking(), now)).toList());
+                    definition.requirement(), definition.blocking(), definition.accepts(), definition.expiresAfterDays(),
+                    definition.expiresOnVersionChange(), definition.blocksVersionChange(), definition.source(), now)).toList());
         }
     }
 
@@ -48,7 +49,7 @@ public class ComplianceControlService implements ComplianceControls {
         initialize(system); // also upgrades legacy systems the first time they enter review.
         List<String> missing = forSystem(system.id().value()).stream()
                 .filter(ComplianceControlJpaEntity::isBlocking)
-                .filter(control -> !satisfiedAndCurrent(control))
+                .filter(control -> !satisfiedAndCurrent(control, system))
                 .map(control -> control.getControlKey() + " (" + control.getTitle() + ")").toList();
         if (!missing.isEmpty()) {
             throw new DomainException("compliance controls required before review: " + String.join(", ", missing));
@@ -67,14 +68,22 @@ public class ComplianceControlService implements ComplianceControls {
         ComplianceControlJpaEntity control = controls.findByIdAndAiSystemId(controlId, aiSystemId)
                 .orElseThrow(() -> new DomainException("compliance control not found: " + controlId));
         validateEvidence(evidence);
-        control.satisfy(evidence.uri(), evidence.sha256(), evidence.version(), evidence.owner(), Instant.now().toString(), evidence.expiresAt());
+        if (control.getAccepts().contains("dataset-version") && blank(evidence.datasetVersion())) throw new DomainException("dataset version is required by this evidence contract");
+        if (control.getAccepts().contains("metrics-by-group") && blank(evidence.metricsByGroup())) throw new DomainException("metrics by group are required by this evidence contract");
+        if (control.getAccepts().contains("approver") && blank(evidence.approver())) throw new DomainException("approver is required by this evidence contract");
+        if (control.getAccepts().contains("signed-attestation") && blank(evidence.signedAttestation())) throw new DomainException("signed attestation is required by this evidence contract");
+        String expiresAt = effectiveExpiry(evidence.expiresAt(), control.getExpiresAfterDays());
+        control.satisfy(evidence.uri(), evidence.sha256(), evidence.version(), evidence.owner(), evidence.datasetVersion(), evidence.metricsByGroup(), evidence.approver(), evidence.signedAttestation(), evidence.ernestReceipt(), Instant.now().toString(), expiresAt);
         return controls.save(control);
     }
 
-    private static boolean satisfiedAndCurrent(ComplianceControlJpaEntity control) {
+    private static boolean satisfiedAndCurrent(ComplianceControlJpaEntity control, AiSystem system) {
         if (control.getStatus() != ComplianceControlStatus.SATISFIED) return false;
+        if (control.isExpiresOnVersionChange() && !system.classification().systemVersion().equals(control.getEvidenceVersion())) return false;
         return control.getExpiresAt() == null || control.getExpiresAt().isBlank() || Instant.parse(control.getExpiresAt()).isAfter(Instant.now());
     }
+
+    private static String effectiveExpiry(String requested, Integer days) { if (!blank(requested)) return requested; return days == null ? null : Instant.now().plusSeconds(days * 86400L).toString(); }
 
     private static void validateEvidence(Evidence evidence) {
         if (evidence == null || blank(evidence.uri()) || blank(evidence.sha256()) || blank(evidence.version()) || blank(evidence.owner())) {
