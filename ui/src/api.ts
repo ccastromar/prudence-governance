@@ -67,6 +67,17 @@ export interface RegisterInput {
   classificationJustification: string; obligations: string[];
 }
 
+export type ComplianceControlStatus = 'PENDING' | 'SATISFIED' | 'EXPIRED';
+export interface ComplianceControl {
+  id: string; profileId: string; key: string; title: string; requirement: string; blocking: boolean;
+  status: ComplianceControlStatus; evidenceUri: string | null; evidenceSha256: string | null;
+  evidenceVersion: string | null; evidenceOwner: string | null; satisfiedAt: string | null;
+  expiresAt: string | null; createdAt: string;
+}
+export interface ComplianceEvidenceInput {
+  evidenceUri: string; evidenceSha256: string; evidenceVersion: string; evidenceOwner: string; expiresAt?: string;
+}
+
 export interface Decision { decision: 'ALLOW' | 'DENY' | 'APPROVAL_REQUIRED'; reason?: string; approver?: string; }
 
 /// Where a piece of governance evidence stands on its way to Ernest. `sealed` (qualified QTSP
@@ -182,6 +193,10 @@ export const api = {
     fetch(`/api/registry/systems/${id}/renew`, { method: 'POST', headers: withAuth(json_ct) }).then(ok<AiSystem>),
   submitSystem: (id: string) =>
     fetch(`/api/registry/systems/${id}/submit`, { method: 'POST', headers: withAuth(json_ct) }).then(ok<AiSystem>),
+  complianceControls: (id: string) =>
+    fetch(`/api/registry/systems/${id}/compliance-controls`, { headers: withAuth() }).then(ok<ComplianceControl[]>),
+  satisfyComplianceControl: (systemId: string, controlId: string, body: ComplianceEvidenceInput) =>
+    post<ComplianceControl>(`/api/registry/systems/${systemId}/compliance-controls/${controlId}/satisfy`, body),
   posture: () => fetch('/api/posture', { headers: withAuth() }).then(json<Posture>),
   systemReviews: (id: string) => fetch(`/api/registry/systems/${id}/reviews`, { headers: withAuth() }).then(json<ReviewEvent[]>),
   drift: () => fetch('/api/posture/drift', { headers: withAuth() }).then(json<Drift>),

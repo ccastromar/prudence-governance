@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type AiSystem, type RegisterInput, type RegulatoryRole, type RiskTier } from '../api';
+import { api, type AiSystem, type ComplianceControl, type ComplianceEvidenceInput, type RegisterInput, type RegulatoryRole, type RiskTier } from '../api';
 import { RiskBadge, StatusBadge } from '../components';
 
 const EMPTY: RegisterInput = { name: '', intendedPurpose: '', ownerName: '', ownerEmail: '', riskTier: 'HIGH', regulatoryRole: 'DEPLOYER', systemVersion: '', modelHash: '', annexI: false, annexIII: true, operatingGeography: 'European Union', affectedPopulation: '', classificationJustification: '', obligations: [''] };
@@ -11,6 +11,11 @@ export default function Registry() {
   const [form, setForm] = useState<RegisterInput>(EMPTY);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [controlsFor, setControlsFor] = useState<AiSystem | null>(null);
+  const [controls, setControls] = useState<ComplianceControl[]>([]);
+  const [controlError, setControlError] = useState('');
+  const [controlBusy, setControlBusy] = useState('');
+  const [evidence, setEvidence] = useState<Record<string, ComplianceEvidenceInput>>({});
 
   const load = () => api.listSystems().then(setSystems).catch(() => setError('Could not load systems (is the backend on :8099?)'));
   useEffect(() => { load(); }, []);
@@ -21,6 +26,25 @@ export default function Registry() {
     try { await api.registerSystem({ ...form, obligations: form.obligations.filter(Boolean) }); setForm(EMPTY); await load(); }
     catch { setError('Registration failed'); }
     finally { setBusy(false); }
+  };
+
+  const openControls = async (system: AiSystem) => {
+    setControlsFor(system); setControls([]); setControlError('');
+    try { setControls(await api.complianceControls(system.id)); }
+    catch { setControlError('Could not load compliance controls'); }
+  };
+  const updateEvidence = (id: string, patch: Partial<ComplianceEvidenceInput>) =>
+    setEvidence(previous => {
+      const current = previous[id] ?? { evidenceUri: '', evidenceSha256: '', evidenceVersion: systemVersion(controlsFor), evidenceOwner: controlsFor?.ownerEmail ?? '' };
+      return { ...previous, [id]: { ...current, ...patch } };
+    });
+  const satisfy = async (control: ComplianceControl) => {
+    if (!controlsFor) return;
+    const body = evidence[control.id] ?? { evidenceUri: '', evidenceSha256: '', evidenceVersion: systemVersion(controlsFor), evidenceOwner: controlsFor.ownerEmail };
+    setControlBusy(control.id); setControlError('');
+    try { await api.satisfyComplianceControl(controlsFor.id, control.id, body); setControls(await api.complianceControls(controlsFor.id)); }
+    catch (e) { setControlError((e as Error).message || 'Could not record evidence'); }
+    finally { setControlBusy(''); }
   };
 
   return (
@@ -70,19 +94,38 @@ export default function Registry() {
       </div>
 
       <table>
-        <thead><tr><th>AI system</th><th>Classification</th><th>Lifecycle</th><th>Owner</th></tr></thead>
+        <thead><tr><th>AI system</th><th>Classification</th><th>Lifecycle</th><th>Compliance</th><th>Owner</th></tr></thead>
         <tbody>
-          {systems.length === 0 && <tr><td colSpan={4} className="mut">No systems registered yet.</td></tr>}
+          {systems.length === 0 && <tr><td colSpan={5} className="mut">No systems registered yet.</td></tr>}
           {systems.map(s => (
             <tr key={s.id}>
               <td><div style={{ fontWeight: 600 }}>{s.name}</div><code>{s.id}</code></td>
               <td><RiskBadge tier={s.riskTier} annexIII={s.annexIII} /><div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{s.regulatoryRole} · v{s.systemVersion}</div></td>
               <td><StatusBadge status={s.approvalStatus} /></td>
+              <td><button className="btn btn-outline" onClick={() => openControls(s)}>Controls</button></td>
               <td className="mut">{s.ownerName}</td>
             </tr>
           ))}
         </tbody>
       </table>
+
+      {controlsFor && <section className="card" style={{ marginTop: 'var(--sp-6)' }}>
+        <div className="row between"><div><h2 style={{ fontSize: 'var(--fs-lg)', margin: 0 }}>Compliance controls</h2><p className="mut" style={{ marginBottom: 0 }}>{controlsFor.name} · evidence stays in its source system; Prudence records its reference and hash.</p></div><button className="btn btn-outline" onClick={() => setControlsFor(null)}>Close</button></div>
+        {controlError && <p className="err">{controlError}</p>}
+        {controls.length === 0 && !controlError && <p className="mut">No profile-derived controls apply to this system.</p>}
+        {controls.map(control => {
+          const draft = evidence[control.id] ?? { evidenceUri: '', evidenceSha256: '', evidenceVersion: systemVersion(controlsFor), evidenceOwner: controlsFor.ownerEmail, expiresAt: '' };
+          const done = control.status === 'SATISFIED';
+          return <div key={control.id} style={{ borderTop: '1px solid var(--line)', padding: 'var(--sp-4) 0' }}>
+            <div className="row between"><div><strong>{control.title}</strong><div className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{control.profileId} · {control.key}{control.blocking ? ' · blocks review' : ''}</div></div><StatusBadge status={control.status} /></div>
+            <p className="mut" style={{ fontSize: 'var(--fs-sm)' }}>{control.requirement}</p>
+            {done ? <p className="mut" style={{ fontSize: 'var(--fs-sm)' }}>Evidence: <a href={control.evidenceUri ?? '#'} target="_blank" rel="noreferrer">{control.evidenceVersion}</a> · {control.evidenceOwner}{control.expiresAt ? ` · expires ${control.expiresAt}` : ''}</p>
+              : <div className="grid2"><div className="field"><label>Evidence URI</label><input value={draft.evidenceUri} onChange={e => updateEvidence(control.id, { evidenceUri: e.target.value })} placeholder="https://…" /></div><div className="field"><label>SHA-256</label><input value={draft.evidenceSha256} onChange={e => updateEvidence(control.id, { evidenceSha256: e.target.value })} placeholder="64 hex characters" /></div><div className="field"><label>Evidence version</label><input value={draft.evidenceVersion} onChange={e => updateEvidence(control.id, { evidenceVersion: e.target.value })} /></div><div className="field"><label>Evidence owner</label><input value={draft.evidenceOwner} onChange={e => updateEvidence(control.id, { evidenceOwner: e.target.value })} /></div><div className="field"><label>Expires at (optional, ISO instant)</label><input value={draft.expiresAt ?? ''} onChange={e => updateEvidence(control.id, { expiresAt: e.target.value })} placeholder="2027-01-01T00:00:00Z" /></div><div className="field" style={{ alignSelf: 'end' }}><button className="btn btn-primary" disabled={controlBusy === control.id} onClick={() => satisfy(control)}>{controlBusy === control.id ? 'Recording…' : 'Record evidence'}</button></div></div>}
+          </div>;
+        })}
+      </section>}
     </>
   );
 }
+
+function systemVersion(system: AiSystem | null) { return system?.systemVersion ?? ''; }

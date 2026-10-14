@@ -18,6 +18,7 @@ import com.prudence.registry.domain.ApprovalStatus;
 import com.prudence.registry.domain.ReviewEvent;
 import com.prudence.registry.domain.RiskTier;
 import com.prudence.evidence.delivery.DeliverEvidence;
+import com.prudence.compliance.application.port.in.ComplianceControls;
 import com.prudence.shared.exception.DomainException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,16 +47,19 @@ public class AiSystemService implements RegisterAiSystemUseCase, AiSystemQueries
     private final ReviewLog reviewLog;
     private final DeliverEvidence evidence;
     private final RaiseAlert alerts;
+    private final ComplianceControls compliance;
     private final int approvalValidityDays;
     private final int reviewWindowDays;
 
     public AiSystemService(AiSystemRepository repository, ReviewLog reviewLog, DeliverEvidence evidence, RaiseAlert alerts,
+                           ComplianceControls compliance,
                            @Value("${prudence.governance.approval-validity-days:365}") int approvalValidityDays,
                            @Value("${prudence.governance.review-window-days:30}") int reviewWindowDays) {
         this.repository = repository;
         this.reviewLog = reviewLog;
         this.evidence = evidence;
         this.alerts = alerts;
+        this.compliance = compliance;
         this.approvalValidityDays = approvalValidityDays;
         this.reviewWindowDays = reviewWindowDays;
     }
@@ -69,7 +73,9 @@ public class AiSystemService implements RegisterAiSystemUseCase, AiSystemQueries
                 new AiSystem.IntendedPurpose(command.intendedPurpose()),
                 new AiSystem.Owner(command.ownerName(), command.ownerEmail()),
                 command.riskTier(), command.classification());
-        return repository.save(system);
+        AiSystem saved = repository.save(system);
+        compliance.initialize(saved);
+        return saved;
     }
 
     @Override
@@ -88,6 +94,7 @@ public class AiSystemService implements RegisterAiSystemUseCase, AiSystemQueries
     @Transactional
     public AiSystem submitForReview(AiSystemId id) {
         AiSystem system = requireForUpdate(id);
+        compliance.requireReadyForReview(system);
         system.submitForReview();
         return repository.save(system);
     }
