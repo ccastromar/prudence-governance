@@ -3,6 +3,10 @@
   "enabled": true,
   "roles": { "realm": [ { "name": "read-write" }, { "name": "read-only" } ] },
   "clientScopes": [
+    { "name": "basic", "protocol": "openid-connect" },
+    { "name": "profile", "protocol": "openid-connect" },
+    { "name": "email", "protocol": "openid-connect" },
+    { "name": "roles", "protocol": "openid-connect" },
     { "name": "pdp.decide", "protocol": "openid-connect",
       "description": "Permission to call the Prudence PDP (/api/policy/decisions).",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } }
