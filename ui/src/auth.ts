@@ -21,13 +21,17 @@ function b64url(bytes: Uint8Array): string {
   let s = ''; for (const b of bytes) s += String.fromCharCode(b);
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
-function rand(n = 32): string { const a = new Uint8Array(n); crypto.getRandomValues(a); return b64url(a); }
+function rand(n = 32): string {
+  const webCrypto = globalThis.crypto;
+  if (!webCrypto?.getRandomValues) throw new Error('This browser requires HTTPS to create the PKCE sign-in request.');
+  const a = new Uint8Array(n); webCrypto.getRandomValues(a); return b64url(a);
+}
 async function challenge(v: string): Promise<string> {
   const bytes = new TextEncoder().encode(v);
   // Browsers only expose crypto.subtle in a secure context. The LAN development
   // server is deliberately plain HTTP, so retain PKCE S256 there with the same
   // SHA-256 calculation instead of silently leaving the sign-in button inert.
-  if (crypto.subtle) return b64url(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+  if (globalThis.crypto?.subtle) return b64url(new Uint8Array(await globalThis.crypto.subtle.digest('SHA-256', bytes)));
   return b64url(sha256(bytes));
 }
 

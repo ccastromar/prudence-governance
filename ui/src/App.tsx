@@ -32,6 +32,7 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('registry');
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(!ssoEnabled || !!getToken());
+  const [authError, setAuthError] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -64,7 +65,8 @@ export default function App() {
           <div className="card" style={{ maxWidth: 420, margin: 'var(--sp-12) auto', textAlign: 'center' }}>
             <h1>Sign in to Prudence</h1>
             <p className="sub">Governance is a controlled function — sign in with your identity provider.</p>
-            <button className="btn btn-primary" onClick={login}>Sign in with SSO</button>
+            <button className="btn btn-primary" onClick={() => { setAuthError(''); void login().catch(error => setAuthError((error as Error).message)); }}>Sign in with SSO</button>
+            {authError && <p className="err">{authError}</p>}
           </div>
         </main>
       </div>
