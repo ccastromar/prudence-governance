@@ -7,6 +7,8 @@ import com.prudence.registry.domain.RegulatoryRole;
 import com.prudence.registry.domain.RiskTier;
 import com.prudence.compliance.application.port.in.ComplianceControls;
 import com.prudence.compliance.domain.ComplianceControlStatus;
+import com.prudence.governance.application.service.GovernanceCaseService;
+import com.prudence.governance.domain.GovernanceCaseType;
 import com.prudence.shared.exception.DomainException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,9 @@ class RegistryLifecycleIntegrationTest {
 
     @Autowired
     private ComplianceControls compliance;
+
+    @Autowired
+    private GovernanceCaseService governanceCases;
 
     @Test
     void registrationRequiresAssessmentThenExplicitReviewBeforeApproval() throws Exception {
@@ -89,6 +94,21 @@ class RegistryLifecycleIntegrationTest {
         }
 
         assertThrows(DomainException.class, () -> review.submitForReview(created.id()));
+    }
+
+    @Test
+    void governanceCaseKeepsReferencesAndAnAuditableDecisionWithoutStoringDocuments() {
+        var system = register.register(request("Model change dossier", RegulatoryRole.DEPLOYER).toCommand());
+        var c = governanceCases.open(system.id().value(), GovernanceCaseType.CHANGE, "Version 1.1 rollout",
+                "Assess the changed model and deployment conditions.", "governance@bank.eu", "owner@bank.eu");
+        assertThrows(DomainException.class, () -> governanceCases.close(c.getId(), "Approved", "reviewer@bank.eu"));
+        governanceCases.addEvidence(c.getId(), "Change assessment", "https://dms.example.eu/change-11.pdf",
+                "a".repeat(64), "1.1", "governance@bank.eu", "owner@bank.eu");
+        governanceCases.startReview(c.getId(), "reviewer@bank.eu");
+        var closed = governanceCases.close(c.getId(), "Approved with monitoring condition", "reviewer@bank.eu");
+        assertEquals("CLOSED", closed.getStatus().name());
+        assertEquals(1, governanceCases.evidence(c.getId()).size());
+        assertEquals(4, governanceCases.timeline(c.getId()).size());
     }
 
     private static RegisterAiSystemRequest request(String name, RegulatoryRole role) {

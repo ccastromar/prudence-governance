@@ -137,6 +137,16 @@ export interface OpenIncidentInput {
   suspendSystem: boolean;
 }
 
+export type GovernanceCaseType = 'ASSESSMENT' | 'CHANGE' | 'EXCEPTION' | 'CORRECTIVE_ACTION';
+export type GovernanceCaseStatus = 'OPEN' | 'IN_REVIEW' | 'CLOSED';
+export interface GovernanceEvidence { id: string; label: string; uri: string; sha256: string; version: string; owner: string; addedBy: string; addedAt: string; }
+export interface GovernanceCaseEvent { id: string; type: string; actor: string; at: string; details: string; }
+export interface GovernanceCase {
+  id: string; aiSystemId: string; type: GovernanceCaseType; status: GovernanceCaseStatus; title: string; summary: string; owner: string;
+  openedBy: string; openedAt: string; reviewStartedAt: string | null; closedAt: string | null; closedBy: string | null; closingDecision: string | null;
+  evidence: GovernanceEvidence[]; timeline: GovernanceCaseEvent[];
+}
+
 /// A record the delivery worker gave up on: evidence (decisions/reviews/attestations/incidents)
 /// that never reached Ernest, or an alert email that never went out.
 export interface DeadLetter {
@@ -166,6 +176,12 @@ const post = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify(body) }).then(ok<T>);
 
 export const api = {
+  governanceCases: () => fetch('/api/governance/cases', { headers: withAuth() }).then(ok<GovernanceCase[]>),
+  governanceCase: (id: string) => fetch(`/api/governance/cases/${id}`, { headers: withAuth() }).then(ok<GovernanceCase>),
+  openGovernanceCase: (body: { aiSystemId: string; type: GovernanceCaseType; title: string; summary: string; owner: string }) => post<GovernanceCase>('/api/governance/cases', body),
+  startGovernanceReview: (id: string) => post<GovernanceCase>(`/api/governance/cases/${id}/review`, {}),
+  addGovernanceEvidence: (id: string, body: { label: string; uri: string; sha256: string; version: string; owner: string }) => post<GovernanceEvidence>(`/api/governance/cases/${id}/evidence`, body),
+  closeGovernanceCase: (id: string, decision: string) => post<GovernanceCase>(`/api/governance/cases/${id}/close`, { decision }),
   deadLetters: () => fetch('/api/evidence/dead-letters', { headers: withAuth() }).then(ok<DeadLetter[]>),
   retryDeadLetter: (target: string, id: string) =>
     fetch(`/api/evidence/dead-letters/${target}/${id}/retry`, { method: 'POST', headers: withAuth(json_ct) })
