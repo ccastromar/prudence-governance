@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.Set;
 
 @Service
 public class ComplianceControlService implements ComplianceControls {
@@ -75,6 +76,20 @@ public class ComplianceControlService implements ComplianceControls {
         String expiresAt = effectiveExpiry(evidence.expiresAt(), control.getExpiresAfterDays());
         control.satisfy(evidence.uri(), evidence.sha256(), evidence.version(), evidence.owner(), evidence.datasetVersion(), evidence.metricsByGroup(), evidence.approver(), evidence.signedAttestation(), evidence.ernestReceipt(), Instant.now().toString(), expiresAt);
         return controls.save(control);
+    }
+
+    @Transactional
+    public int invalidateAffectedByChange(String aiSystemId, Set<String> fields) {
+        Set<String> keys = new java.util.HashSet<>();
+        if (fields.contains("DATA_OR_EMBEDDINGS")) keys.add("DATA_GOVERNANCE");
+        if (fields.contains("PROMPT_OR_TOOLS") || fields.contains("INTEGRATION_ENVIRONMENT")) keys.add("HUMAN_OVERSIGHT");
+        if (fields.contains("GPAI_PROVIDER_MODEL") || fields.contains("MODEL_VERSION")) keys.add("ROBUSTNESS_SECURITY");
+        if (fields.contains("SECURITY_CONFIGURATION")) keys.add("ROBUSTNESS_SECURITY");
+        var affected = controls.findByAiSystemIdOrderByProfileIdAscControlKeyAsc(aiSystemId).stream()
+                .filter(c -> keys.contains(c.getControlKey())).toList();
+        affected.forEach(ComplianceControlJpaEntity::invalidateForChange);
+        controls.saveAll(affected);
+        return affected.size();
     }
 
     private static boolean satisfiedAndCurrent(ComplianceControlJpaEntity control, AiSystem system) {

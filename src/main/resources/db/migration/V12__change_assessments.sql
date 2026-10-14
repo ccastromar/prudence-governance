@@ -1,0 +1,2 @@
+create table change_assessment (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), proposed_version varchar(255) not null, changed_fields varchar(4000), outcome varchar(255) not null check (outcome in ('MINOR','CONTROL_REVIEW','SUBSTANTIAL','PROHIBITED')), rationale varchar(4000) not null, evidence_uri varchar(2000) not null, evidence_sha256 varchar(255) not null, assessed_at varchar(255) not null, assessed_by varchar(255) not null);
+create index change_assessment_system_idx on change_assessment(ai_system_id, assessed_at);

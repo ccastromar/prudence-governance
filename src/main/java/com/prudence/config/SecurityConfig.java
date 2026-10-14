@@ -53,6 +53,7 @@ public class SecurityConfig {
             // calls it with a client-credentials token. Require the `pdp.decide` scope
             // (a human SSO token does not carry it, so humans can't drive the PDP directly).
             .requestMatchers(HttpMethod.POST, "/api/policy/decisions").hasAuthority("SCOPE_pdp.decide")
+            .requestMatchers(HttpMethod.POST, "/api/governance/change-assessments").hasAuthority("SCOPE_pdp.decide")
             .requestMatchers(HttpMethod.POST, "/api/registry/systems", "/api/registry/systems/*/submit",
                     "/api/registry/systems/*/compliance-controls/**").hasRole("read-write")
             // Registering an incident and recording its reports change the register (and may

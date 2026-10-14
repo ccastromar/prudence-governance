@@ -44,6 +44,9 @@ public class ComplianceControlJpaEntity {
     }
 
     public void requestEvidence() { if (status == ComplianceControlStatus.NOT_STARTED) status = ComplianceControlStatus.EVIDENCE_REQUESTED; }
+    /// A deployment change made the prior attestation stale; retain its reference for audit but
+    /// require a fresh one before the next approval.
+    public void invalidateForChange() { if (status == ComplianceControlStatus.SATISFIED) status = ComplianceControlStatus.NOT_STARTED; }
     public void satisfy(String uri, String sha256, String version, String owner, String datasetVersion, String metrics, String approver,
                         String attestation, String receipt, String satisfiedAt, String expiresAt) {
         this.evidenceUri = uri; this.evidenceSha256 = sha256; this.evidenceVersion = version;
