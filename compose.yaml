@@ -60,7 +60,10 @@ services:
       PRUDENCE_CONSOLE_URL: ${PRUDENCE_CONSOLE_URL:-}
 
   ui:
-    build: ./ui
+    build:
+      # Repository root: the console imports the shared design tokens from docs/design.
+      context: .
+      dockerfile: ui/Dockerfile
     depends_on:
       - prudence
     ports:
