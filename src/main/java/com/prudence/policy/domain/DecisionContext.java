@@ -10,8 +10,15 @@ public record DecisionContext(
         String policyVersion,
         String policyHash,
         String systemVersion,
-        String modelHash) {
+        String modelHash,
+        String causationId,
+        String correlationId,
+        Long systemSequence) {
+    public DecisionContext(String subject, String pipeline, String aiSystemId, String action, String policyVersion,
+                           String policyHash, String systemVersion, String modelHash) {
+        this(subject, pipeline, aiSystemId, action, policyVersion, policyHash, systemVersion, modelHash, null, null, null);
+    }
     public DecisionContext(String subject, String pipeline, String aiSystemId, String action) {
-        this(subject, pipeline, aiSystemId, action, "unversioned", "unknown", "unknown", "unknown");
+        this(subject, pipeline, aiSystemId, action, "unversioned", "unknown", "unknown", "unknown", null, null, null);
     }
 }

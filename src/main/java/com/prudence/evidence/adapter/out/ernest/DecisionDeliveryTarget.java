@@ -58,7 +58,8 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
 
     private static DecisionContext context(EvidenceOutboxJpaEntity e) {
         return new DecisionContext(e.getSubject(), e.getPipeline(), e.getAiSystemId(), e.getAction(),
-                e.getPolicyVersion(), e.getPolicyHash(), e.getSystemVersion(), e.getModelHash());
+                e.getPolicyVersion(), e.getPolicyHash(), e.getSystemVersion(), e.getModelHash(),
+                e.getCausationId(), e.getCorrelationId(), e.getSystemSequence());
     }
 
     @Override

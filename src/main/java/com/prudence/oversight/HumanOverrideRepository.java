@@ -1,0 +1,1 @@
+package com.prudence.oversight; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface HumanOverrideRepository extends JpaRepository<HumanOverrideJpaEntity,String>{List<HumanOverrideJpaEntity> findByAiSystemIdOrderByOccurredAtDesc(String id);}

@@ -1,0 +1,1 @@
+create table human_oversight_assignment (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), role varchar(255) not null, person varchar(255) not null, override_authority boolean not null, stop_authority boolean not null, training_evidence varchar(2000) not null, training_expires_at varchar(255) not null);

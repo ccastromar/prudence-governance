@@ -5,6 +5,8 @@ import com.prudence.compliance.adapter.out.persistence.ComplianceControlJpaRepos
 import com.prudence.compliance.application.port.in.ComplianceControls;
 import com.prudence.compliance.domain.ComplianceControlStatus;
 import com.prudence.registry.domain.AiSystem;
+import com.prudence.registry.domain.RiskTier;
+import com.prudence.oversight.HumanAssignmentRepository;
 import com.prudence.shared.exception.DomainException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +20,10 @@ import java.util.Set;
 public class ComplianceControlService implements ComplianceControls {
     private final ComplianceControlJpaRepository controls;
     private final ComplianceProfileCatalog catalog;
+    private final HumanAssignmentRepository assignments;
 
-    public ComplianceControlService(ComplianceControlJpaRepository controls, ComplianceProfileCatalog catalog) {
-        this.controls = controls;
-        this.catalog = catalog;
+    public ComplianceControlService(ComplianceControlJpaRepository controls, ComplianceProfileCatalog catalog, HumanAssignmentRepository assignments) {
+        this.controls = controls; this.catalog = catalog; this.assignments = assignments;
     }
 
     @Override
@@ -54,6 +56,11 @@ public class ComplianceControlService implements ComplianceControls {
                 .map(control -> control.getControlKey() + " (" + control.getTitle() + ")").toList();
         if (!missing.isEmpty()) {
             throw new DomainException("compliance controls required before review: " + String.join(", ", missing));
+        }
+        if (system.riskTier() == RiskTier.HIGH && assignments.findByAiSystemId(system.id().value()).stream().noneMatch(a ->
+                a.getRole() == com.prudence.oversight.OversightRole.SUPERVISOR && (a.isOverrideAuthority() || a.isStopAuthority())
+                        && Instant.parse(a.getTrainingExpiresAt()).isAfter(Instant.now()))) {
+            throw new DomainException("a high-risk system requires a current supervisor with override or stop authority before review");
         }
     }
 

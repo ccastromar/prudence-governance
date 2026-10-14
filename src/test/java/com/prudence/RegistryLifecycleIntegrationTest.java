@@ -9,6 +9,7 @@ import com.prudence.compliance.application.port.in.ComplianceControls;
 import com.prudence.compliance.domain.ComplianceControlStatus;
 import com.prudence.governance.application.service.GovernanceCaseService;
 import com.prudence.governance.domain.GovernanceCaseType;
+import com.prudence.oversight.*;
 import com.prudence.shared.exception.DomainException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,7 @@ class RegistryLifecycleIntegrationTest {
 
     @Autowired
     private GovernanceCaseService governanceCases;
+    @Autowired private HumanAssignmentRepository assignments;
 
     @Test
     void registrationRequiresAssessmentThenExplicitReviewBeforeApproval() throws Exception {
@@ -62,6 +64,8 @@ class RegistryLifecycleIntegrationTest {
         assertTrue(controls.stream().allMatch(c -> c.getStatus() == ComplianceControlStatus.NOT_STARTED));
         assertThrows(DomainException.class, () -> review.submitForReview(created.id()));
         controls.forEach(control -> compliance.satisfy(created.id().value(), control.getId(), evidence()));
+        assignments.save(new HumanAssignmentJpaEntity("supervisor-" + created.id().value(), created.id().value(), OversightRole.SUPERVISOR,
+                "supervisor@bank.eu", true, true, "https://lms.example.eu/training", Instant.now().plusSeconds(86400).toString()));
 
         var submitted = review.submitForReview(created.id());
         assertEquals("PENDING_APPROVAL", submitted.approvalStatus().name());

@@ -26,6 +26,9 @@ public class EvidenceOutboxJpaEntity {
     private String verdict;
     @Column(length = 2000) private String reason;
     private String createdAt;
+    private String causationId;
+    private String correlationId;
+    private long systemSequence;
     @Embedded private Delivery delivery;
 
     protected EvidenceOutboxJpaEntity() {}
@@ -53,4 +56,8 @@ public class EvidenceOutboxJpaEntity {
     public String getModelHash() { return modelHash; }
     public String getVerdict() { return verdict; }
     public String getReason() { return reason; }
+    public String getCausationId() { return causationId; }
+    public String getCorrelationId() { return correlationId; }
+    public long getSystemSequence() { return systemSequence; }
+    public void setCausality(String causationId, String correlationId, long systemSequence) { this.causationId=causationId; this.correlationId=correlationId; this.systemSequence=systemSequence; }
 }

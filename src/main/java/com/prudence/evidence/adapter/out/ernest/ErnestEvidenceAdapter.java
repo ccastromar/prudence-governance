@@ -334,6 +334,9 @@ public class ErnestEvidenceAdapter {
         metadata.put("policyHash", ctx.policyHash());
         metadata.put("systemVersion", ctx.systemVersion());
         metadata.put("modelHash", ctx.modelHash());
+        if (ctx.causationId() != null) metadata.put("causationId", ctx.causationId());
+        if (ctx.correlationId() != null) metadata.put("correlationId", ctx.correlationId());
+        if (ctx.systemSequence() != null) metadata.put("systemSequence", ctx.systemSequence());
         metadata.put("decision", verdict);
         if (reason != null) metadata.put("reason", reason);
         return metadata;
