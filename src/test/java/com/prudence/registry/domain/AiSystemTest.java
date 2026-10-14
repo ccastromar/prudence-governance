@@ -114,6 +114,26 @@ class AiSystemTest {
         assertEquals(ApprovalStatus.UNDER_ASSESSMENT, system.approvalStatus());
     }
 
+    @Test
+    void suspendedSystemRequiresANewIndependentReviewBeforeItCanRunAgain() {
+        AiSystem system = register(RiskTier.HIGH);
+        system.submitForReview();
+        system.approve("risk-reviewer", 365);
+        system.approve("dpo-reviewer", 365);
+        assertTrue(system.isApproved());
+
+        system.suspend();
+        assertEquals(ApprovalStatus.SUSPENDED, system.approvalStatus());
+        assertFalse(system.isApproved());
+        assertThrows(DomainException.class, () -> system.approve("third-reviewer", 365));
+
+        system.submitForReview();
+        assertEquals(ApprovalStatus.PENDING_APPROVAL, system.approvalStatus());
+        system.approve("risk-reviewer", 365);
+        system.approve("dpo-reviewer", 365);
+        assertTrue(system.isApproved());
+    }
+
     private static AiSystem register(RiskTier riskTier) {
         return AiSystem.register(SYSTEM_ID, "assistant", PURPOSE, OWNER, riskTier, classification());
     }

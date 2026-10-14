@@ -1,6 +1,7 @@
 package com.prudence.evidence.adapter.out.ernest;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -32,7 +33,7 @@ final class ErnestKafkaPublisher implements AutoCloseable {
     /// One record to publish: partition key, Ernest's dedup id, and the event body.
     record Event(String key, String sourceEventId, Map<String, Object> body) {}
 
-    private final KafkaProducer<String, byte[]> producer;
+    private final Producer<String, byte[]> producer;
     private final String topic;
     private final JsonMapper mapper = JsonMapper.builder().build();
 
@@ -52,6 +53,13 @@ final class ErnestKafkaPublisher implements AutoCloseable {
         // Security last: it may also override any setting above (kafka-properties passthrough).
         config.putAll(security);
         this.producer = new KafkaProducer<>(config, new StringSerializer(), new ByteArraySerializer());
+        this.topic = topic;
+    }
+
+    /// Kept package-visible so transport behaviour can be tested with Kafka's MockProducer
+    /// without opening a broker connection.
+    ErnestKafkaPublisher(Producer<String, byte[]> producer, String topic) {
+        this.producer = producer;
         this.topic = topic;
     }
 
