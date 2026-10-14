@@ -60,6 +60,9 @@ public class SecurityConfig {
             // suspend a system); reading it only needs authentication.
             .requestMatchers(HttpMethod.POST, "/api/incidents", "/api/incidents/**").hasRole("read-write")
             .requestMatchers(HttpMethod.POST, "/api/governance/cases", "/api/governance/cases/**").hasRole("read-write")
+            .requestMatchers(HttpMethod.POST, "/api/governance/change-assessments", "/api/monitoring/**",
+                    "/api/oversight/**", "/api/impact/**", "/api/compliance-snapshots/**")
+                .hasRole("read-write")
             // Re-driving dead-lettered evidence is an operator act.
             .requestMatchers(HttpMethod.POST, "/api/evidence/**").hasRole("read-write")
             // Approving/rejecting/renewing a system and issuing an attestation are reviewer acts.
