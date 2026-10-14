@@ -14,24 +14,24 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GovernanceExceptionHandler {
 
-    @ExceptionHandler(AiSystemNotFoundException.class)
-    ProblemDetail onNotFound(AiSystemNotFoundException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
-    }
+  @ExceptionHandler(AiSystemNotFoundException.class)
+  ProblemDetail onNotFound(AiSystemNotFoundException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+  }
 
-    @ExceptionHandler(IncidentNotFoundException.class)
-    ProblemDetail onIncidentNotFound(IncidentNotFoundException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
-    }
+  @ExceptionHandler(IncidentNotFoundException.class)
+  ProblemDetail onIncidentNotFound(IncidentNotFoundException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
+  }
 
-    /// Invalid input the domain rejects (missing fields, impossible dates) is the caller's error.
-    @ExceptionHandler(IllegalArgumentException.class)
-    ProblemDetail onInvalidInput(IllegalArgumentException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
-    }
+  /// Invalid input the domain rejects (missing fields, impossible dates) is the caller's error.
+  @ExceptionHandler(IllegalArgumentException.class)
+  ProblemDetail onInvalidInput(IllegalArgumentException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
+  }
 
-    @ExceptionHandler(DomainException.class)
-    ProblemDetail onDomainRule(DomainException e) {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
-    }
+  @ExceptionHandler(DomainException.class)
+  ProblemDetail onDomainRule(DomainException e) {
+    return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, e.getMessage());
+  }
 }

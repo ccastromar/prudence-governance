@@ -1,2 +1,7 @@
 package com.prudence.monitoring;
-public enum MonitoringStatus { GREEN, AMBER, RED }
+
+public enum MonitoringStatus {
+  GREEN,
+  AMBER,
+  RED
+}

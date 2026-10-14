@@ -5,7 +5,7 @@ package com.prudence.evidence.delivery;
 /// transaction for the record, so a listener that writes (e.g. queues an alert) commits with
 /// the dead-letter itself. Implementations must not throw.
 public interface DeliveryListener {
-    void deadLettered(String target, String recordId, DeliveryFailure failure, String error);
+  void deadLettered(String target, String recordId, DeliveryFailure failure, String error);
 
-    void configurationFailing(String target, String error);
+  void configurationFailing(String target, String error);
 }

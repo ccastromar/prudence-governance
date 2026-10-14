@@ -1,1 +1,9 @@
-package com.prudence.monitoring; import org.springframework.data.jpa.repository.JpaRepository; import java.util.List; public interface MonitoringSignalRepository extends JpaRepository<MonitoringSignalJpaEntity,String>{List<MonitoringSignalJpaEntity> findByAiSystemIdOrderByObservedAtDesc(String id);}
+package com.prudence.monitoring;
+
+import java.util.List;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface MonitoringSignalRepository
+    extends JpaRepository<MonitoringSignalJpaEntity, String> {
+  List<MonitoringSignalJpaEntity> findByAiSystemIdOrderByObservedAtDesc(String id);
+}

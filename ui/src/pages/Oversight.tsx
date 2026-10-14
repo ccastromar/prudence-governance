@@ -1,9 +1,244 @@
-import { useEffect, useState } from 'react';
-import { api, type AiSystem, type HumanAssignment, type HumanOverride, type OversightRole } from '../api';
-const roles: OversightRole[]=['OWNER','SUPERVISOR','COMPLIANCE','DPO','SECURITY','PROVIDER'];
-export default function Oversight(){
- const[systems,setSystems]=useState<AiSystem[]>([]),[id,setId]=useState(''),[assignments,setAssignments]=useState<HumanAssignment[]>([]),[overrides,setOverrides]=useState<HumanOverride[]>([]),[error,setError]=useState('');
- const[a,setA]=useState({role:'SUPERVISOR' as OversightRole,person:'',overrideAuthority:true,stopAuthority:true,trainingEvidence:'',trainingExpiresAt:''}); const[o,setO]=useState({aosReference:'',supervisor:'',reason:'',outcome:''}); const[review,setReview]=useState({reviewer:'',note:''});
- const load=async(x=id)=>{try{setSystems(await api.listSystems());if(x){const[a,o]=await Promise.all([api.assignments(x),api.overrides(x)]);setAssignments(a);setOverrides(o)}}catch(e){setError((e as Error).message)}}; useEffect(()=>{load()},[]);
- return <><h1>Human oversight</h1><p className="sub">Named authority, current training and auditable override decisions. Prudence governs capability; AOS executes the intervention.</p>{error&&<p className="err">{error}</p>}<div className="field"><label>AI system</label><select value={id} onChange={e=>{setId(e.target.value);load(e.target.value)}}><option value="">Select…</option>{systems.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></div>{id&&<div className="grid2"><section className="card"><h2>Assignments</h2>{assignments.map(x=><p key={x.id}><b>{x.person}</b> · {x.role} · {x.overrideAuthority?'override ':''}{x.stopAuthority?'stop ':''} · training expires {x.trainingExpiresAt}</p>)}<select value={a.role} onChange={e=>setA({...a,role:e.target.value as OversightRole})}>{roles.map(r=><option key={r}>{r}</option>)}</select><input placeholder="Person" value={a.person} onChange={e=>setA({...a,person:e.target.value})}/><input placeholder="Training evidence URI" value={a.trainingEvidence} onChange={e=>setA({...a,trainingEvidence:e.target.value})}/><input placeholder="Training expiry ISO instant" value={a.trainingExpiresAt} onChange={e=>setA({...a,trainingExpiresAt:e.target.value})}/><label><input type="checkbox" checked={a.overrideAuthority} onChange={e=>setA({...a,overrideAuthority:e.target.checked})}/> Override authority</label><label><input type="checkbox" checked={a.stopAuthority} onChange={e=>setA({...a,stopAuthority:e.target.checked})}/> Stop authority</label><button className="btn btn-primary" onClick={async()=>{try{await api.addAssignment(id,a);load()}catch(e){setError((e as Error).message)}}}>Assign</button></section><section className="card"><h2>Overrides from AOS</h2>{overrides.map(x=><div key={x.id} style={{borderBottom:'1px solid var(--border)',padding:'var(--sp-3) 0'}}><b>{x.supervisor}</b> · {x.reason}<div className="mut">{x.outcome} · {x.reviewedBy?`reviewed by ${x.reviewedBy}`:'review pending'}</div>{!x.reviewedBy&&<div className="row"><input placeholder="Reviewer" value={review.reviewer} onChange={e=>setReview({...review,reviewer:e.target.value})}/><input placeholder="Review note" value={review.note} onChange={e=>setReview({...review,note:e.target.value})}/><button className="btn btn-outline" onClick={async()=>{try{await api.reviewOverride(x.id,review);setReview({reviewer:'',note:''});load()}catch(e){setError((e as Error).message)}}}>Review</button></div>}</div>)}<h3>Record override</h3><input placeholder="AOS reference" value={o.aosReference} onChange={e=>setO({...o,aosReference:e.target.value})}/><input placeholder="Supervisor" value={o.supervisor} onChange={e=>setO({...o,supervisor:e.target.value})}/><input placeholder="Reason" value={o.reason} onChange={e=>setO({...o,reason:e.target.value})}/><input placeholder="Outcome" value={o.outcome} onChange={e=>setO({...o,outcome:e.target.value})}/><button className="btn btn-primary" onClick={async()=>{try{await api.addOverride(id,o);load()}catch(e){setError((e as Error).message)}}}>Record override</button></section></div>}</>;
+import { useEffect, useState } from "react";
+import {
+  api,
+  type AiSystem,
+  type HumanAssignment,
+  type HumanOverride,
+  type OversightRole,
+} from "../api";
+const roles: OversightRole[] = [
+  "OWNER",
+  "SUPERVISOR",
+  "COMPLIANCE",
+  "DPO",
+  "SECURITY",
+  "PROVIDER",
+];
+export default function Oversight() {
+  const [systems, setSystems] = useState<AiSystem[]>([]),
+    [id, setId] = useState(""),
+    [assignments, setAssignments] = useState<HumanAssignment[]>([]),
+    [overrides, setOverrides] = useState<HumanOverride[]>([]),
+    [error, setError] = useState("");
+  const [a, setA] = useState({
+    role: "SUPERVISOR" as OversightRole,
+    person: "",
+    overrideAuthority: true,
+    stopAuthority: true,
+    trainingEvidence: "",
+    trainingExpiresAt: "",
+  });
+  const [o, setO] = useState({
+    aosReference: "",
+    supervisor: "",
+    reason: "",
+    outcome: "",
+  });
+  const [review, setReview] = useState({ reviewer: "", note: "" });
+  const load = async (x = id) => {
+    try {
+      setSystems(await api.listSystems());
+      if (x) {
+        const [a, o] = await Promise.all([
+          api.assignments(x),
+          api.overrides(x),
+        ]);
+        setAssignments(a);
+        setOverrides(o);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  useEffect(() => {
+    load();
+  }, []);
+  return (
+    <>
+      <h1>Human oversight</h1>
+      <p className="sub">
+        Named authority, current training and auditable override decisions.
+        Prudence governs capability; AOS executes the intervention.
+      </p>
+      {error && <p className="err">{error}</p>}
+      <div className="field">
+        <label>AI system</label>
+        <select
+          value={id}
+          onChange={(e) => {
+            setId(e.target.value);
+            load(e.target.value);
+          }}
+        >
+          <option value="">Select…</option>
+          {systems.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {id && (
+        <div className="grid2">
+          <section className="card">
+            <h2>Assignments</h2>
+            {assignments.map((x) => (
+              <p key={x.id}>
+                <b>{x.person}</b> · {x.role} ·{" "}
+                {x.overrideAuthority ? "override " : ""}
+                {x.stopAuthority ? "stop " : ""} · training expires{" "}
+                {x.trainingExpiresAt}
+              </p>
+            ))}
+            <select
+              value={a.role}
+              onChange={(e) =>
+                setA({ ...a, role: e.target.value as OversightRole })
+              }
+            >
+              {roles.map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </select>
+            <input
+              placeholder="Person"
+              value={a.person}
+              onChange={(e) => setA({ ...a, person: e.target.value })}
+            />
+            <input
+              placeholder="Training evidence URI"
+              value={a.trainingEvidence}
+              onChange={(e) => setA({ ...a, trainingEvidence: e.target.value })}
+            />
+            <input
+              placeholder="Training expiry ISO instant"
+              value={a.trainingExpiresAt}
+              onChange={(e) =>
+                setA({ ...a, trainingExpiresAt: e.target.value })
+              }
+            />
+            <label>
+              <input
+                type="checkbox"
+                checked={a.overrideAuthority}
+                onChange={(e) =>
+                  setA({ ...a, overrideAuthority: e.target.checked })
+                }
+              />{" "}
+              Override authority
+            </label>
+            <label>
+              <input
+                type="checkbox"
+                checked={a.stopAuthority}
+                onChange={(e) =>
+                  setA({ ...a, stopAuthority: e.target.checked })
+                }
+              />{" "}
+              Stop authority
+            </label>
+            <button
+              className="btn btn-primary"
+              onClick={async () => {
+                try {
+                  await api.addAssignment(id, a);
+                  load();
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Assign
+            </button>
+          </section>
+          <section className="card">
+            <h2>Overrides from AOS</h2>
+            {overrides.map((x) => (
+              <div
+                key={x.id}
+                style={{
+                  borderBottom: "1px solid var(--border)",
+                  padding: "var(--sp-3) 0",
+                }}
+              >
+                <b>{x.supervisor}</b> · {x.reason}
+                <div className="mut">
+                  {x.outcome} ·{" "}
+                  {x.reviewedBy
+                    ? `reviewed by ${x.reviewedBy}`
+                    : "review pending"}
+                </div>
+                {!x.reviewedBy && (
+                  <div className="row">
+                    <input
+                      placeholder="Reviewer"
+                      value={review.reviewer}
+                      onChange={(e) =>
+                        setReview({ ...review, reviewer: e.target.value })
+                      }
+                    />
+                    <input
+                      placeholder="Review note"
+                      value={review.note}
+                      onChange={(e) =>
+                        setReview({ ...review, note: e.target.value })
+                      }
+                    />
+                    <button
+                      className="btn btn-outline"
+                      onClick={async () => {
+                        try {
+                          await api.reviewOverride(x.id, review);
+                          setReview({ reviewer: "", note: "" });
+                          load();
+                        } catch (e) {
+                          setError((e as Error).message);
+                        }
+                      }}
+                    >
+                      Review
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            <h3>Record override</h3>
+            <input
+              placeholder="AOS reference"
+              value={o.aosReference}
+              onChange={(e) => setO({ ...o, aosReference: e.target.value })}
+            />
+            <input
+              placeholder="Supervisor"
+              value={o.supervisor}
+              onChange={(e) => setO({ ...o, supervisor: e.target.value })}
+            />
+            <input
+              placeholder="Reason"
+              value={o.reason}
+              onChange={(e) => setO({ ...o, reason: e.target.value })}
+            />
+            <input
+              placeholder="Outcome"
+              value={o.outcome}
+              onChange={(e) => setO({ ...o, outcome: e.target.value })}
+            />
+            <button
+              className="btn btn-primary"
+              onClick={async () => {
+                try {
+                  await api.addOverride(id, o);
+                  load();
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Record override
+            </button>
+          </section>
+        </div>
+      )}
+    </>
+  );
 }

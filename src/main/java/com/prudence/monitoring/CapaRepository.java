@@ -1,1 +1,8 @@
-package com.prudence.monitoring; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface CapaRepository extends JpaRepository<CapaJpaEntity,String>{List<CapaJpaEntity> findByAiSystemIdOrderByDueAtAsc(String id);}
+package com.prudence.monitoring;
+
+import java.util.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CapaRepository extends JpaRepository<CapaJpaEntity, String> {
+  List<CapaJpaEntity> findByAiSystemIdOrderByDueAtAsc(String id);
+}

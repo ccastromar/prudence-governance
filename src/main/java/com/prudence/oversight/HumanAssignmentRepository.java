@@ -1,1 +1,8 @@
-package com.prudence.oversight; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface HumanAssignmentRepository extends JpaRepository<HumanAssignmentJpaEntity,String>{List<HumanAssignmentJpaEntity> findByAiSystemId(String id);}
+package com.prudence.oversight;
+
+import java.util.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface HumanAssignmentRepository extends JpaRepository<HumanAssignmentJpaEntity, String> {
+  List<HumanAssignmentJpaEntity> findByAiSystemId(String id);
+}

@@ -1,1 +1,12 @@
-package com.prudence.causality; import jakarta.persistence.LockModeType; import org.springframework.data.jpa.repository.*; import org.springframework.data.repository.query.Param; import java.util.*; public interface SystemSequenceRepository extends JpaRepository<SystemSequenceJpaEntity,String>{@Lock(LockModeType.PESSIMISTIC_WRITE) @Query("select s from SystemSequenceJpaEntity s where s.aiSystemId=:id") Optional<SystemSequenceJpaEntity> lock(@Param("id") String id);}
+package com.prudence.causality;
+
+import jakarta.persistence.LockModeType;
+import java.util.*;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
+
+public interface SystemSequenceRepository extends JpaRepository<SystemSequenceJpaEntity, String> {
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select s from SystemSequenceJpaEntity s where s.aiSystemId=:id")
+  Optional<SystemSequenceJpaEntity> lock(@Param("id") String id);
+}

@@ -15,50 +15,84 @@ import jakarta.persistence.Table;
 @Table(name = "attestation")
 public class AttestationJpaEntity {
 
-    @Id
-    private String id;
-    private String generatedAt;
-    private String overallPosture;
-    private String contentHash;
-    private boolean sealed;
-    private Long blockIndex;
-    private String modelId;
-    private String sealDetail;
+  @Id private String id;
+  private String generatedAt;
+  private String overallPosture;
+  private String contentHash;
+  private boolean sealed;
+  private Long blockIndex;
+  private String modelId;
+  private String sealDetail;
 
-    @Column(length = 1_000_000)
-    private String reportJson;
+  @Column(length = 1_000_000)
+  private String reportJson;
 
-    @Embedded private Delivery delivery;
+  @Embedded private Delivery delivery;
 
-    protected AttestationJpaEntity() {}
+  protected AttestationJpaEntity() {}
 
-    public AttestationJpaEntity(String id, String generatedAt, String overallPosture, String contentHash,
-                                String modelId, String sealDetail, String reportJson) {
-        this.id = id;
-        this.generatedAt = generatedAt;
-        this.overallPosture = overallPosture;
-        this.contentHash = contentHash;
-        this.modelId = modelId;
-        this.sealDetail = sealDetail;
-        this.reportJson = reportJson;
-        this.delivery = Delivery.pending();
-    }
+  public AttestationJpaEntity(
+      String id,
+      String generatedAt,
+      String overallPosture,
+      String contentHash,
+      String modelId,
+      String sealDetail,
+      String reportJson) {
+    this.id = id;
+    this.generatedAt = generatedAt;
+    this.overallPosture = overallPosture;
+    this.contentHash = contentHash;
+    this.modelId = modelId;
+    this.sealDetail = sealDetail;
+    this.reportJson = reportJson;
+    this.delivery = Delivery.pending();
+  }
 
-    /// Ernest's receipt for this report's hash.
-    public void recordSeal(boolean qualified, Long blockIndex, String detail) {
-        this.sealed = qualified;
-        this.blockIndex = blockIndex;
-        this.sealDetail = detail;
-    }
+  /// Ernest's receipt for this report's hash.
+  public void recordSeal(boolean qualified, Long blockIndex, String detail) {
+    this.sealed = qualified;
+    this.blockIndex = blockIndex;
+    this.sealDetail = detail;
+  }
 
-    public String getId() { return id; }
-    public String getGeneratedAt() { return generatedAt; }
-    public String getOverallPosture() { return overallPosture; }
-    public String getContentHash() { return contentHash; }
-    public boolean isSealed() { return sealed; }
-    public Long getBlockIndex() { return blockIndex; }
-    public String getModelId() { return modelId; }
-    public String getSealDetail() { return sealDetail; }
-    public String getReportJson() { return reportJson; }
-    public Delivery getDelivery() { return delivery; }
+  public String getId() {
+    return id;
+  }
+
+  public String getGeneratedAt() {
+    return generatedAt;
+  }
+
+  public String getOverallPosture() {
+    return overallPosture;
+  }
+
+  public String getContentHash() {
+    return contentHash;
+  }
+
+  public boolean isSealed() {
+    return sealed;
+  }
+
+  public Long getBlockIndex() {
+    return blockIndex;
+  }
+
+  public String getModelId() {
+    return modelId;
+  }
+
+  public String getSealDetail() {
+    return sealDetail;
+  }
+
+  public String getReportJson() {
+    return reportJson;
+  }
+
+  public Delivery getDelivery() {
+    return delivery;
+  }
 }

@@ -10,7 +10,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @ConfigurationPropertiesScan
 @EnableScheduling
 public class PrudenceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(PrudenceApplication.class, args);
-    }
+  public static void main(String[] args) {
+    SpringApplication.run(PrudenceApplication.class, args);
+  }
 }

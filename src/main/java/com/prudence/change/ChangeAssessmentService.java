@@ -1,10 +1,99 @@
 package com.prudence.change;
-import com.prudence.registry.application.port.in.*; import com.prudence.registry.domain.*; import com.prudence.shared.exception.DomainException; import com.prudence.compliance.application.service.ComplianceControlService; import org.springframework.stereotype.Service; import org.springframework.transaction.annotation.Transactional; import java.time.Instant; import java.util.*;
-@Service public class ChangeAssessmentService {
- private final ChangeAssessmentRepository repo; private final AiSystemQueries systems; private final ReviewAiSystemUseCase reviews; private final ComplianceControlService controls;
- public ChangeAssessmentService(ChangeAssessmentRepository r,AiSystemQueries s,ReviewAiSystemUseCase v,ComplianceControlService c){repo=r;systems=s;reviews=v;controls=c;}
- @Transactional public ChangeAssessmentJpaEntity assess(Request q,String actor){ AiSystem s=systems.findById(new AiSystemId(q.aiSystemId())).orElseThrow(()->new AiSystemNotFoundException(new AiSystemId(q.aiSystemId()))); if(q.evidenceUri()==null||q.evidenceUri().isBlank()||q.evidenceSha256()==null||!q.evidenceSha256().replace("sha256:","").matches("[a-fA-F0-9]{64}"))throw new DomainException("change evidence URI and SHA-256 are required"); Set<String> f=q.changedFields()==null?Set.of():Set.copyOf(q.changedFields()); ChangeOutcome o=classify(s,q,f); String why=rationale(o,f); if(o==ChangeOutcome.CONTROL_REVIEW) why += " Controls invalidated: "+controls.invalidateAffectedByChange(s.id().value(),f); if(o==ChangeOutcome.SUBSTANTIAL || o==ChangeOutcome.PROHIBITED)reviews.suspend(s.id(),actor,(o==ChangeOutcome.SUBSTANTIAL?"Substantial change requires new approval: ":"Prohibited change assessment: ")+why); return repo.save(new ChangeAssessmentJpaEntity(UUID.randomUUID().toString(),q.aiSystemId(),q.proposedVersion(),String.join(",",f),o,why,q.evidenceUri(),q.evidenceSha256(),Instant.now().toString(),actor)); }
- private static ChangeOutcome classify(AiSystem s,Request q,Set<String> f){ if(s.riskTier()==RiskTier.PROHIBITED||f.contains("PROHIBITED_USE"))return ChangeOutcome.PROHIBITED; if(f.isEmpty())return ChangeOutcome.MINOR; if(f.contains("MODEL_VERSION")||f.contains("INTENDED_PURPOSE")||f.contains("AFFECTED_POPULATION")||f.contains("AUTOMATION")||f.contains("INTEGRATION_ENVIRONMENT")||f.contains("SECURITY_CONFIGURATION"))return ChangeOutcome.SUBSTANTIAL; if(f.contains("DATA_OR_EMBEDDINGS")||f.contains("GPAI_PROVIDER_MODEL")||f.contains("PROMPT_OR_TOOLS"))return ChangeOutcome.CONTROL_REVIEW; return ChangeOutcome.MINOR; }
- private static String rationale(ChangeOutcome o,Set<String> f){return switch(o){case MINOR->"Inventory-only change: "+f;case CONTROL_REVIEW->"Revalidate affected evidence controls: "+f;case SUBSTANTIAL->"New assessment and approval required: "+f;case PROHIBITED->"System suspended: "+f;};}
- public record Request(String aiSystemId,String proposedVersion,List<String> changedFields,String evidenceUri,String evidenceSha256){}
+
+import com.prudence.compliance.application.service.ComplianceControlService;
+import com.prudence.registry.application.port.in.*;
+import com.prudence.registry.domain.*;
+import com.prudence.shared.exception.DomainException;
+import java.time.Instant;
+import java.util.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ChangeAssessmentService {
+  private final ChangeAssessmentRepository repo;
+  private final AiSystemQueries systems;
+  private final ReviewAiSystemUseCase reviews;
+  private final ComplianceControlService controls;
+
+  public ChangeAssessmentService(
+      ChangeAssessmentRepository r,
+      AiSystemQueries s,
+      ReviewAiSystemUseCase v,
+      ComplianceControlService c) {
+    repo = r;
+    systems = s;
+    reviews = v;
+    controls = c;
+  }
+
+  @Transactional
+  public ChangeAssessmentJpaEntity assess(Request q, String actor) {
+    AiSystem s =
+        systems
+            .findById(new AiSystemId(q.aiSystemId()))
+            .orElseThrow(() -> new AiSystemNotFoundException(new AiSystemId(q.aiSystemId())));
+    if (q.evidenceUri() == null
+        || q.evidenceUri().isBlank()
+        || q.evidenceSha256() == null
+        || !q.evidenceSha256().replace("sha256:", "").matches("[a-fA-F0-9]{64}"))
+      throw new DomainException("change evidence URI and SHA-256 are required");
+    Set<String> f = q.changedFields() == null ? Set.of() : Set.copyOf(q.changedFields());
+    ChangeOutcome o = classify(s, q, f);
+    String why = rationale(o, f);
+    if (o == ChangeOutcome.CONTROL_REVIEW)
+      why += " Controls invalidated: " + controls.invalidateAffectedByChange(s.id().value(), f);
+    if (o == ChangeOutcome.SUBSTANTIAL || o == ChangeOutcome.PROHIBITED)
+      reviews.suspend(
+          s.id(),
+          actor,
+          (o == ChangeOutcome.SUBSTANTIAL
+                  ? "Substantial change requires new approval: "
+                  : "Prohibited change assessment: ")
+              + why);
+    return repo.save(
+        new ChangeAssessmentJpaEntity(
+            UUID.randomUUID().toString(),
+            q.aiSystemId(),
+            q.proposedVersion(),
+            String.join(",", f),
+            o,
+            why,
+            q.evidenceUri(),
+            q.evidenceSha256(),
+            Instant.now().toString(),
+            actor));
+  }
+
+  private static ChangeOutcome classify(AiSystem s, Request q, Set<String> f) {
+    if (s.riskTier() == RiskTier.PROHIBITED || f.contains("PROHIBITED_USE"))
+      return ChangeOutcome.PROHIBITED;
+    if (f.isEmpty()) return ChangeOutcome.MINOR;
+    if (f.contains("MODEL_VERSION")
+        || f.contains("INTENDED_PURPOSE")
+        || f.contains("AFFECTED_POPULATION")
+        || f.contains("AUTOMATION")
+        || f.contains("INTEGRATION_ENVIRONMENT")
+        || f.contains("SECURITY_CONFIGURATION")) return ChangeOutcome.SUBSTANTIAL;
+    if (f.contains("DATA_OR_EMBEDDINGS")
+        || f.contains("GPAI_PROVIDER_MODEL")
+        || f.contains("PROMPT_OR_TOOLS")) return ChangeOutcome.CONTROL_REVIEW;
+    return ChangeOutcome.MINOR;
+  }
+
+  private static String rationale(ChangeOutcome o, Set<String> f) {
+    return switch (o) {
+      case MINOR -> "Inventory-only change: " + f;
+      case CONTROL_REVIEW -> "Revalidate affected evidence controls: " + f;
+      case SUBSTANTIAL -> "New assessment and approval required: " + f;
+      case PROHIBITED -> "System suspended: " + f;
+    };
+  }
+
+  public record Request(
+      String aiSystemId,
+      String proposedVersion,
+      List<String> changedFields,
+      String evidenceUri,
+      String evidenceSha256) {}
 }
