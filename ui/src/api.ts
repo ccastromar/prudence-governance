@@ -147,6 +147,10 @@ export interface GovernanceCase {
   openedBy: string; openedAt: string; reviewStartedAt: string | null; closedAt: string | null; closedBy: string | null; closingDecision: string | null;
   evidence: GovernanceEvidence[]; timeline: GovernanceCaseEvent[];
 }
+export type TransparencyKind = 'DIRECT_AI_INTERACTION' | 'DEEPFAKE' | 'EMOTION_RECOGNITION' | 'BIOMETRIC_CATEGORISATION' | 'PUBLIC_INTEREST_CONTENT';
+export interface Fria { id: string; aiSystemId: string; jurisdiction: string; templateVersion: string; affectedGroups: string; assumptions: string; mitigations: string; dpiaUri: string; dpiaSha256: string; signedBy: string; signedAt: string; }
+export interface ImpactRequirement { friaRequired: boolean; transparencyRequired: boolean; }
+export interface TransparencyNotice { id: string; aiSystemId: string; kind: TransparencyKind; audience: string; noticeVersion: string; deploymentEvidence: string; deployedBy: string; deployedAt: string; }
 
 /// A record the delivery worker gave up on: evidence (decisions/reviews/attestations/incidents)
 /// that never reached Ernest, or an alert email that never went out.
@@ -177,6 +181,12 @@ const post = <T,>(url: string, body: unknown) =>
   fetch(url, { method: 'POST', headers: withAuth(json_ct), body: JSON.stringify(body) }).then(ok<T>);
 
 export const api = {
+  impactRequirements: (id: string) => fetch(`/api/impact/systems/${id}/requirements`, { headers: withAuth() }).then(ok<ImpactRequirement>),
+  setImpactRequirements: (id: string, body: ImpactRequirement) => post<ImpactRequirement>(`/api/impact/systems/${id}/requirements`, body),
+  frias: (id: string) => fetch(`/api/impact/systems/${id}/fria`, { headers: withAuth() }).then(ok<Fria[]>),
+  createFria: (body: Omit<Fria, 'id' | 'signedAt'>) => post<Fria>('/api/impact/fria', body),
+  transparencyNotices: (id: string) => fetch(`/api/impact/systems/${id}/transparency-notices`, { headers: withAuth() }).then(ok<TransparencyNotice[]>),
+  createTransparencyNotice: (body: Omit<TransparencyNotice, 'id' | 'deployedAt'>) => post<TransparencyNotice>('/api/impact/transparency-notices', body),
   governanceCases: () => fetch('/api/governance/cases', { headers: withAuth() }).then(ok<GovernanceCase[]>),
   governanceCase: (id: string) => fetch(`/api/governance/cases/${id}`, { headers: withAuth() }).then(ok<GovernanceCase>),
   openGovernanceCase: (body: { aiSystemId: string; type: GovernanceCaseType; title: string; summary: string; owner: string }) => post<GovernanceCase>('/api/governance/cases', body),
