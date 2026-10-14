@@ -1,4 +1,38 @@
 package com.prudence.export;
-import com.prudence.registry.application.port.in.AiSystemQueries; import com.prudence.registry.domain.*; import com.prudence.compliance.application.port.in.ComplianceControls; import com.prudence.registry.application.port.in.ReviewQueries; import org.springframework.web.bind.annotation.*; import java.nio.charset.StandardCharsets; import java.security.*; import java.time.*; import java.util.*;
-/// Portable, structured snapshot. It intentionally contains references/hashes rather than files.
-@RestController @RequestMapping("/api/compliance-snapshots") public class ComplianceSnapshotController {private final AiSystemQueries systems;private final ComplianceControls controls;private final ReviewQueries reviews;public ComplianceSnapshotController(AiSystemQueries s,ComplianceControls c,ReviewQueries r){systems=s;controls=c;reviews=r;} @GetMapping("/systems/{id}") public Snapshot export(@PathVariable String id,@RequestParam(required=false) String asOf){var s=systems.findById(new AiSystemId(id)).orElseThrow(()->new AiSystemNotFoundException(new AiSystemId(id)));String at=asOf==null?Instant.now().toString():asOf;var body=new LinkedHashMap<String,Object>();body.put("schemaVersion","prudence-compliance-snapshot/v1");body.put("asOf",at);body.put("system",Map.of("id",s.id().value(),"name",s.name(),"riskTier",s.riskTier().name(),"approvalStatus",s.approvalStatus().name(),"version",s.classification().systemVersion(),"modelHash",s.classification().modelHash(),"role",s.classification().regulatoryRole().name()));body.put("controls",controls.forSystem(id));body.put("reviews",reviews.reviewsForSystem(id));return new Snapshot(at,body,sha(body.toString()));} private static String sha(String s){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);}} public record Snapshot(String asOf,Map<String,Object> manifest,String sha256){} }
+
+import tools.jackson.databind.ObjectMapper;
+import com.prudence.compliance.application.port.in.ComplianceControls;
+import com.prudence.registry.application.port.in.AiSystemQueries;
+import com.prudence.registry.application.port.in.ReviewQueries;
+import com.prudence.registry.domain.*;
+import com.prudence.shared.exception.DomainException;
+import org.springframework.web.bind.annotation.*;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Instant;
+import java.util.*;
+
+/// A saved manifest is immutable evidence of the state seen at generation time.
+@RestController
+@RequestMapping("/api/compliance-snapshots")
+public class ComplianceSnapshotController {
+    private final AiSystemQueries systems; private final ComplianceControls controls; private final ReviewQueries reviews;
+    private final ComplianceSnapshotRepository snapshots; private final ObjectMapper json;
+    public ComplianceSnapshotController(AiSystemQueries systems, ComplianceControls controls, ReviewQueries reviews, ComplianceSnapshotRepository snapshots, ObjectMapper json) {
+        this.systems=systems; this.controls=controls; this.reviews=reviews; this.snapshots=snapshots; this.json=json;
+    }
+    @PostMapping("/systems/{id}")
+    public StoredSnapshot create(@PathVariable String id) {
+        var system=systems.findById(new AiSystemId(id)).orElseThrow(()->new AiSystemNotFoundException(new AiSystemId(id)));
+        String asOf=Instant.now().toString(); var manifest=new TreeMap<String,Object>();
+        manifest.put("schemaVersion","prudence-compliance-snapshot/v1"); manifest.put("asOf",asOf);
+        manifest.put("system",Map.of("id",system.id().value(),"name",system.name(),"riskTier",system.riskTier().name(),"approvalStatus",system.approvalStatus().name(),"version",system.classification().systemVersion(),"modelHash",system.classification().modelHash(),"role",system.classification().regulatoryRole().name()));
+        manifest.put("controls",controls.forSystem(id)); manifest.put("reviews",reviews.reviewsForSystem(id));
+        try { String encoded=json.writeValueAsString(manifest); String hash=sha(encoded); var saved=snapshots.save(new ComplianceSnapshotJpaEntity(UUID.randomUUID().toString(),id,asOf,hash,encoded)); return from(saved); }
+        catch (Exception e) { throw new IllegalStateException("cannot serialize compliance snapshot",e); }
+    }
+    @GetMapping("/{snapshotId}") public StoredSnapshot get(@PathVariable String snapshotId) { return from(snapshots.findById(snapshotId).orElseThrow(()->new DomainException("compliance snapshot not found: "+snapshotId))); }
+    private StoredSnapshot from(ComplianceSnapshotJpaEntity s) { try { return new StoredSnapshot(s.getId(),s.getAiSystemId(),s.getAsOf(),s.getSha256(),json.readValue(s.getManifest(),Map.class)); } catch(Exception e){throw new IllegalStateException("stored snapshot is unreadable",e);} }
+    private static String sha(String text) { try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8)));}catch(Exception e){throw new IllegalStateException(e);} }
+    public record StoredSnapshot(String id,String aiSystemId,String asOf,String sha256,Map<String,Object> manifest) {}
+}
