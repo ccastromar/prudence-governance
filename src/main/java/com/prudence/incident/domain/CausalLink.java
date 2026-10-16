@@ -4,7 +4,7 @@ package com.prudence.incident.domain;
 /// once a causal link is established *or reasonably likely*; the deadline runs from awareness
 /// either way. A link that has been ruled out lifts the reporting obligation.
 public enum CausalLink {
-    SUSPECTED,
-    ESTABLISHED,
-    RULED_OUT
+  SUSPECTED,
+  ESTABLISHED,
+  RULED_OUT
 }

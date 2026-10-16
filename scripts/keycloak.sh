@@ -11,6 +11,8 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/.." && pwd)"
 PORT="${KEYCLOAK_PORT:-8081}"
+HTTP_HOST="${KEYCLOAK_HTTP_HOST:-127.0.0.1}"
+PUBLIC_HOST="${KEYCLOAK_PUBLIC_HOST:-localhost}"
 
 if [ -z "${KEYCLOAK_HOME:-}" ]; then
   KEYCLOAK_HOME="$(ls -d "$REPO"/../keycloak-*/ 2>/dev/null | sort -V | tail -1)"
@@ -27,9 +29,9 @@ fi
 mkdir -p "$KEYCLOAK_HOME/data/import"
 cp "$HERE/chestertown-realm.json" "$KEYCLOAK_HOME/data/import/"
 
-echo "Keycloak $(cat "$KEYCLOAK_HOME/version.txt" 2>/dev/null) on http://localhost:$PORT"
-echo "issuer: http://localhost:$PORT/realms/chestertown"
+echo "Keycloak $(cat "$KEYCLOAK_HOME/version.txt" 2>/dev/null) on http://$HTTP_HOST:$PORT"
+echo "issuer: http://$PUBLIC_HOST:$PORT/realms/chestertown"
 cd "$KEYCLOAK_HOME"
 KC_BOOTSTRAP_ADMIN_USERNAME="${KC_BOOTSTRAP_ADMIN_USERNAME:-admin}" \
 KC_BOOTSTRAP_ADMIN_PASSWORD="${KC_BOOTSTRAP_ADMIN_PASSWORD:-admin}" \
-  exec bin/kc.sh start-dev --http-port "$PORT" --import-realm
+  exec bin/kc.sh start-dev --http-host "$HTTP_HOST" --hostname "$PUBLIC_HOST" --http-port "$PORT" --import-realm

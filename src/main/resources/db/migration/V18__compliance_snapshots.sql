@@ -1,0 +1,1 @@
+create table compliance_snapshot (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), as_of varchar(255) not null, sha256 varchar(255) not null, manifest varchar(20000) not null);

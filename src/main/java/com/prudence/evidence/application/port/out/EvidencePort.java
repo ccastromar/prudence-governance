@@ -6,5 +6,5 @@ import com.prudence.policy.domain.PolicyDecision;
 /// Driven port to Ernest: governance decisions and attestations are recorded as
 /// tamper-evident evidence (sealed by Ernest), closing the control loop.
 public interface EvidencePort {
-    void recordDecision(DecisionContext context, PolicyDecision decision);
+  void recordDecision(DecisionContext context, PolicyDecision decision);
 }

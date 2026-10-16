@@ -12,39 +12,82 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "incident_event")
 public class IncidentEventJpaEntity {
-    @Id private String id;
-    private String incidentId;
-    private String aiSystemId;
-    private String type;
-    private String actor;
-    private String at;
-    @Column(length = 4000) private String details;
-    private boolean sealed;
-    private Long blockIndex;
-    @Embedded private Delivery delivery;
+  @Id private String id;
+  private String incidentId;
+  private String aiSystemId;
+  private String type;
+  private String actor;
+  private String at;
 
-    protected IncidentEventJpaEntity() {}
+  @Column(length = 4000)
+  private String details;
 
-    public IncidentEventJpaEntity(String id, String incidentId, String aiSystemId, String type, String actor,
-                                  String at, String details) {
-        this.id = id; this.incidentId = incidentId; this.aiSystemId = aiSystemId; this.type = type;
-        this.actor = actor; this.at = at; this.details = details;
-        this.delivery = Delivery.pending();
-    }
+  private boolean sealed;
+  private Long blockIndex;
+  @Embedded private Delivery delivery;
 
-    public void recordSeal(boolean qualified, Long blockIndex) {
-        this.sealed = qualified;
-        this.blockIndex = blockIndex;
-    }
+  protected IncidentEventJpaEntity() {}
 
-    public String getId() { return id; }
-    public String getIncidentId() { return incidentId; }
-    public String getAiSystemId() { return aiSystemId; }
-    public String getType() { return type; }
-    public String getActor() { return actor; }
-    public String getAt() { return at; }
-    public String getDetails() { return details; }
-    public boolean isSealed() { return sealed; }
-    public Long getBlockIndex() { return blockIndex; }
-    public Delivery getDelivery() { return delivery; }
+  public IncidentEventJpaEntity(
+      String id,
+      String incidentId,
+      String aiSystemId,
+      String type,
+      String actor,
+      String at,
+      String details) {
+    this.id = id;
+    this.incidentId = incidentId;
+    this.aiSystemId = aiSystemId;
+    this.type = type;
+    this.actor = actor;
+    this.at = at;
+    this.details = details;
+    this.delivery = Delivery.pending();
+  }
+
+  public void recordSeal(boolean qualified, Long blockIndex) {
+    this.sealed = qualified;
+    this.blockIndex = blockIndex;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public String getIncidentId() {
+    return incidentId;
+  }
+
+  public String getAiSystemId() {
+    return aiSystemId;
+  }
+
+  public String getType() {
+    return type;
+  }
+
+  public String getActor() {
+    return actor;
+  }
+
+  public String getAt() {
+    return at;
+  }
+
+  public String getDetails() {
+    return details;
+  }
+
+  public boolean isSealed() {
+    return sealed;
+  }
+
+  public Long getBlockIndex() {
+    return blockIndex;
+  }
+
+  public Delivery getDelivery() {
+    return delivery;
+  }
 }

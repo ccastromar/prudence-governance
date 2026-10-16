@@ -6,8 +6,8 @@ import com.prudence.registry.domain.ReviewEvent;
 /// failure so the evidence delivery worker can classify and retry it; it is only ever called
 /// from that worker, never from the review itself.
 public interface ReviewSealPort {
-    SealResult seal(ReviewEvent event) throws Exception;
+  SealResult seal(ReviewEvent event) throws Exception;
 
-    /// `qualified`: carries a QTSP seal (false when recorded without one).
-    record SealResult(boolean qualified, Long blockIndex) {}
+  /// `qualified`: carries a QTSP seal (false when recorded without one).
+  record SealResult(boolean qualified, Long blockIndex) {}
 }

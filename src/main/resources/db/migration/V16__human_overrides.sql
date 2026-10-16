@@ -1,0 +1,1 @@
+create table human_override (id varchar(255) primary key, ai_system_id varchar(255) not null references ai_system(id), aos_reference varchar(255) not null, supervisor varchar(255) not null, reason varchar(4000) not null, outcome varchar(4000) not null, occurred_at varchar(255) not null, reviewed_by varchar(255), reviewed_at varchar(255), review_note varchar(4000));

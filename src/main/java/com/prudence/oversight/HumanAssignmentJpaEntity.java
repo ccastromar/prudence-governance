@@ -1,0 +1,65 @@
+package com.prudence.oversight;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "human_oversight_assignment")
+public class HumanAssignmentJpaEntity {
+  @Id private String id;
+  private String aiSystemId;
+
+  @Enumerated(EnumType.STRING)
+  private OversightRole role;
+
+  private String person;
+  private boolean overrideAuthority;
+  private boolean stopAuthority;
+  private String trainingEvidence;
+  private String trainingExpiresAt;
+
+  protected HumanAssignmentJpaEntity() {}
+
+  public HumanAssignmentJpaEntity(
+      String id, String s, OversightRole r, String p, boolean o, boolean stop, String e, String x) {
+    this.id = id;
+    aiSystemId = s;
+    role = r;
+    person = p;
+    overrideAuthority = o;
+    stopAuthority = stop;
+    trainingEvidence = e;
+    trainingExpiresAt = x;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public String getAiSystemId() {
+    return aiSystemId;
+  }
+
+  public OversightRole getRole() {
+    return role;
+  }
+
+  public String getPerson() {
+    return person;
+  }
+
+  public boolean isOverrideAuthority() {
+    return overrideAuthority;
+  }
+
+  public boolean isStopAuthority() {
+    return stopAuthority;
+  }
+
+  public String getTrainingEvidence() {
+    return trainingEvidence;
+  }
+
+  public String getTrainingExpiresAt() {
+    return trainingExpiresAt;
+  }
+}

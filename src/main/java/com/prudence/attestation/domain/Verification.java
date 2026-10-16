@@ -12,13 +12,13 @@ package com.prudence.attestation.domain;
 ///   UNCONFIRMED — hash matches but Ernest could not confirm the seal (unreachable / chain
 ///                 broken / hash not found)
 public record Verification(
-        String attestationId,
-        boolean hashMatches,
-        String recomputedHash,
-        String storedHash,
-        boolean sealed,
-        Long blockIndex,
-        boolean ernestConfirmed,
-        boolean chainValid,
-        String verdict,
-        String detail) {}
+    String attestationId,
+    boolean hashMatches,
+    String recomputedHash,
+    String storedHash,
+    boolean sealed,
+    Long blockIndex,
+    boolean ernestConfirmed,
+    boolean chainValid,
+    String verdict,
+    String detail) {}

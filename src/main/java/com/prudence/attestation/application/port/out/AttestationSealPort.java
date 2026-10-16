@@ -6,8 +6,9 @@ import java.util.Map;
 /// attestation id, returning where it landed. Throws on failure so the evidence delivery
 /// worker can classify and retry it; report generation itself never waits on a retry.
 public interface AttestationSealPort {
-    Receipt seal(String attestationId, String contentHash, Map<String, Object> summary) throws Exception;
+  Receipt seal(String attestationId, String contentHash, Map<String, Object> summary)
+      throws Exception;
 
-    /// `qualified`: carries a QTSP seal. `detail`: human-readable account of the record.
-    record Receipt(boolean qualified, Long blockIndex, String detail) {}
+  /// `qualified`: carries a QTSP seal. `detail`: human-readable account of the record.
+  record Receipt(boolean qualified, Long blockIndex, String detail) {}
 }

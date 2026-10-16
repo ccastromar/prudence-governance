@@ -13,23 +13,23 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/posture")
 public class PostureController {
 
-    private final PostureQuery posture;
-    private final DriftQuery drift;
+  private final PostureQuery posture;
+  private final DriftQuery drift;
 
-    public PostureController(PostureQuery posture, DriftQuery drift) {
-        this.posture = posture;
-        this.drift = drift;
-    }
+  public PostureController(PostureQuery posture, DriftQuery drift) {
+    this.posture = posture;
+    this.drift = drift;
+  }
 
-    @GetMapping
-    public Posture get() {
-        return posture.compute();
-    }
+  @GetMapping
+  public Posture get() {
+    return posture.compute();
+  }
 
-    /// Policy drift: executions observed in the evidence plane that diverge from the
-    /// governance record (ungoverned runs).
-    @GetMapping("/drift")
-    public Drift drift() {
-        return drift.compute();
-    }
+  /// Policy drift: executions observed in the evidence plane that diverge from the
+  /// governance record (ungoverned runs).
+  @GetMapping("/drift")
+  public Drift drift() {
+    return drift.compute();
+  }
 }
