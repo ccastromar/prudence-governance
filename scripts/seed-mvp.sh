@@ -37,10 +37,52 @@ try:
 except RuntimeError as error:
     raise SystemExit(str(error))
 
-def refresh(s): return request("GET", f"{systems_api}/{s['id']}")
+def refresh(s): return request("GET", f"{systems_api}/{s['id']}", "author")
 def post(s, suffix, actor, body=None): return request("POST", f"{systems_api}/{s['id']}{suffix}", actor, body)
+
+def ensure_review_ready(s):
+    """Add only the demo evidence required to exercise an actual review flow."""
+    if s["riskTier"] != "HIGH": return
+    assignments_url = f"{base}/api/oversight/systems/{s['id']}/assignments"
+    assignments = request("GET", assignments_url, "author")
+    now = datetime.now(timezone.utc)
+    has_supervisor = any(
+        a.get("role") == "SUPERVISOR"
+        and (a.get("overrideAuthority") or a.get("stopAuthority"))
+        and a.get("trainingExpiresAt", "") > now.isoformat().replace("+00:00", "Z")
+        for a in assignments
+    )
+    if not has_supervisor:
+        request("POST", assignments_url, "author", {
+            "role": "SUPERVISOR",
+            "person": "MVP governance supervisor",
+            "overrideAuthority": True,
+            "stopAuthority": True,
+            "trainingEvidence": "https://evidence.example.eu/mvp/supervisor-training",
+            "trainingExpiresAt": "2030-01-01T00:00:00Z",
+        })
+
+    controls_url = f"{systems_api}/{s['id']}/compliance-controls"
+    for control in request("GET", controls_url, "author"):
+        if not control["blocking"] or control["status"] == "SATISFIED": continue
+        evidence = {
+            "evidenceUri": f"https://evidence.example.eu/mvp/{s['id']}/{control['key'].lower()}",
+            "evidenceSha256": "sha256:" + "a" * 64,
+            "evidenceVersion": s["systemVersion"],
+            "evidenceOwner": "MVP Governance Demo",
+            "signedAttestation": "MVP demo attestation",
+        }
+        if "dataset-version" in control["accepts"]:
+            evidence.update({
+                "datasetVersion": "mvp-dataset-2026-10",
+                "metricsByGroup": "https://evidence.example.eu/mvp/metrics-by-group",
+                "approver": "MVP governance supervisor",
+            })
+        request("POST", f"{controls_url}/{control['id']}/satisfy", "author", evidence)
+
 def submit(s):
     if s["approvalStatus"] in {"UNDER_ASSESSMENT", "REJECTED", "EXPIRED", "SUSPENDED"}:
+        ensure_review_ready(s)
         print("    → enviada a revisión"); return post(s, "/submit", "author")
     return s
 def approve_one(s):
