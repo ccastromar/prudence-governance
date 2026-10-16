@@ -82,6 +82,27 @@ Swap Keycloak for Azure Entra ID (or any OIDC IdP) with no code changes: set the
 the Entra v2.0 endpoint, register the three apps, and model roles as **App Roles** so they
 arrive in the `roles` claim the apps already read.
 
+## Public MVP seed
+
+`scripts/seed-mvp.sh` creates an idempotent dataset through the API: one system under
+assessment, one pending review, one pending a second high-risk approval, one approved, one
+rejected, one suspended by an incident and one prohibited/blocked. It requires three different
+users with the `read-write` realm role, because Prudence enforces an independent second signer
+for high-risk systems.
+
+```bash
+PRUDENCE_URL=https://prudence.ccmlab.cc \
+SEED_AUTHOR_TOKEN='...' \
+SEED_REVIEWER_ONE_TOKEN='...' \
+SEED_REVIEWER_TWO_TOKEN='...' \
+./scripts/seed-mvp.sh
+```
+
+The script neither accesses PostgreSQL directly nor stores passwords. The author token creates
+the records and the demonstrative incident; the two reviewer tokens provide the independent
+approvals. Re-running it leaves correctly seeded records unchanged and resumes a partially
+completed run safely.
+
 ## Identity claims in the dev realm
 
 `chestertown-realm.json` declares its own `clientScopes`, so on import Keycloak does **not**
