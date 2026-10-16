@@ -64,6 +64,16 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => {
+    const signOutExpiredSession = () => {
+      clearToken();
+      setAuthed(false);
+    };
+    window.addEventListener("prudence:unauthorized", signOutExpiredSession);
+    return () =>
+      window.removeEventListener("prudence:unauthorized", signOutExpiredSession);
+  }, []);
+
   if (!ready) return null;
 
   const topbar = (

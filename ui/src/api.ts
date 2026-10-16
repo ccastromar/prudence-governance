@@ -2,6 +2,13 @@
 import { getToken } from "./auth";
 
 const json_ct = { "Content-Type": "application/json" };
+
+// A stale access token used to leave the console rendered as authenticated and
+// made each page report a misleading backend error. The application shell owns
+// the redirect to sign-in; this event lets every API helper notify it uniformly.
+const unauthorized = () =>
+  window.dispatchEvent(new Event("prudence:unauthorized"));
+
 function withAuth(
   headers: Record<string, string> = {},
 ): Record<string, string> {
@@ -494,6 +501,10 @@ export interface DeadLetter {
 }
 
 async function json<T>(res: Response): Promise<T> {
+  if (res.status === 401) {
+    unauthorized();
+    throw new Error("Your session has expired. Please sign in again.");
+  }
   if (!res.ok && res.status >= 500) throw new Error(`${res.status}`);
   return res.json() as Promise<T>;
 }
@@ -503,6 +514,10 @@ async function json<T>(res: Response): Promise<T> {
 /// which deliberately reads 202/403 bodies.
 async function ok<T>(res: Response): Promise<T> {
   if (!res.ok) {
+    if (res.status === 401) {
+      unauthorized();
+      throw new Error("Your session has expired. Please sign in again.");
+    }
     let msg = `${res.status}`;
     try {
       const b = await res.json();
