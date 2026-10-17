@@ -28,4 +28,5 @@ integrations/*
 integrations/**/.venv/
 integrations/**/__pycache__/
 integrations/**/*.pyc
+integrations/**/*.egg-info/
 loadtest/

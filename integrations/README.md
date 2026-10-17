@@ -31,6 +31,18 @@ least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never r
 or Ernest credential. `chestertown-infra/scripts/provision-framework-demo-runner-client.sh`
 creates the runner identity and bridge token on the MVP host.
 
+By default the runner needs no model: Pydantic AI uses its offline `TestModel` and the LangGraph
+node returns a fixed draft. Set `PRUDENCE_DEMO_LLM_BASE_URL` to an OpenAI-compatible `/v1`
+endpoint (optionally `PRUDENCE_DEMO_LLM_MODEL`, default `aos-deterministic-mock`, and
+`PRUDENCE_DEMO_LLM_API_KEY`) and both frameworks make a real model call over HTTP instead: the
+Pydantic AI agent lets the model choose the governed tool, and the LangGraph node asks it for
+the draft. AOS's deterministic mock LLM (`aos-mock-llm`) is such an endpoint — it is not a
+language model, and each run reports which model answered (`model`), shown in the panel. When
+the PDP denies, the LangGraph node does not call the model at all.
+
+`pydantic-ai` and `langgraph` are installable packages (`pip install -e ./pydantic-ai`), each
+next to `prudence-core`.
+
 ## Qualified seals (eIDAS B2) — optional
 
 Pass a `QtspSealer` to `ErnestEvidence` (the examples do so when `QTSP_CSC_URL` is set) and

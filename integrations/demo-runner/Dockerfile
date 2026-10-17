@@ -9,5 +9,7 @@ COPY integrations/demo-runner/server.py /app/server.py
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 ENV PYTHONUNBUFFERED=1
+# pydantic-ai prints an observability banner on every agent run; keep container logs clean.
+ENV PYDANTIC_AI_NO_BANNER=1
 EXPOSE 9100
 CMD ["python", "/app/server.py"]

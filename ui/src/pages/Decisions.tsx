@@ -77,6 +77,7 @@ function DemoCard({ demo, systems, latest }: { demo: Demo; systems: AiSystem[]; 
             {result.evidence?.status && <span className="mut">Ernest HTTP {result.evidence.status}</span>}
           </div>
           <p className="mut">{result.reason || "Governance gate completed."}</p>
+          {result.model && <p className="mut">Model: <b>{result.model}</b></p>}
           {result.output && <pre className="code">{result.output}</pre>}
           {result.continued !== undefined && (
             <p className="mut">Downstream delivery: {result.continued ? "continued" : "stopped at the governance gate"}</p>

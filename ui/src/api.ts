@@ -173,6 +173,8 @@ export interface GovernedDemoRun {
   reason?: string | null;
   output?: string | null;
   aiSystemId?: string;
+  /** Which model answered: an OpenAI-compatible endpoint (e.g. a deterministic mock) or offline. */
+  model?: string;
   continued?: boolean;
   evidence?: {
     status?: number | null;

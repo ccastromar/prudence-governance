@@ -2,7 +2,12 @@
 
 The HTTP surface is intentionally tiny and intended only for the Prudence backend on the Docker
 application network. It executes the real framework adapters: ``@governed`` for Pydantic AI and
-``governed_node`` / ``gate_route`` for LangGraph. Neither an LLM API key nor user data is used.
+``governed_node`` / ``gate_route`` for LangGraph. No user data and no real LLM are used.
+
+The model is Pydantic AI's offline ``TestModel`` by default. With PRUDENCE_DEMO_LLM_BASE_URL set
+(an OpenAI-compatible ``/v1`` endpoint, e.g. AOS's deterministic mock LLM), both frameworks talk
+to that endpoint instead, so the demo makes a real model call over HTTP. Each run reports which
+model answered, so a deterministic mock is never presented as a real LLM.
 """
 from __future__ import annotations
 
@@ -15,6 +20,7 @@ from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, TypedDict
 
+import httpx
 from langgraph.graph import END, START, StateGraph
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.test import TestModel
@@ -26,6 +32,43 @@ from prudence_pydantic import GovDeps, governed
 PORT = int(os.getenv("PORT", "9100"))
 SHARED_TOKEN = os.getenv("PRUDENCE_DEMO_RUNNER_TOKEN", "")
 LATEST: dict[str, dict[str, Any]] = {}
+
+LLM_BASE_URL = os.getenv("PRUDENCE_DEMO_LLM_BASE_URL", "").strip().rstrip("/")
+LLM_MODEL = os.getenv("PRUDENCE_DEMO_LLM_MODEL", "aos-deterministic-mock").strip()
+LLM_API_KEY = os.getenv("PRUDENCE_DEMO_LLM_API_KEY", "deterministic-demo-only").strip()
+
+
+def model_label(framework: str) -> str:
+    if LLM_BASE_URL:
+        return f"{LLM_MODEL} via {LLM_BASE_URL}"
+    return "pydantic-ai TestModel (offline)" if framework == "Pydantic AI" else "fixed draft (offline, no model)"
+
+
+def pydantic_model():
+    """The configured OpenAI-compatible endpoint, or the offline TestModel."""
+    if not LLM_BASE_URL:
+        return TestModel()
+    try:
+        from pydantic_ai.models.openai import OpenAIChatModel as OpenAICompatibleModel
+    except ImportError:  # pydantic-ai before the OpenAIChatModel rename
+        from pydantic_ai.models.openai import OpenAIModel as OpenAICompatibleModel
+    from pydantic_ai.providers.openai import OpenAIProvider
+
+    return OpenAICompatibleModel(LLM_MODEL, provider=OpenAIProvider(base_url=LLM_BASE_URL, api_key=LLM_API_KEY))
+
+
+def draft_reply(request: str) -> str:
+    """One chat completion from the configured endpoint; a fixed draft without one."""
+    if not LLM_BASE_URL:
+        return "Draft: We are investigating the checkout issue and will update you shortly."
+    response = httpx.post(
+        f"{LLM_BASE_URL}/chat/completions",
+        headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+        json={"model": LLM_MODEL, "messages": [{"role": "user", "content": f"Draft a short customer reply to: {request}"}]},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()["choices"][0]["message"]["content"]
 
 
 class RecordingGate:
@@ -86,7 +129,7 @@ def run_bug_triage(system_id: str, initiator: str) -> dict[str, Any]:
         gate=gate,
         evidence=evidence,
     )
-    result = agent.run_sync("Triage the checkout incident", deps=deps, model=TestModel())
+    result = agent.run_sync("Triage the checkout incident", deps=deps, model=pydantic_model())
     output = getattr(result, "output", None) or getattr(result, "data", None)
     return response("Pydantic AI", "Bug triage tool", gate, evidence, output, ai_system_id=system_id)
 
@@ -113,7 +156,7 @@ def run_response_drafter(system_id: str, initiator: str) -> dict[str, Any]:
     )
 
     def draft_node(state: DraftState) -> dict[str, Any]:
-        return {"output": "Draft: We are investigating the checkout issue and will update you shortly."}
+        return {"output": draft_reply(state["request"])}
 
     def deliver_node(state: DraftState) -> dict[str, Any]:
         return {"sent": True, "output": state["output"] + " Delivery queued."}
@@ -160,6 +203,7 @@ def response(
         "reason": decision.reason,
         "output": str(output) if output is not None else None,
         "aiSystemId": ai_system_id,
+        "model": model_label(framework),
         "evidence": evidence.receipt,
     }
     if continued is not None:
