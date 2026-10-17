@@ -733,7 +733,7 @@ export const api = {
       method: "POST",
       headers: withAuth(json_ct),
       body: JSON.stringify({ aiSystemId }),
-    }).then(json<GovernedDemoRun>),
+    }).then(ok<GovernedDemoRun>),
   demoRuns: () =>
     fetch("/api/demos/runs", { headers: withAuth() }).then(
       json<Partial<Record<"bug-triage" | "response-drafter", GovernedDemoRun>>>,
