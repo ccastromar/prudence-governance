@@ -12,6 +12,7 @@ deberías ver. Si ves otra cosa, has encontrado un posible fallo. 🎯
 | [03-customer-chatbot.md](03-customer-chatbot.md) | Customer Support Chatbot | 🟡 LIMITED |
 | [04-email-spam-filter.md](04-email-spam-filter.md) | Email Spam Filter | 🟢 MINIMAL |
 | [05-journeys-generales.md](05-journeys-generales.md) | Registro, sistemas prohibidos, certificados | — |
+| [06-demo-aos-en-vivo.md](06-demo-aos-en-vivo.md) | Demo en vivo: AOS pide permiso a Prudence (4 IAs del seed MVP) | 🟡🔴⛔ |
 
 ---
 
