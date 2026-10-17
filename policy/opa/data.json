@@ -3,11 +3,13 @@
     "roles_of": {
       "alice@bank.eu": ["model-operator"],
       "bob@bank.eu": ["risk-officer"],
-      "service-account-pdp-client": ["model-operator"]
+      "service-account-pdp-client": ["model-operator"],
+      "service-account-aos-pdp": ["model-operator"]
     },
     "role_permissions": {
       "model-operator": [
-        { "pipeline": "credit-risk-scoring", "actions": ["run"] }
+        { "pipeline": "credit-risk-scoring", "actions": ["run"] },
+        { "pipeline": "pipeline_aos_credit_pre_screening", "actions": ["run"] }
       ],
       "risk-officer": [
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
