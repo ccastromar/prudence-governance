@@ -138,6 +138,20 @@ h1 {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+.badge.neutral {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+}
+.code {
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3);
+  overflow-x: auto;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  white-space: pre-wrap;
+}
 
 .btn {
   border: 0;

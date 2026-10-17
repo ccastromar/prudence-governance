@@ -27,6 +27,19 @@ export function clearToken() {
   }
 }
 
+/** UI affordance only; the API remains the authoritative read-write role enforcement. */
+export function hasRealmRole(role: string): boolean {
+  if (!ssoEnabled) return true;
+  const token = getToken();
+  try {
+    const encoded = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(atob(encoded));
+    return Array.isArray(payload.roles) && payload.roles.includes(role);
+  } catch {
+    return false;
+  }
+}
+
 function b64url(bytes: Uint8Array): string {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);

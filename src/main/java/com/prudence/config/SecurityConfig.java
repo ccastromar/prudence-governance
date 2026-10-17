@@ -84,6 +84,10 @@ public class SecurityConfig {
                     // Re-driving dead-lettered evidence is an operator act.
                     .requestMatchers(HttpMethod.POST, "/api/evidence/**")
                     .hasRole("read-write")
+                    // A human can request a demonstrator run, but the browser never calls the
+                    // PDP or Ernest directly: the private runner presents its workload token.
+                    .requestMatchers(HttpMethod.POST, "/api/demos/**")
+                    .hasRole("read-write")
                     // Approving/rejecting/renewing a system and issuing an attestation are reviewer
                     // acts.
                     .requestMatchers(

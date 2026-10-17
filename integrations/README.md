@@ -11,6 +11,7 @@ prudence-core/        prudence_governance — the shared core
 
 pydantic-ai/          prudence_pydantic — @governed decorator for a Pydantic AI tool
 langgraph/            prudence_langgraph — governed_node + gate_route for a LangGraph graph
+demo-runner/          internal HTTP runner used by Prudence's visible framework demos
 ```
 
 Every adapter does the same two things at its framework's natural hook point: consult the
@@ -19,6 +20,16 @@ afterwards. The decision is sealed by Prudence itself (the PDP records every dec
 makes), so adapters never record it twice: per governed call that is one PDP call and one
 Ernest write from the agent. Adding a runtime (OpenAI Agents SDK, CrewAI, …) is a new
 thin adapter, not a new core.
+
+## Console demonstrations
+
+The optional `demo-runner` executes the deterministic examples exposed in Prudence's **Policy
+decisions → Governed runs** panel: a Pydantic AI bug-triage tool and a LangGraph
+response-drafting node. It is internal-only: the browser calls Prudence with a `read-write`
+session, Prudence relays to the runner using a private token, and the runner uses its own
+least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never receives a PDP
+or Ernest credential. `chestertown-infra/scripts/provision-framework-demo-runner-client.sh`
+creates the runner identity and bridge token on the MVP host.
 
 ## Qualified seals (eIDAS B2) — optional
 

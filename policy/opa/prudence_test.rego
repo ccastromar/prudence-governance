@@ -7,6 +7,15 @@ test_operator_can_run if {
 	allow with input as {"subject": "alice@bank.eu", "pipeline": "credit-risk-scoring", "aiSystemId": "sys-1", "action": "run"}
 }
 
+# The private framework demo runner may execute exactly its two visible demonstrations.
+test_framework_demo_runner_can_run_bug_triage if {
+	allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": "pipeline_bug_triage", "aiSystemId": "sys-1", "action": "run"}
+}
+
+test_framework_demo_runner_cannot_run_other_pipeline if {
+	not allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": "credit-risk-scoring", "aiSystemId": "sys-1", "action": "run"}
+}
+
 # Operator may NOT approve (only run).
 test_operator_cannot_approve if {
 	not allow with input as {"subject": "alice@bank.eu", "pipeline": "credit-risk-scoring", "aiSystemId": "sys-1", "action": "approve"}

@@ -1,0 +1,6 @@
+-e /app/prudence-core
+-e /app/pydantic-ai
+-e /app/langgraph
+pydantic-ai-slim>=0.0.14
+langgraph>=0.2
+httpx>=0.27

@@ -5,6 +5,7 @@
       "bob@bank.eu": ["risk-officer"],
       "service-account-pdp-client": ["model-operator"],
       "service-account-aos-pdp": ["model-operator"]
+      ,"service-account-prudence-demo-runner": ["framework-demo-runner"]
     },
     "role_permissions": {
       "model-operator": [
@@ -13,6 +14,10 @@
       ],
       "risk-officer": [
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
+      ],
+      "framework-demo-runner": [
+        { "pipeline": "pipeline_bug_triage", "actions": ["run"] },
+        { "pipeline": "pipeline_response_drafter", "actions": ["run"] }
       ]
     }
   }

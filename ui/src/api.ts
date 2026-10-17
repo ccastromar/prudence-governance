@@ -166,6 +166,20 @@ export interface Decision {
   approver?: string;
 }
 
+export interface GovernedDemoRun {
+  framework: "Pydantic AI" | "LangGraph";
+  step: string;
+  decision: Decision["decision"];
+  reason?: string | null;
+  output?: string | null;
+  aiSystemId?: string;
+  continued?: boolean;
+  evidence?: {
+    status?: number | null;
+    receipt?: Record<string, unknown> | null;
+  } | null;
+}
+
 /// Where a piece of governance evidence stands on its way to Ernest. `sealed` (qualified QTSP
 /// seal) is independent: a DELIVERED record may be recorded without one.
 export type EvidenceDelivery = "PENDING" | "DELIVERED" | "DEAD";
@@ -714,6 +728,16 @@ export const api = {
       headers: withAuth(json_ct),
       body: JSON.stringify(body),
     }).then(json<Decision>),
+  runDemo: (demo: "bug-triage" | "response-drafter", aiSystemId: string) =>
+    fetch(`/api/demos/${demo}/runs`, {
+      method: "POST",
+      headers: withAuth(json_ct),
+      body: JSON.stringify({ aiSystemId }),
+    }).then(json<GovernedDemoRun>),
+  demoRuns: () =>
+    fetch("/api/demos/runs", { headers: withAuth() }).then(
+      json<Partial<Record<"bug-triage" | "response-drafter", GovernedDemoRun>>>,
+    ),
   approveSystem: (id: string) =>
     fetch(`/api/registry/systems/${id}/approve`, {
       method: "POST",
