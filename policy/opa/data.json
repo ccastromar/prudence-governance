@@ -9,7 +9,7 @@
     "role_permissions": {
       "model-operator": [
         { "pipeline": "credit-risk-scoring", "actions": ["run"] },
-        { "pipeline": "pipeline_aos_credit_pre_screening", "actions": ["run"] }
+        { "pipeline": "pipeline_aos_support_lookup", "actions": ["run"] }
       ],
       "risk-officer": [
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
