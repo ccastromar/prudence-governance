@@ -538,6 +538,7 @@ async function ok<T>(res: Response): Promise<T> {
     try {
       const b = await res.json();
       if (b?.detail) msg = b.detail;
+      else if (typeof b?.error === "string") msg = `${res.status}: ${b.error}`;
     } catch {
       /* ignore */
     }

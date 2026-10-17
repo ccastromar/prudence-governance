@@ -7,6 +7,8 @@ import java.util.Map;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.BufferingClientHttpRequestFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -62,6 +64,9 @@ public class DemoRunController {
     try {
       Map<?, ?> result =
           RestClient.builder()
+              // Buffer the JSON body so it goes out with a Content-Length: the default JDK client
+              // streams it chunked, and the runner's stdlib HTTP server then reads an empty body.
+              .requestFactory(new BufferingClientHttpRequestFactory(new JdkClientHttpRequestFactory()))
               .baseUrl(properties.baseUrl().replaceAll("/+$", ""))
               .defaultHeader("X-Prudence-Demo-Runner-Token", properties.token())
               .defaultHeader("X-Prudence-Demo-Initiator", initiator)

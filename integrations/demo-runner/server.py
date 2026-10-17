@@ -15,6 +15,8 @@ import hashlib
 import hmac
 import json
 import os
+import sys
+import traceback
 import uuid
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -234,8 +236,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         try:
-            length = int(self.headers.get("Content-Length", "0"))
-            payload = json.loads(self.rfile.read(length))
+            payload = json.loads(self.read_body() or b"{}")
             system_id = payload.get("aiSystemId", "")
             if not isinstance(system_id, str) or not system_id.strip():
                 raise ValueError("aiSystemId is required")
@@ -246,7 +247,22 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as error:
             self.reply(HTTPStatus.BAD_REQUEST, {"error": str(error)})
         except Exception:  # fail closed; do not return runtime internals to the browser
+            traceback.print_exc(file=sys.stderr)  # ...but keep them in the container log
             self.reply(HTTPStatus.BAD_GATEWAY, {"error": "governed runtime failed"})
+
+    def read_body(self) -> bytes:
+        """Request body, with or without Content-Length (HTTP/1.1 chunked transfer encoding)."""
+        if "chunked" not in self.headers.get("Transfer-Encoding", "").lower():
+            return self.rfile.read(int(self.headers.get("Content-Length", "0") or 0))
+        body = bytearray()
+        while True:
+            size = int(self.rfile.readline().split(b";", 1)[0].strip() or b"0", 16)
+            if size == 0:
+                while self.rfile.readline() not in (b"\r\n", b"\n", b""):
+                    pass  # optional trailers
+                return bytes(body)
+            body += self.rfile.read(size)
+            self.rfile.readline()  # CRLF after each chunk
 
     def reply(self, status: HTTPStatus, body: dict[str, Any]):
         data = json.dumps(body).encode()
