@@ -14,5 +14,18 @@ target/
 **/node_modules
 ui/dist
 ui/*.tsbuildinfo
-integrations/
+# The backend image does not need integrations. Keep them out by default, but retain the three
+# packages and runner source required by integrations/demo-runner/Dockerfile.
+integrations/*
+!integrations/prudence-core/
+!integrations/prudence-core/**
+!integrations/pydantic-ai/
+!integrations/pydantic-ai/**
+!integrations/langgraph/
+!integrations/langgraph/**
+!integrations/demo-runner/
+!integrations/demo-runner/**
+integrations/**/.venv/
+integrations/**/__pycache__/
+integrations/**/*.pyc
 loadtest/
