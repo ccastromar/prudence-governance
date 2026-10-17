@@ -12,14 +12,19 @@ no depende de una GPU ni de internet, y nadie puede decir que "el modelo tuvo su
 
 | Botón en AOS | IA en Prudence | Riesgo | Estado inicial | Primera respuesta |
 |---|---|---|---|---|
-| *Support lookup · limited risk* | MVP · Asistente de soporte al cliente | 🟡 LIMITED | UNDER_ASSESSMENT | 🔴 **DENY** |
+| *Support lookup · limited risk* | MVP · Asistente de soporte al cliente | 🟡 LIMITED | UNDER_ASSESSMENT (SUSPENDED tras un reinicio) | 🔴 **DENY** |
 | *Credit pre-screening · high risk* | MVP · Preselección de crédito al consumo | 🔴 HIGH | PENDING_APPROVAL | 🟠 **APPROVAL REQUIRED** |
 | *Social scoring · prohibited* | MVP · Puntuación social de ciudadanos | ⛔ PROHIBITED | BLOCKED | 🔴 **DENY** (siempre) |
 | *Translator · suspended* | MVP · Traductor de comunicaciones | 🟡 LIMITED | SUSPENDED | 🔴 **DENY** |
 
-> ⚠️ La demo **cambia el estado** de estas IAs (las aprueba). Después, `seed-mvp.sh` ya no
-> las encuentra como esperaba y se queja. Es correcto: el seed comprueba el estado de partida.
-> Para repetir la demo desde cero, reinicia la base de datos de pruebas y vuelve a sembrar.
+> 🔁 **Repetir la demo:** la demo **aprueba** estas IAs, y Prudence no tiene botón de "desaprobar"
+> (su historial solo se añade, nunca se borra). Para volver al principio ejecuta
+> `./scripts/aos-demo-rearm.sh`: abre en cada IA aprobada un incidente **no grave**,
+> *Reinicio de la demo en vivo de AOS*, que la suspende, y lo cierra al momento; el de crédito
+> vuelve a quedar esperando sus dos firmas. Los ids no cambian y no hace falta reiniciar AOS.
+> Cada reinicio deja esos incidentes cerrados en el registro, a propósito: es la verdad de lo
+> que pasó. Ojo: después de un reinicio, `seed-mvp.sh` se queja de que el soporte ya no está
+> en UNDER_ASSESSMENT; es su comprobación estricta y no afecta a la demo.
 
 ---
 
@@ -57,7 +62,7 @@ no depende de una GPU ni de internet, y nadie puede decir que "el modelo tuvo su
 - [ ] Tarjeta roja **Denied by Prudence** · *AI system not approved*.
 - [ ] *AOS did not run any step*: no se ha llamado a ninguna herramienta.
 
-2. En Prudence → **Approvals**: *Submit for review* en *MVP · Asistente de soporte al cliente* y luego **Approve** (una sola firma).
+2. En Prudence → **Approvals**: *Submit for review* en *MVP · Asistente de soporte al cliente* (sale para reenviar si viene de un reinicio) y luego **Approve** (una sola firma).
 3. En AOS, envía **otra vez** la misma petición.
 
 **Deberías ver:**
