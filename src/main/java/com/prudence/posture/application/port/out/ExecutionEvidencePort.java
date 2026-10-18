@@ -10,7 +10,17 @@ public interface ExecutionEvidencePort {
   /// throttled, failed mid-way) says so: partial counts must never pass for a clean result.
   ExecutionScan scan();
 
-  /// `counts`: aiSystemId -> execution-stage blocks seen. `complete` is false when the scan
-  /// stopped early; `detail` explains why.
-  record ExecutionScan(Map<String, Long> counts, boolean complete, String detail) {}
+  /// `counts`: aiSystemId -> execution-stage blocks seen. `lastExecutionAt`: aiSystemId -> ISO
+  /// time of its latest execution, when the evidence plane can tell (absent = unknown).
+  /// `complete` is false when the scan stopped early; `detail` explains why.
+  record ExecutionScan(
+      Map<String, Long> counts,
+      Map<String, String> lastExecutionAt,
+      boolean complete,
+      String detail) {
+
+    public ExecutionScan(Map<String, Long> counts, boolean complete, String detail) {
+      this(counts, Map.of(), complete, detail);
+    }
+  }
 }

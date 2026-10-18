@@ -127,13 +127,21 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
     try {
       Map<?, ?> body = client.get().uri("/api/stats/executions").retrieve().body(Map.class);
       Map<String, Long> counts = new HashMap<>();
+      Map<String, String> lastExecutionAt = new HashMap<>();
       if (body != null && body.get("counts") instanceof Map<?, ?> c) {
         c.forEach(
             (k, v) -> {
               if (k instanceof String id && v instanceof Number n) counts.put(id, n.longValue());
             });
       }
-      return new ExecutionScan(counts, true, null);
+      // Older Ernest versions do not report it; missing times stay unknown (never "early").
+      if (body != null && body.get("lastExecutionAt") instanceof Map<?, ?> l) {
+        l.forEach(
+            (k, v) -> {
+              if (k instanceof String id && v instanceof String at) lastExecutionAt.put(id, at);
+            });
+      }
+      return new ExecutionScan(counts, lastExecutionAt, true, null);
     } catch (RestClientResponseException e) {
       if (e.getStatusCode().value() != 404) {
         log.warn("could not read execution counts from Ernest: {}", e.getMessage());
@@ -150,6 +158,7 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
   /// Fallback for Ernest versions without /api/stats/executions.
   private ExecutionScan scanByPaging() {
     Map<String, Long> counts = new HashMap<>();
+    Map<String, java.time.Instant> latest = new HashMap<>();
     try {
       int page = 1, totalPages = 1;
       do {
@@ -166,6 +175,8 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
                 && md.get("aiSystemId") instanceof String sid
                 && !sid.isBlank()) {
               counts.merge(sid, 1L, Long::sum);
+              java.time.Instant at = executionTime(data.get("occurredAt"), blk.get("timestamp"));
+              if (at != null) latest.merge(sid, at, (a, b) -> a.isAfter(b) ? a : b);
             }
           }
         }
@@ -174,9 +185,28 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
     } catch (Exception e) {
       // Fail-closed: report what was read, flagged incomplete, never as a full scan.
       log.warn("could not scan execution evidence from Ernest: {}", e.getMessage());
-      return new ExecutionScan(counts, false, "Evidence scan stopped early: " + e.getMessage());
+      return new ExecutionScan(
+          counts, isoTimes(latest), false, "Evidence scan stopped early: " + e.getMessage());
     }
-    return new ExecutionScan(counts, true, null);
+    return new ExecutionScan(counts, isoTimes(latest), true, null);
+  }
+
+  /// The event's stated time when it parses, else the block's own time (epoch millis).
+  private static java.time.Instant executionTime(Object occurredAt, Object blockTimestamp) {
+    if (occurredAt instanceof String s && !s.isBlank()) {
+      try {
+        return java.time.Instant.parse(s);
+      } catch (RuntimeException ignored) {
+        // fall back to the block time
+      }
+    }
+    return blockTimestamp instanceof Number n ? java.time.Instant.ofEpochMilli(n.longValue()) : null;
+  }
+
+  private static Map<String, String> isoTimes(Map<String, java.time.Instant> times) {
+    Map<String, String> out = new HashMap<>();
+    times.forEach((id, at) -> out.put(id, at.toString()));
+    return out;
   }
 
   private static org.springframework.http.client.ClientHttpRequestFactory timeoutFactory() {

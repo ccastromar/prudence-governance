@@ -16,7 +16,8 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /// Joins the registry with the evidence plane to catch ungoverned runs: an execution tagged
-/// with a system that is not APPROVED (or not registered at all) is a policy-drift violation.
+/// with a system that is not registered, was never approved, or ran after its approval ended
+/// is a policy-drift violation. Executions from while it was approved stay legitimate history.
 @Service
 public class DriftService implements DriftQuery {
 
@@ -48,19 +49,53 @@ public class DriftService implements DriftQuery {
                 n,
                 "OK",
                 n + " governed execution(s) on record."));
-      } else {
+        continue;
+      }
+      // Not approved now. Executions that all happened while it was still approved are
+      // legitimate history; anything later, never-approved, or of unknown time is drift.
+      Instant ended = parse(s.approvalEndedAt());
+      Instant last = parse(scan.lastExecutionAt().get(s.id()));
+      if (ended != null && last != null && !last.isAfter(ended)) {
         findings.add(
             new Finding(
                 s.id(),
                 s.name(),
                 s.approvalStatus().name(),
                 n,
-                "VIOLATION",
+                "OK",
                 n
-                    + " execution(s) recorded for a non-approved system ("
-                    + s.approvalStatus()
-                    + ") — ungoverned run."));
+                    + " execution(s) on record, all while it was approved (latest "
+                    + last
+                    + "; approval ended "
+                    + ended
+                    + ")."));
+        continue;
       }
+      String why;
+      if (ended == null) {
+        why = "recorded for a system that was never approved";
+      } else if (last == null) {
+        why =
+            "on record, but their times are unknown, so they cannot be shown to predate the end"
+                + " of approval ("
+                + ended
+                + ")";
+      } else {
+        why = "recorded after the approval ended (latest " + last + "; ended " + ended + ")";
+      }
+      findings.add(
+          new Finding(
+              s.id(),
+              s.name(),
+              s.approvalStatus().name(),
+              n,
+              "VIOLATION",
+              n
+                  + " execution(s) "
+                  + why
+                  + " — now "
+                  + s.approvalStatus()
+                  + ", ungoverned run."));
     }
 
     // Executions tagged with an id not in the registry at all: fully ungoverned.
@@ -80,5 +115,14 @@ public class DriftService implements DriftQuery {
     boolean hasViolations = findings.stream().anyMatch(f -> "VIOLATION".equals(f.severity()));
     return new Drift(
         Instant.now().toString(), hasViolations, scan.complete(), scan.detail(), findings);
+  }
+
+  private static Instant parse(String iso) {
+    if (iso == null || iso.isBlank()) return null;
+    try {
+      return Instant.parse(iso);
+    } catch (RuntimeException unparsable) {
+      return null; // unknown: treated as not provably within the approval
+    }
   }
 }

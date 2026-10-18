@@ -10,11 +10,14 @@ public interface SystemInventoryPort {
   List<GovernedSystem> all();
 
   /// `approvalExpiresAt` is null when not approved; `reviewDue` = renewal notice issued.
+  /// `approvalEndedAt`: when the system last left APPROVED (suspended, expired…), from the
+  /// append-only review trail; null if it was never approved and then taken out of approval.
   record GovernedSystem(
       String id,
       String name,
       RiskTier riskTier,
       ApprovalStatus approvalStatus,
       String approvalExpiresAt,
-      boolean reviewDue) {}
+      boolean reviewDue,
+      String approvalEndedAt) {}
 }
