@@ -7,13 +7,15 @@ import com.prudence.policy.application.port.in.DecidePolicyUseCase;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
 import jakarta.validation.Valid;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-/// The PDP endpoint an AOS gate calls. Maps the sealed decision to HTTP with exhaustive
-/// pattern matching — allow 200, approval 202, deny 403.
+/// The PDP endpoint a runtime gate calls (Decision API v1, `docs/api/decision-api-v1.yaml`).
+/// Maps the sealed decision to HTTP with exhaustive pattern matching — allow 200, approval
+/// 202, deny 403 — and returns the id under which the decision was recorded as evidence.
 @RestController
 @RequestMapping("/api/policy")
 public class PolicyController {
@@ -33,6 +35,10 @@ public class PolicyController {
     // workload identity.  The request field is retained only for the open dev profile.
     // A caller must not be able to impersonate another principal by changing JSON.
     String subject = authentication != null ? authentication.getName() : request.subject();
+    // Assigned here and recorded with the decision in the same transaction: the id returned is
+    // the id of the evidence, never one that was not stored.
+    String decisionId = UUID.randomUUID().toString();
+    String policyVersion = properties.opa().policyVersion();
     PolicyDecision decision =
         pdp.decide(
             new DecisionContext(
@@ -40,20 +46,29 @@ public class PolicyController {
                 request.pipeline(),
                 request.aiSystemId(),
                 request.action(),
-                properties.opa().policyVersion(),
+                policyVersion,
                 properties.opa().policyHash(),
                 "unknown",
-                "unknown"));
+                "unknown",
+                null,
+                null,
+                null,
+                null,
+                null,
+                decisionId));
 
     return switch (decision) {
       case PolicyDecision.Allow ignored ->
-          ResponseEntity.ok(new DecisionResponse("ALLOW", null, null));
+          ResponseEntity.ok(
+              new DecisionResponse("ALLOW", null, null, decisionId, policyVersion));
       case PolicyDecision.ApprovalRequired ar ->
           ResponseEntity.status(HttpStatus.ACCEPTED)
-              .body(new DecisionResponse("APPROVAL_REQUIRED", ar.reason(), ar.approver()));
+              .body(
+                  new DecisionResponse(
+                      "APPROVAL_REQUIRED", ar.reason(), ar.approver(), decisionId, policyVersion));
       case PolicyDecision.Deny d ->
           ResponseEntity.status(HttpStatus.FORBIDDEN)
-              .body(new DecisionResponse("DENY", d.reason(), null));
+              .body(new DecisionResponse("DENY", d.reason(), null, decisionId, policyVersion));
     };
   }
 }

@@ -26,6 +26,7 @@ class Decision:
     decision: str                 # ALLOW | DENY | APPROVAL_REQUIRED
     reason: str | None = None
     approver: str | None = None
+    decision_id: str | None = None   # the id Prudence recorded it under (Decision API v1)
 
     @property
     def allowed(self) -> bool:
@@ -81,4 +82,4 @@ class PrudenceGate:
             body = r.json()
         except Exception as e:  # noqa: BLE001 — fail closed on any error
             return Decision("DENY", f"PDP unreachable: {e}")
-        return Decision(body.get("decision", "DENY"), body.get("reason"), body.get("approver"))
+        return Decision(body.get("decision", "DENY"), body.get("reason"), body.get("approver"), body.get("decisionId"))

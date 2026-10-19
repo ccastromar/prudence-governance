@@ -33,7 +33,9 @@ public class OutboxEvidenceAdapter implements EvidencePort {
         };
     var record =
         new EvidenceOutboxJpaEntity(
-            UUID.randomUUID().toString(),
+            // The id the PDP already returned to the caller (Decision API v1), so a runtime
+            // can cite the exact recorded decision; a fresh one when none was assigned.
+            context.decisionId() != null ? context.decisionId() : UUID.randomUUID().toString(),
             context.subject(),
             context.pipeline(),
             context.aiSystemId(),

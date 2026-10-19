@@ -1,0 +1,142 @@
+openapi: 3.1.0
+info:
+  title: Prudence Decision API
+  version: 1.0.0
+  summary: Ask Prudence whether a governed AI system may run, before running it.
+  description: |
+    The Policy Decision Point (PDP) that a runtime gate (the Policy Enforcement Point) calls
+    before it executes a pipeline backed by a governed AI system. AOS is the reference
+    runtime; any orchestrator can call it (see `integrations/` for Pydantic AI and LangGraph).
+
+    **Fail closed.** A gate must treat anything other than an `ALLOW` decision as "do not
+    run": a `DENY`, an `APPROVAL_REQUIRED`, an error status, a timeout or an unreadable body.
+
+    **Who is asking comes from the token, not the body.** The subject is the authenticated
+    workload identity (`email`, then `preferred_username`, then `sub` of the access token).
+    The `subject` field in the request is ignored outside the open development profile.
+
+    **Every decision is evidence.** Prudence records each decision, in the same transaction
+    that produces it, under `decisionId`, and delivers it to the evidence store
+    asynchronously. Keep the `decisionId`: it identifies the decision that allowed (or
+    stopped) an execution.
+
+    **Compatibility.** v1 only grows by adding optional response fields. Clients must ignore
+    fields they do not know.
+servers:
+  - url: https://prudence.ccmlab.cc
+    description: Chestertown MVP
+  - url: http://localhost:8099
+    description: Local development
+security:
+  - workloadToken: [pdp.decide]
+paths:
+  /api/policy/decisions:
+    post:
+      operationId: decide
+      summary: Decide whether a pipeline may run against an AI system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionRequest'
+            example:
+              subject: ignored-when-authenticated
+              pipeline: credit_prescreening
+              aiSystemId: 68bf42c1-7b02-46b7-a7d9-68d696620b8a
+              action: run
+      responses:
+        '200':
+          description: ALLOW — the pipeline may run.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              example:
+                decision: ALLOW
+                reason: null
+                approver: null
+                decisionId: 4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90
+                policyVersion: lab
+        '202':
+          description: |
+            APPROVAL_REQUIRED — do not run. The AI system needs a governance approval first
+            (for a high-risk system, two different reviewers); `approver` names the role.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              example:
+                decision: APPROVAL_REQUIRED
+                reason: high-risk system awaiting governance approval
+                approver: risk-officer
+                decisionId: 0b7e3d21-55a4-4f0e-9c3b-1a2d3e4f5a6b
+                policyVersion: lab
+        '400':
+          description: A required field is missing or blank. Nothing was decided or recorded.
+        '401':
+          description: No token, or an invalid, expired or foreign-issuer token. Nothing was decided.
+        '403':
+          description: |
+            Either a **DENY decision** (the body is a `DecisionResponse` with `decision: DENY`,
+            recorded as evidence), or a token without the `pdp.decide` scope (no decision body,
+            nothing recorded). Both mean "do not run".
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              example:
+                decision: DENY
+                reason: prohibited AI system
+                approver: null
+                decisionId: 7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d
+                policyVersion: lab
+components:
+  securitySchemes:
+    workloadToken:
+      type: oauth2
+      description: |
+        A machine (client credentials) access token from the deployment's OpenID Connect
+        issuer, with the `pdp.decide` scope. Human SSO tokens do not carry that scope and are
+        refused. The client must carry a `preferred_username` mapper so the token names it.
+      flows:
+        clientCredentials:
+          tokenUrl: https://sso.ccmlab.cc/realms/prudence/protocol/openid-connect/token
+          scopes:
+            pdp.decide: Ask the Policy Decision Point for decisions
+  schemas:
+    DecisionRequest:
+      type: object
+      required: [subject, pipeline, aiSystemId, action]
+      properties:
+        subject:
+          type: string
+          description: Required by the schema but ignored when the call is authenticated (always, outside dev).
+        pipeline:
+          type: string
+          description: The pipeline (or flow) the runtime wants to execute.
+        aiSystemId:
+          type: string
+          description: The AI system's id in Prudence's registry.
+        action:
+          type: string
+          description: What the runtime wants to do with it, e.g. `run`.
+    DecisionResponse:
+      type: object
+      required: [decision, decisionId]
+      properties:
+        decision:
+          type: string
+          enum: [ALLOW, DENY, APPROVAL_REQUIRED]
+        reason:
+          type: [string, 'null']
+          description: Why it was denied or is waiting; null for ALLOW.
+        approver:
+          type: [string, 'null']
+          description: The role that must approve; only for APPROVAL_REQUIRED.
+        decisionId:
+          type: string
+          description: The id this decision was recorded under as evidence.
+        policyVersion:
+          type: string
+          description: The policy bundle version that produced the decision.

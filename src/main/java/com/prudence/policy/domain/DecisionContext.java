@@ -15,7 +15,40 @@ public record DecisionContext(
     String correlationId,
     Long systemSequence,
     String aiSystemName,
-    String riskTier) {
+    String riskTier,
+    String decisionId) {
+
+  /// Without a decision id: the outbox then assigns one.
+  public DecisionContext(
+      String subject,
+      String pipeline,
+      String aiSystemId,
+      String action,
+      String policyVersion,
+      String policyHash,
+      String systemVersion,
+      String modelHash,
+      String causationId,
+      String correlationId,
+      Long systemSequence,
+      String aiSystemName,
+      String riskTier) {
+    this(
+        subject,
+        pipeline,
+        aiSystemId,
+        action,
+        policyVersion,
+        policyHash,
+        systemVersion,
+        modelHash,
+        causationId,
+        correlationId,
+        systemSequence,
+        aiSystemName,
+        riskTier,
+        null);
+  }
 
   /// Without the system's identity (name, risk tier): callers that only know the request.
   public DecisionContext(

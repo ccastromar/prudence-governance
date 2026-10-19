@@ -49,7 +49,8 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
                         null,
                         null,
                         system.name(),
-                        system.riskTier().name()))
+                        system.riskTier().name(),
+                        context.decisionId()))
             .orElse(context);
     PolicyDecision decision = evaluate(effective, view);
     evidence.recordDecision(effective, decision); // durable outbox, delivered to Ernest
