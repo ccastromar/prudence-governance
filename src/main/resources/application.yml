@@ -61,7 +61,10 @@ prudence:
     console-url: ${PRUDENCE_CONSOLE_URL:}
     drift-check-ms: ${PRUDENCE_DRIFT_CHECK_MS:900000}
   evidence:
-    outbox-delay-ms: ${PRUDENCE_EVIDENCE_OUTBOX_DELAY_MS:30000}
+    # How often the delivery worker looks for pending evidence. Decisions (the high-volume
+    # stream) only go out on this poll, so it bounds how late they reach the evidence store;
+    # reviews, incidents and attestations are also sent right after they are recorded.
+    outbox-delay-ms: ${PRUDENCE_EVIDENCE_OUTBOX_DELAY_MS:2000}
     # Transient failures back off exponentially (capped at 1h); at this limit the event is
     # dead-lettered and posture turns RED. Permanent rejections dead-letter immediately.
     max-attempts: ${PRUDENCE_EVIDENCE_MAX_ATTEMPTS:20}
