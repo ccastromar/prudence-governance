@@ -1,9 +1,0 @@
-package com.prudence.impact;
-
-public enum TransparencyKind {
-  DIRECT_AI_INTERACTION,
-  DEEPFAKE,
-  EMOTION_RECOGNITION,
-  BIOMETRIC_CATEGORISATION,
-  PUBLIC_INTEREST_CONTENT
-}

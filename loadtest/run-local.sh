@@ -58,12 +58,12 @@ PORT=3112 METRICS_PORT=9113 "$WORK/ingestor" worker > "$WORK/worker.log" 2>&1 & 
 
 start_prudence(){ # $1 = label, rest = extra args
   local label=$1; shift
-  java -Xmx2g -cp "$REPO/target/classes:$(cat "$WORK/cp.txt")" com.prudence.PrudenceApplication --spring.profiles.active=dev \
+  java -Xmx2g -cp "$REPO/target/classes:$(cat "$WORK/cp.txt")" cc.ccmlab.prudence.PrudenceApplication --spring.profiles.active=dev \
     --server.port=18099 --server.tomcat.threads.max=200 \
     --spring.datasource.url=jdbc:postgresql://127.0.0.1:54329/prudence --spring.datasource.username=prudence --spring.datasource.password=pw \
     --spring.datasource.hikari.maximum-pool-size=40 --spring.flyway.enabled=true --spring.jpa.hibernate.ddl-auto=validate \
     --prudence.opa.base-url=http://127.0.0.1:18181 --prudence.ernest.base-url=http://127.0.0.1:3101 --prudence.ernest.api-key=ernest-key \
-    --prudence.alerts.drift-initial-delay-ms=3600000 --logging.level.com.prudence=WARN "$@" > "$WORK/prudence-$label.log" 2>&1 &
+    --prudence.alerts.drift-initial-delay-ms=3600000 --logging.level.cc.ccmlab.prudence=WARN "$@" > "$WORK/prudence-$label.log" 2>&1 &
   PRUDENCE=$!; PIDS+=($PRUDENCE)
   for i in $(seq 1 90); do curl -s -m 2 -f -o /dev/null http://127.0.0.1:18099/actuator/health && return 0
     kill -0 $PRUDENCE 2>/dev/null || break; sleep 1; done

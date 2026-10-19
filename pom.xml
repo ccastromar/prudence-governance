@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.prudence</groupId>
+    <groupId>cc.ccmlab</groupId>
     <artifactId>prudence</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>prudence</name>

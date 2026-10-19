@@ -1,0 +1,84 @@
+package cc.ccmlab.prudence.monitoring;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "monitoring_signal")
+public class MonitoringSignalJpaEntity {
+  @Id private String id;
+  private String aiSystemId;
+
+  @Enumerated(EnumType.STRING)
+  private RiskSignal signal;
+
+  private double value;
+  private double amberThreshold;
+  private double redThreshold;
+
+  @Enumerated(EnumType.STRING)
+  private MonitoringStatus status;
+
+  private String observedAt;
+
+  @Column(length = 2000)
+  private String sourceReference;
+
+  protected MonitoringSignalJpaEntity() {}
+
+  public MonitoringSignalJpaEntity(
+      String id,
+      String s,
+      RiskSignal k,
+      double v,
+      double a,
+      double r,
+      MonitoringStatus st,
+      String at,
+      String ref) {
+    this.id = id;
+    aiSystemId = s;
+    signal = k;
+    value = v;
+    amberThreshold = a;
+    redThreshold = r;
+    status = st;
+    observedAt = at;
+    sourceReference = ref;
+  }
+
+  public String getId() {
+    return id;
+  }
+
+  public String getAiSystemId() {
+    return aiSystemId;
+  }
+
+  public RiskSignal getSignal() {
+    return signal;
+  }
+
+  public double getValue() {
+    return value;
+  }
+
+  public double getAmberThreshold() {
+    return amberThreshold;
+  }
+
+  public double getRedThreshold() {
+    return redThreshold;
+  }
+
+  public MonitoringStatus getStatus() {
+    return status;
+  }
+
+  public String getObservedAt() {
+    return observedAt;
+  }
+
+  public String getSourceReference() {
+    return sourceReference;
+  }
+}
