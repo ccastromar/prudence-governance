@@ -97,6 +97,24 @@ export interface Drift {
   findings: DriftFinding[];
 }
 
+/// Runtime execution reports vs Ernest's execution evidence (ADR-001). `complete` false:
+/// Ernest could not be read, so nothing was compared.
+export interface ExecutionSourceMismatch {
+  aiSystemId: string;
+  name: string;
+  kind: "REPORTED_NOT_EVIDENCED" | "EVIDENCED_NOT_REPORTED";
+  lastReportedAt: string | null;
+  lastEvidencedAt: string | null;
+  detail: string;
+}
+export interface ExecutionSources {
+  checkedAt: string;
+  complete: boolean;
+  detail: string;
+  graceMinutes: number;
+  mismatches: ExecutionSourceMismatch[];
+}
+
 export interface RegisterInput {
   name: string;
   intendedPurpose: string;
@@ -783,6 +801,10 @@ export const api = {
     ),
   drift: () =>
     fetch("/api/posture/drift", { headers: withAuth() }).then(json<Drift>),
+  executionSources: () =>
+    fetch("/api/posture/execution-sources", { headers: withAuth() }).then(
+      json<ExecutionSources>,
+    ),
   listAttestations: () =>
     fetch("/api/attestations", { headers: withAuth() }).then(
       json<AttestationSummary[]>,

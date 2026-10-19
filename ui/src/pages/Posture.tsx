@@ -3,6 +3,7 @@ import {
   api,
   type Posture as PostureData,
   type Drift,
+  type ExecutionSources,
   type DeadLetter,
 } from "../api";
 import { RiskBadge, StatusBadge, PostureBadge } from "../components";
@@ -13,6 +14,7 @@ import { RiskBadge, StatusBadge, PostureBadge } from "../components";
 export default function Posture() {
   const [data, setData] = useState<PostureData | null>(null);
   const [drift, setDrift] = useState<Drift | null>(null);
+  const [sources, setSources] = useState<ExecutionSources | null>(null);
   const [error, setError] = useState("");
   const [dead, setDead] = useState<DeadLetter[]>([]);
   const [busy, setBusy] = useState("");
@@ -29,6 +31,12 @@ export default function Posture() {
       .then(setDrift)
       .catch(() => {
         /* drift is best-effort */
+      });
+    api
+      .executionSources()
+      .then(setSources)
+      .catch(() => {
+        /* best-effort */
       });
     api
       .deadLetters()
@@ -222,6 +230,60 @@ export default function Posture() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {sources && (!sources.complete || sources.mismatches.length > 0) && (
+        <div
+          className="card"
+          style={{ marginTop: "var(--sp-6)", borderColor: "var(--warn)" }}
+        >
+          <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
+            Execution sources
+          </h2>
+          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+            What runtimes reported to Prudence and the execution evidence in
+            Ernest should agree (after a {sources.graceMinutes}-minute grace for
+            delivery). A mismatch is a warning, not a violation: evidence that
+            never arrived, or an execution nobody reported.
+          </p>
+          {!sources.complete ? (
+            <div className="mut">{sources.detail}</div>
+          ) : (
+            <table>
+              <thead>
+                <tr>
+                  <th>AI system</th>
+                  <th>Last reported</th>
+                  <th>Last in Ernest</th>
+                  <th>Warning</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.mismatches.map((m) => (
+                  <tr key={m.aiSystemId}>
+                    <td>
+                      <div style={{ fontWeight: 600 }}>{m.name}</div>
+                      <code>{m.aiSystemId}</code>
+                    </td>
+                    <td className="mut">{m.lastReportedAt ?? "—"}</td>
+                    <td className="mut">{m.lastEvidencedAt ?? "—"}</td>
+                    <td>
+                      <span style={{ fontWeight: 700, color: "var(--warn)" }}>
+                        ●{" "}
+                        {m.kind === "REPORTED_NOT_EVIDENCED"
+                          ? "evidence missing"
+                          : "not reported"}
+                      </span>
+                      <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                        {m.detail}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
