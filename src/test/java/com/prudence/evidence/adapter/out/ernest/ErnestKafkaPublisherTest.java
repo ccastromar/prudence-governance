@@ -35,7 +35,7 @@ class ErnestKafkaPublisherTest {
     assertEquals("prudence.decisions", record.topic());
     assertEquals("system-1", record.key());
     assertEquals("prudence-pdp", header(record.headers().lastHeader("source")));
-    assertEquals("inference.logged", header(record.headers().lastHeader("eventType")));
+    assertEquals("policy.decision", header(record.headers().lastHeader("eventType")));
     assertEquals("decision-1", header(record.headers().lastHeader("sourceEventId")));
     assertTrue(
         new String(record.value(), StandardCharsets.UTF_8)
