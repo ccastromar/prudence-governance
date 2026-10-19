@@ -4,7 +4,7 @@ spring:
       on-profile: dev
   datasource:
     # Development only. Production requires a managed database through application.yml.
-    url: jdbc:h2:file:./data/prudence;AUTO_SERVER=TRUE
+    url: jdbc:h2:file:./data/prudence;AUTO_SERVER=TRUE;NON_KEYWORDS=VALUE
     username: sa
     password:
   jpa:
