@@ -44,6 +44,7 @@ public class OutboxEvidenceAdapter implements EvidencePort {
             context.modelHash(),
             verdict,
             reason);
+    record.setSystemIdentity(context.aiSystemName(), context.riskTier());
     var envelope =
         causality.envelope(
             "GOVERNANCE_DECISION",

@@ -112,7 +112,9 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
         e.getModelHash(),
         e.getCausationId(),
         e.getCorrelationId(),
-        e.getSystemSequence());
+        e.getSystemSequence(),
+        e.getAiSystemName(),
+        e.getRiskTier());
   }
 
   @Override

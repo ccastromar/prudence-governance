@@ -74,7 +74,7 @@ final class ErnestKafkaPublisher implements AutoCloseable {
         record
             .headers()
             .add(new RecordHeader("source", bytes("prudence-pdp")))
-            .add(new RecordHeader("eventType", bytes("inference.logged")))
+            .add(new RecordHeader("eventType", bytes(ErnestEvidenceAdapter.DECISION_EVENT_TYPE)))
             .add(new RecordHeader("sourceEventId", bytes(event.sourceEventId())));
         sent.add(producer.send(record));
         outcomes.add(null);

@@ -15,7 +15,18 @@ public interface RegisteredSystemLookup {
       boolean approved,
       String systemVersion,
       String modelHash,
-      boolean approvalExpired) {
+      boolean approvalExpired,
+      String name) {
+    public SystemRiskView(
+        String aiSystemId,
+        RiskTier riskTier,
+        boolean approved,
+        String systemVersion,
+        String modelHash,
+        boolean approvalExpired) {
+      this(aiSystemId, riskTier, approved, systemVersion, modelHash, approvalExpired, null);
+    }
+
     public SystemRiskView(String aiSystemId, RiskTier riskTier, boolean approved) {
       this(aiSystemId, riskTier, approved, "unknown", "unknown", false);
     }

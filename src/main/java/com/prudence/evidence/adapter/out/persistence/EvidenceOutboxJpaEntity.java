@@ -28,6 +28,8 @@ public class EvidenceOutboxJpaEntity {
   private String reason;
 
   private String createdAt;
+  private String aiSystemName;
+  private String riskTier;
   private String causationId;
   private String correlationId;
   private long systemSequence;
@@ -112,6 +114,20 @@ public class EvidenceOutboxJpaEntity {
 
   public String getReason() {
     return reason;
+  }
+
+  public String getAiSystemName() {
+    return aiSystemName;
+  }
+
+  public String getRiskTier() {
+    return riskTier;
+  }
+
+  /// The system's identity at decision time (nullable: rows written before V24 have none).
+  public void setSystemIdentity(String aiSystemName, String riskTier) {
+    this.aiSystemName = aiSystemName;
+    this.riskTier = riskTier;
   }
 
   public String getCausationId() {

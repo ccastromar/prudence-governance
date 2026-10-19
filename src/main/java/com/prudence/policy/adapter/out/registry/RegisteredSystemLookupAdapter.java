@@ -31,6 +31,7 @@ public class RegisteredSystemLookupAdapter implements RegisteredSystemLookup {
                     s.isApproved(),
                     s.classification().systemVersion(),
                     s.classification().modelHash(),
-                    s.approvalStatus() == ApprovalStatus.EXPIRED || s.hasLapsed(Instant.now())));
+                    s.approvalStatus() == ApprovalStatus.EXPIRED || s.hasLapsed(Instant.now()),
+                    s.name()));
   }
 }

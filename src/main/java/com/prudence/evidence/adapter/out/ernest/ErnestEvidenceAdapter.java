@@ -33,6 +33,10 @@ import org.springframework.web.client.RestClientResponseException;
 @Component
 public class ErnestEvidenceAdapter {
 
+  /// Ernest event type for a PDP decision (its canonical `policy_decision`). The direct
+  /// transport still posts to /api/inferences, which has no type of its own.
+  static final String DECISION_EVENT_TYPE = "policy.decision";
+
   private static final Logger log = LoggerFactory.getLogger(ErnestEvidenceAdapter.class);
 
   private final RestClient ernest;
@@ -316,23 +320,39 @@ public class ErnestEvidenceAdapter {
         .post()
         .uri("/events")
         .header("X-Ernest-Event-Source", "prudence-pdp")
-        .header("X-Ernest-Event-Type", "inference.logged")
+        .header("X-Ernest-Event-Type", DECISION_EVENT_TYPE)
         .header("X-Ernest-Source-Event-Id", inferenceId)
         .body(body)
         .retrieve()
         .toBodilessEntity();
   }
 
-  /// The event body Ernest's ingestor receives for a decision, over HTTP or Kafka alike.
+  /// The event body Ernest's ingestor receives for a decision, over HTTP or Kafka alike. It
+  /// names the AI system and declares Prudence its system of record (ADR-001), so Ernest shows
+  /// the system by name and leaves its lifecycle to Prudence.
   private Map<String, Object> eventBody(
       String inferenceId, DecisionContext ctx, String verdict, String reason) {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("modelId", ctx.aiSystemId());
+    if (ctx.aiSystemName() != null) body.put("modelName", ctx.aiSystemName());
+    body.put("aiSystem", aiSystemBlock(ctx));
+    body.put("decisionId", inferenceId);
     body.put("inferenceId", inferenceId);
     body.put("inputHash", sha256Hex(ctx.subject() + "|" + ctx.pipeline() + "|" + ctx.action()));
     body.put("outputHash", sha256Hex(verdict + "|" + (reason == null ? "" : reason)));
     body.put("metadata", decisionMetadata(ctx, verdict, reason));
     return body;
+  }
+
+  /// The identity block every decision event carries; name and risk tier are those recorded
+  /// at decision time (absent for decisions recorded before they were kept).
+  private static Map<String, Object> aiSystemBlock(DecisionContext ctx) {
+    Map<String, Object> block = new LinkedHashMap<>();
+    block.put("id", ctx.aiSystemId());
+    if (ctx.aiSystemName() != null) block.put("name", ctx.aiSystemName());
+    if (ctx.riskTier() != null) block.put("riskTier", ctx.riskTier());
+    block.put("systemOfRecord", "prudence");
+    return block;
   }
 
   /// Kafka record for a decision: keyed by AI system (per-system order), deduped by its id.

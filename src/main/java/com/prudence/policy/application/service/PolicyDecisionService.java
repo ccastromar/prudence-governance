@@ -31,7 +31,8 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
   public PolicyDecision decide(DecisionContext context) {
     var view = registry.find(context.aiSystemId());
     // Evidence carries the registered system version/model hash, so the decision can be
-    // reproduced against the exact build it governed (not the caller's "unknown").
+    // reproduced against the exact build it governed (not the caller's "unknown"), and the
+    // system's name and risk tier as they stood at decision time (its identity in Ernest).
     DecisionContext effective =
         view.map(
                 system ->
@@ -43,7 +44,12 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
                         context.policyVersion(),
                         context.policyHash(),
                         system.systemVersion(),
-                        system.modelHash()))
+                        system.modelHash(),
+                        null,
+                        null,
+                        null,
+                        system.name(),
+                        system.riskTier().name()))
             .orElse(context);
     PolicyDecision decision = evaluate(effective, view);
     evidence.recordDecision(effective, decision); // durable outbox, delivered to Ernest
