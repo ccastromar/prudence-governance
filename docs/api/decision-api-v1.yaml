@@ -139,6 +139,77 @@ paths:
           description: The token lacks the `execution.report` scope.
         '409':
           description: This (`runtime`, `executionId`) was already reported with different facts.
+  /access/v1/evaluation:
+    post:
+      operationId: authzenEvaluation
+      summary: OpenID AuthZEN 1.0 access evaluation (same PDP, standard shape)
+      description: |
+        The same decision as `POST /api/policy/decisions`, for orchestrators that speak OpenID
+        AuthZEN Authorization API 1.0. Mapping: `resource` is
+        `{type: "pipeline", id: <pipeline>, properties: {aiSystemId}}` and `action.name` is the
+        action. `subject` is required by AuthZEN but, as in Decision API v1, the authenticated
+        workload identity is used instead.
+
+        Always `200` for a decision. `decision` is `true` only for Prudence's ALLOW, so a
+        generic AuthZEN client fails closed on APPROVAL_REQUIRED; `context` carries
+        `prudenceDecision`, `reason`, `approvalRequired`, `approver`, `decisionId` and
+        `policyVersion`. Every evaluation is recorded as a decision. `X-Request-ID` is echoed.
+      parameters:
+        - name: X-Request-ID
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example:
+              subject: { type: workload, id: aos }
+              resource: { type: pipeline, id: credit_prescreening, properties: { aiSystemId: 68bf42c1-7b02-46b7-a7d9-68d696620b8a } }
+              action: { name: run }
+      responses:
+        '200':
+          description: The decision.
+          content:
+            application/json:
+              example:
+                decision: false
+                context:
+                  decisionId: 0b7e3d21-55a4-4f0e-9c3b-1a2d3e4f5a6b
+                  policyVersion: lab
+                  prudenceDecision: APPROVAL_REQUIRED
+                  approvalRequired: true
+                  approver: risk-officer
+                  reason: high-risk system awaiting governance approval
+        '400':
+          description: 'A required attribute is missing, or `resource.type` is not `pipeline`. Body `{error: {status, message}}`.'
+        '401':
+          description: No token, or an invalid one.
+        '403':
+          description: The token lacks the `pdp.decide` scope.
+  /access/v1/evaluations:
+    post:
+      operationId: authzenEvaluations
+      summary: OpenID AuthZEN 1.0 batch evaluation
+      description: |
+        `evaluations` is an array of evaluations; top-level `subject`, `resource`, `action`
+        are defaults. `options.evaluations_semantic` is `execute_all` (default),
+        `deny_on_first_deny` or `permit_on_first_permit` (evaluation stops there). A malformed
+        item is a `false` decision with `context.error`. Without `evaluations` it behaves as a
+        single evaluation.
+      responses:
+        '200':
+          description: '`{evaluations: [...]}`, in request order.'
+        '400':
+          description: Unknown `evaluations_semantic`.
+  /.well-known/authzen-configuration:
+    get:
+      operationId: authzenConfiguration
+      summary: AuthZEN PDP metadata (public)
+      security: []
+      responses:
+        '200':
+          description: '`policy_decision_point`, `access_evaluation_endpoint`, `access_evaluations_endpoint`.'
 components:
   securitySchemes:
     workloadToken:

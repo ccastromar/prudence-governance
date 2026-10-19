@@ -4,10 +4,8 @@ import com.prudence.config.IntegrationProperties;
 import com.prudence.policy.adapter.in.web.dto.DecisionRequest;
 import com.prudence.policy.adapter.in.web.dto.DecisionResponse;
 import com.prudence.policy.application.port.in.DecidePolicyUseCase;
-import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
 import jakarta.validation.Valid;
-import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -35,27 +33,12 @@ public class PolicyController {
     // workload identity.  The request field is retained only for the open dev profile.
     // A caller must not be able to impersonate another principal by changing JSON.
     String subject = authentication != null ? authentication.getName() : request.subject();
-    // Assigned here and recorded with the decision in the same transaction: the id returned is
-    // the id of the evidence, never one that was not stored.
-    String decisionId = UUID.randomUUID().toString();
-    String policyVersion = properties.opa().policyVersion();
-    PolicyDecision decision =
-        pdp.decide(
-            new DecisionContext(
-                subject,
-                request.pipeline(),
-                request.aiSystemId(),
-                request.action(),
-                policyVersion,
-                properties.opa().policyHash(),
-                "unknown",
-                "unknown",
-                null,
-                null,
-                null,
-                null,
-                null,
-                decisionId));
+    var recorded =
+        RecordedDecisions.decide(
+            pdp, properties, subject, request.pipeline(), request.aiSystemId(), request.action());
+    String decisionId = recorded.decisionId();
+    String policyVersion = recorded.policyVersion();
+    PolicyDecision decision = recorded.decision();
 
     return switch (decision) {
       case PolicyDecision.Allow ignored ->

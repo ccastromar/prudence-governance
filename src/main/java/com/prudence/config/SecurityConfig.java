@@ -61,6 +61,13 @@ public class SecurityConfig {
                     // separate scope: asking for decisions does not imply reporting executions.
                     .requestMatchers(HttpMethod.POST, "/api/executions")
                     .hasAuthority("SCOPE_execution.report")
+                    // OpenID AuthZEN front door to the same PDP: same scope as Decision API v1.
+                    // Its discovery document is public, as the specification intends.
+                    .requestMatchers(
+                        HttpMethod.POST, "/access/v1/evaluation", "/access/v1/evaluations")
+                    .hasAuthority("SCOPE_pdp.decide")
+                    .requestMatchers(HttpMethod.GET, "/.well-known/authzen-configuration")
+                    .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/governance/change-assessments")
                     .hasAuthority("SCOPE_pdp.decide")
                     .requestMatchers(
