@@ -139,7 +139,22 @@ public class SecurityConfig {
       // The evidence store (ADR-001): Ernest by default, or CloudEvents on Kafka for a
       // company's own audit store. Either way evidence never travels unencrypted.
       String sink = environment.getProperty("prudence.evidence.sink", "ernest").strip();
-      if ("cloudevents".equals(sink)) {
+      if ("cloudevents".equals(sink)
+          && "webhook"
+              .equals(
+                  environment
+                      .getProperty("prudence.evidence.cloudevents.transport", "kafka")
+                      .strip())) {
+        requireNonBlank(environment, "prudence.evidence.cloudevents.webhook-url");
+        if (!environment
+            .getProperty("prudence.evidence.cloudevents.webhook-url", "")
+            .strip()
+            .toLowerCase()
+            .startsWith("https://")) {
+          throw new IllegalStateException(
+              "Refusing to start outside dev/test with a CloudEvents webhook that is not HTTPS");
+        }
+      } else if ("cloudevents".equals(sink)) {
         requireNonBlank(environment, "prudence.evidence.cloudevents.kafka-bootstrap-servers");
         String protocol =
             environment

@@ -1,6 +1,6 @@
 package cc.ccmlab.prudence.posture.adapter.out.executions;
 
-import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher;
+import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport;
 import cc.ccmlab.prudence.evidence.adapter.out.persistence.EvidenceOutboxJpaRepository;
 import cc.ccmlab.prudence.posture.application.port.out.EvidenceHealthPort;
 import java.util.Collection;
@@ -17,25 +17,25 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "cloudevents")
 public class CloudEventsEvidenceHealth implements EvidenceHealthPort {
 
-  private final CloudEventsKafkaPublisher kafka;
+  private final CloudEventsTransport transport;
   private final EvidenceOutboxJpaRepository outbox;
 
   public CloudEventsEvidenceHealth(
-      CloudEventsKafkaPublisher kafka, EvidenceOutboxJpaRepository outbox) {
-    this.kafka = kafka;
+      CloudEventsTransport transport, EvidenceOutboxJpaRepository outbox) {
+    this.transport = transport;
     this.outbox = outbox;
   }
 
   @Override
   public EvidenceHealth check() {
-    if (!kafka.reachable()) {
+    if (!transport.reachable()) {
       return new EvidenceHealth(
-          false, "External evidence store (" + kafka.target() + ") is unreachable.");
+          false, "External evidence store (" + transport.target() + ") is unreachable.");
     }
     return new EvidenceHealth(
         true,
         "External evidence store ("
-            + kafka.target()
+            + transport.target()
             + ") reachable. Custody only: Prudence cannot verify the records' integrity there.");
   }
 

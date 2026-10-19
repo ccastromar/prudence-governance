@@ -1,6 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.cloudevents;
 
-import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher.CloudEvent;
+import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport.CloudEvent;
 import cc.ccmlab.prudence.registry.application.port.out.ReviewSealPort;
 import cc.ccmlab.prudence.registry.domain.ReviewEvent;
 import java.time.Instant;
@@ -17,10 +17,10 @@ public class CloudEventsReviewSeal implements ReviewSealPort {
 
   static final String TYPE = "chestertown.prudence.review.v1";
 
-  private final CloudEventsKafkaPublisher kafka;
+  private final CloudEventsTransport transport;
 
-  public CloudEventsReviewSeal(CloudEventsKafkaPublisher kafka) {
-    this.kafka = kafka;
+  public CloudEventsReviewSeal(CloudEventsTransport transport) {
+    this.transport = transport;
   }
 
   @Override
@@ -34,7 +34,7 @@ public class CloudEventsReviewSeal implements ReviewSealPort {
     data.put("at", event.at());
     data.put("previousStatus", event.previousStatus());
     data.put("newStatus", event.newStatus());
-    kafka.sendOne(new CloudEvent(event.id(), TYPE, event.aiSystemId(), Instant.now(), data));
+    transport.sendOne(new CloudEvent(event.id(), TYPE, event.aiSystemId(), Instant.now(), data));
     return new SealResult(false, null);
   }
 }

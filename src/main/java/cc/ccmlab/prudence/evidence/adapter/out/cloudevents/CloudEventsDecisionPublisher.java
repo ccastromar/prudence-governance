@@ -1,6 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.cloudevents;
 
-import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher.CloudEvent;
+import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport.CloudEvent;
 import cc.ccmlab.prudence.evidence.delivery.DecisionPublisher;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
@@ -23,10 +23,10 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
 
   static final String TYPE = "chestertown.prudence.policy.decision.v1";
 
-  private final CloudEventsKafkaPublisher kafka;
+  private final CloudEventsTransport transport;
 
-  public CloudEventsDecisionPublisher(CloudEventsKafkaPublisher kafka) {
-    this.kafka = kafka;
+  public CloudEventsDecisionPublisher(CloudEventsTransport transport) {
+    this.transport = transport;
   }
 
   @Override
@@ -37,12 +37,12 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
   @Override
   public void publishDecision(String decisionId, DecisionContext context, PolicyDecision decision)
       throws Exception {
-    kafka.sendOne(event(decisionId, context, decision));
+    transport.sendOne(event(decisionId, context, decision));
   }
 
   @Override
   public List<Exception> publishDecisions(List<Item> items) {
-    return kafka.send(
+    return transport.send(
         items.stream().map(i -> event(i.decisionId(), i.context(), i.decision())).toList());
   }
 

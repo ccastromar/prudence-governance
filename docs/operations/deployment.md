@@ -205,6 +205,22 @@ Event types (the `type` attribute; `subject` is the AI system, or the register):
 | `chestertown.prudence.record.v1` | Governance records such as incident events: register, record id, content hash, metadata |
 | `chestertown.prudence.attestation.v1` | Each attestation: its content hash and summary |
 
+**Or an HTTPS webhook** instead of Kafka (a SIEM collector, a log intake, your own ledger):
+one `POST` per event, body in CloudEvents structured mode
+(`Content-Type: application/cloudevents+json`), optionally authenticated with a bearer token:
+
+```
+PRUDENCE_EVIDENCE_SINK=cloudevents
+PRUDENCE_EVIDENCE_CLOUDEVENTS_TRANSPORT=webhook
+PRUDENCE_EVIDENCE_CLOUDEVENTS_WEBHOOK_URL=https://audit.example.eu/intake/prudence
+PRUDENCE_EVIDENCE_CLOUDEVENTS_WEBHOOK_TOKEN=<from your secret store>
+```
+
+A `2xx` answer is the acknowledgement. `401`/`403` are a configuration failure (records stay
+queued, one alert); `408`, `429` and `5xx` are retried with backoff; any other `4xx` dead-letters
+the record. Outside dev/test Prudence refuses to start with a webhook that is not HTTPS. Posture
+checks reachability with a `HEAD` request (any answer below `500` counts as reachable).
+
 The event `id` is Prudence's stable record id: consumers deduplicate retries on it. Only
 identifiers, outcomes, times and hashes are sent — never prompts, inputs or outputs.
 

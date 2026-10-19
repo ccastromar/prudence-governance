@@ -1,6 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.cloudevents;
 
-import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher.CloudEvent;
+import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport.CloudEvent;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import cc.ccmlab.prudence.evidence.delivery.GovernanceRecordWriter;
 import java.time.Instant;
@@ -18,10 +18,10 @@ public class CloudEventsRecordWriter implements GovernanceRecordWriter {
 
   static final String TYPE = "chestertown.prudence.record.v1";
 
-  private final CloudEventsKafkaPublisher kafka;
+  private final CloudEventsTransport transport;
 
-  public CloudEventsRecordWriter(CloudEventsKafkaPublisher kafka) {
-    this.kafka = kafka;
+  public CloudEventsRecordWriter(CloudEventsTransport transport) {
+    this.transport = transport;
   }
 
   @Override
@@ -37,7 +37,7 @@ public class CloudEventsRecordWriter implements GovernanceRecordWriter {
     data.put("recordId", recordId);
     data.put("contentHash", ErnestSealer.sha256Canonical(content));
     data.put("metadata", metadata);
-    kafka.sendOne(new CloudEvent(recordId, TYPE, registerId, Instant.now(), data));
+    transport.sendOne(new CloudEvent(recordId, TYPE, registerId, Instant.now(), data));
     return new Receipt(false, null);
   }
 }

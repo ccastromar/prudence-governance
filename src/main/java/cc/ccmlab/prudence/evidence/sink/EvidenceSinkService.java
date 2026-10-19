@@ -1,7 +1,7 @@
 package cc.ccmlab.prudence.evidence.sink;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
-import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher;
+import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -26,12 +26,12 @@ public class EvidenceSinkService {
   private final String kind;
   private final String ernestUrl;
   private final RestClient ernest;
-  private final ObjectProvider<CloudEventsKafkaPublisher> cloudEvents;
+  private final ObjectProvider<CloudEventsTransport> cloudEvents;
 
   public EvidenceSinkService(
       @Value("${prudence.evidence.sink:ernest}") String kind,
       IntegrationProperties props,
-      ObjectProvider<CloudEventsKafkaPublisher> cloudEvents) {
+      ObjectProvider<CloudEventsTransport> cloudEvents) {
     this.kind = kind == null || kind.isBlank() ? ERNEST : kind.trim().toLowerCase();
     if (!ERNEST.equals(this.kind) && !CLOUDEVENTS.equals(this.kind)) {
       throw new IllegalStateException(
@@ -74,7 +74,7 @@ public class EvidenceSinkService {
             .map(EvidenceSinkInfo.Level::of)
             .toList();
     if (CLOUDEVENTS.equals(kind)) {
-      CloudEventsKafkaPublisher publisher = cloudEvents.getIfAvailable();
+      CloudEventsTransport publisher = cloudEvents.getIfAvailable();
       return new EvidenceSinkInfo(
           kind,
           "External store (CloudEvents)",

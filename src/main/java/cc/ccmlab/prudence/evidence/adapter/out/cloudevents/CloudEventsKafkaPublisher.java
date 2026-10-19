@@ -4,9 +4,7 @@ import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestKafkaPublisher;
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -22,7 +20,7 @@ import org.apache.kafka.common.header.internals.RecordHeader;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -32,15 +30,12 @@ import tools.jackson.databind.json.JsonMapper;
 /// stable outbox id, so a consumer deduplicates retries. Only identifiers, outcomes, times and
 /// hashes are sent — never prompts, inputs or outputs.
 @Component
-@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "cloudevents")
-public class CloudEventsKafkaPublisher {
+@ConditionalOnExpression(
+    "'${prudence.evidence.sink:ernest}' == 'cloudevents'"
+        + " and '${prudence.evidence.cloudevents.transport:kafka}' == 'kafka'")
+public class CloudEventsKafkaPublisher implements CloudEventsTransport {
 
   static final Duration SEND_TIMEOUT = Duration.ofSeconds(10);
-
-  /// One CloudEvent: `type` is versioned (chestertown.prudence.<kind>.v1); `subject` is the AI
-  /// system (or register) it is about, also the partition key so its events stay in order.
-  public record CloudEvent(
-      String id, String type, String subject, Instant time, Map<String, Object> data) {}
 
   private final Producer<String, byte[]> producer;
   private final String topic;
@@ -86,26 +81,21 @@ public class CloudEventsKafkaPublisher {
     return topic;
   }
 
+  @Override
   public String target() {
     return "kafka://" + bootstrapServers + "/" + topic;
   }
 
   /// Sends every event and waits for the broker: one entry per input, in order, null when
   /// acknowledged, otherwise the failure.
+  @Override
   public List<Exception> send(List<CloudEvent> events) {
     List<Future<RecordMetadata>> sent = new ArrayList<>(events.size());
     List<Exception> outcomes = new ArrayList<>(events.size());
     for (CloudEvent event : events) {
       try {
-        Map<String, Object> envelope = new LinkedHashMap<>();
-        envelope.put("specversion", "1.0");
-        envelope.put("id", event.id());
-        envelope.put("source", source);
-        envelope.put("type", event.type());
-        envelope.put("subject", event.subject());
-        envelope.put("time", event.time().toString());
-        envelope.put("datacontenttype", "application/json");
-        envelope.put("data", event.data());
+        // The subject is also the partition key, so one system's events stay in order.
+        Map<String, Object> envelope = CloudEventsTransport.envelope(source, event);
         ProducerRecord<String, byte[]> record =
             new ProducerRecord<>(topic, event.subject(), mapper.writeValueAsBytes(envelope));
         record
@@ -113,8 +103,7 @@ public class CloudEventsKafkaPublisher {
             .add(
                 new RecordHeader(
                     "content-type",
-                    "application/cloudevents+json; charset=UTF-8"
-                        .getBytes(StandardCharsets.UTF_8)));
+                    CloudEventsTransport.CONTENT_TYPE.getBytes(StandardCharsets.UTF_8)));
         sent.add(producer.send(record));
         outcomes.add(null);
       } catch (Exception e) {
@@ -140,13 +129,8 @@ public class CloudEventsKafkaPublisher {
     return outcomes;
   }
 
-  /// Sends one event, throwing its failure.
-  public void sendOne(CloudEvent event) throws Exception {
-    Exception failure = send(List.of(event)).get(0);
-    if (failure != null) throw failure;
-  }
-
   /// Whether the broker answers for the topic right now (metadata within the block timeout).
+  @Override
   public boolean reachable() {
     try {
       return !producer.partitionsFor(topic).isEmpty();
