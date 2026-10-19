@@ -34,6 +34,47 @@ type Tab =
   | "snapshots"
   | "attestations";
 
+const TABS: readonly Tab[] = [
+  "registry",
+  "approvals",
+  "decisions",
+  "posture",
+  "incidents",
+  "cases",
+  "impact",
+  "monitoring",
+  "oversight",
+  "changes",
+  "snapshots",
+  "attestations",
+];
+
+/// Deep links from the other Chestertown apps: `?tab=registry&system=<id>` opens a tab and
+/// highlights one AI system. The SSO round-trip reloads the page without them, so they are
+/// parked in sessionStorage until the user is back.
+const DEEP_LINK_KEY = "prudence.deeplink";
+function readDeepLink(): { tab?: Tab; system?: string } {
+  let params = new URLSearchParams(window.location.search);
+  if (!params.get("tab") && !params.get("system")) {
+    try {
+      params = new URLSearchParams(sessionStorage.getItem(DEEP_LINK_KEY) ?? "");
+    } catch {
+      /* storage unavailable: no parked link */
+    }
+  } else {
+    try {
+      sessionStorage.setItem(DEEP_LINK_KEY, window.location.search);
+    } catch {
+      /* best-effort */
+    }
+  }
+  const tab = params.get("tab") as Tab | null;
+  return {
+    tab: tab && TABS.includes(tab) ? tab : undefined,
+    system: params.get("system") ?? undefined,
+  };
+}
+
 function Switcher() {
   return (
     <nav className="switcher">
@@ -52,7 +93,8 @@ function Switcher() {
 }
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>("registry");
+  const [link] = useState(readDeepLink);
+  const [tab, setTab] = useState<Tab>(link.tab ?? "registry");
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(!ssoEnabled || !!getToken());
   const [authError, setAuthError] = useState("");
@@ -64,6 +106,17 @@ export default function App() {
     })();
   }, []);
 
+  // Once signed in, the deep link has served: forget it, so a later visit opens normally.
+  useEffect(() => {
+    if (authed) {
+      try {
+        sessionStorage.removeItem(DEEP_LINK_KEY);
+      } catch {
+        /* best-effort */
+      }
+    }
+  }, [authed]);
+
   useEffect(() => {
     const signOutExpiredSession = () => {
       clearToken();
@@ -71,7 +124,10 @@ export default function App() {
     };
     window.addEventListener("prudence:unauthorized", signOutExpiredSession);
     return () =>
-      window.removeEventListener("prudence:unauthorized", signOutExpiredSession);
+      window.removeEventListener(
+        "prudence:unauthorized",
+        signOutExpiredSession,
+      );
   }, []);
 
   if (!ready) return null;
@@ -213,7 +269,7 @@ export default function App() {
         </button>
       </nav>
       <main>
-        {tab === "registry" && <Registry />}
+        {tab === "registry" && <Registry focusSystem={link.system} />}
         {tab === "approvals" && <Approvals />}
         {tab === "decisions" && <Decisions />}
         {tab === "posture" && <Posture />}

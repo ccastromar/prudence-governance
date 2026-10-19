@@ -35,7 +35,7 @@ const ROLES: RegulatoryRole[] = [
   "DISTRIBUTOR",
 ];
 
-export default function Registry() {
+export default function Registry({ focusSystem }: { focusSystem?: string }) {
   const [systems, setSystems] = useState<AiSystem[]>([]);
   const [form, setForm] = useState<RegisterInput>(EMPTY);
   const [error, setError] = useState("");
@@ -58,6 +58,14 @@ export default function Registry() {
   useEffect(() => {
     load();
   }, []);
+
+  // A deep link (`?system=<id>`) scrolls to that AI system once the list has loaded.
+  useEffect(() => {
+    if (!focusSystem || systems.length === 0) return;
+    document
+      .getElementById(`system-${focusSystem}`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusSystem, systems]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,7 +350,18 @@ export default function Registry() {
             </tr>
           )}
           {systems.map((s) => (
-            <tr key={s.id}>
+            <tr
+              key={s.id}
+              id={`system-${s.id}`}
+              style={
+                s.id === focusSystem
+                  ? {
+                      outline: "2px solid var(--accent-govern)",
+                      outlineOffset: -2,
+                    }
+                  : undefined
+              }
+            >
               <td>
                 <div style={{ fontWeight: 600 }}>{s.name}</div>
                 <code>{s.id}</code>{" "}
