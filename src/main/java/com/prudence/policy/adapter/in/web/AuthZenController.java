@@ -112,7 +112,8 @@ public class AuthZenController {
         // A per-evaluation error is a denial carrying the error (AuthZEN batch semantics).
         result = new LinkedHashMap<>();
         result.put("decision", false);
-        result.put("context", Map.of("error", Map.of("status", 400, "message", invalid.getMessage())));
+        result.put(
+            "context", Map.of("error", Map.of("status", 400, "message", invalid.getMessage())));
       }
       results.add(result);
       boolean decision = Boolean.TRUE.equals(result.get("decision"));
@@ -126,7 +127,8 @@ public class AuthZenController {
     // As in Decision API v1: the token, not the JSON, names the subject outside dev.
     String subject = authentication != null ? authentication.getName() : e.subjectId();
     var recorded =
-        RecordedDecisions.decide(pdp, properties, subject, e.pipeline(), e.aiSystemId(), e.action());
+        RecordedDecisions.decide(
+            pdp, properties, subject, e.pipeline(), e.aiSystemId(), e.action());
     Map<String, Object> context = new LinkedHashMap<>();
     context.put("decisionId", recorded.decisionId());
     context.put("policyVersion", recorded.policyVersion());
@@ -174,7 +176,8 @@ public class AuthZenController {
 
   @SuppressWarnings("unchecked")
   private static Map<String, Object> asMap(Object value) {
-    if (!(value instanceof Map<?, ?> m)) throw new IllegalArgumentException("evaluation must be an object");
+    if (!(value instanceof Map<?, ?> m))
+      throw new IllegalArgumentException("evaluation must be an object");
     return (Map<String, Object>) m;
   }
 
@@ -199,7 +202,10 @@ public class AuthZenController {
       }
       String pipeline = required(resource, "id", "resource.id");
       String aiSystemId =
-          required(asMapOrEmpty(resource.get("properties")), "aiSystemId", "resource.properties.aiSystemId");
+          required(
+              asMapOrEmpty(resource.get("properties")),
+              "aiSystemId",
+              "resource.properties.aiSystemId");
       String actionName = required(action, "name", "action.name");
       return new Evaluation(subjectId, pipeline, aiSystemId, actionName);
     }

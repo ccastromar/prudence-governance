@@ -39,7 +39,8 @@ public class CloudEventsKafkaPublisher {
 
   /// One CloudEvent: `type` is versioned (chestertown.prudence.<kind>.v1); `subject` is the AI
   /// system (or register) it is about, also the partition key so its events stay in order.
-  public record CloudEvent(String id, String type, String subject, Instant time, Map<String, Object> data) {}
+  public record CloudEvent(
+      String id, String type, String subject, Instant time, Map<String, Object> data) {}
 
   private final Producer<String, byte[]> producer;
   private final String topic;
@@ -52,11 +53,13 @@ public class CloudEventsKafkaPublisher {
       @Value("${prudence.evidence.cloudevents.topic:prudence.evidence}") String topic,
       @Value("${prudence.evidence.cloudevents.source:prudence}") String source,
       @Value("${prudence.evidence.cloudevents.kafka-security-protocol:PLAINTEXT}") String protocol,
-      @Value("${prudence.evidence.cloudevents.kafka-sasl-mechanism:SCRAM-SHA-512}") String mechanism,
+      @Value("${prudence.evidence.cloudevents.kafka-sasl-mechanism:SCRAM-SHA-512}")
+          String mechanism,
       @Value("${prudence.evidence.cloudevents.kafka-sasl-username:}") String username,
       @Value("${prudence.evidence.cloudevents.kafka-sasl-password:}") String password,
       @Value("${prudence.evidence.cloudevents.kafka-truststore-location:}") String truststore,
-      @Value("${prudence.evidence.cloudevents.kafka-truststore-password:}") String truststorePassword) {
+      @Value("${prudence.evidence.cloudevents.kafka-truststore-password:}")
+          String truststorePassword) {
     if (bootstrapServers == null || bootstrapServers.isBlank()) {
       throw new IllegalStateException(
           "prudence.evidence.sink=cloudevents needs prudence.evidence.cloudevents.kafka-bootstrap-servers");
@@ -110,7 +113,8 @@ public class CloudEventsKafkaPublisher {
             .add(
                 new RecordHeader(
                     "content-type",
-                    "application/cloudevents+json; charset=UTF-8".getBytes(StandardCharsets.UTF_8)));
+                    "application/cloudevents+json; charset=UTF-8"
+                        .getBytes(StandardCharsets.UTF_8)));
         sent.add(producer.send(record));
         outcomes.add(null);
       } catch (Exception e) {

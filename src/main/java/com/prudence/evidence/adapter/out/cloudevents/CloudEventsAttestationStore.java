@@ -15,7 +15,8 @@ import org.springframework.stereotype.Component;
 /// (CUSTODY_ONLY), never as confirmed, and the receipt says why.
 @Component
 @ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "cloudevents")
-public class CloudEventsAttestationStore implements AttestationSealPort, AttestationEvidenceQueryPort {
+public class CloudEventsAttestationStore
+    implements AttestationSealPort, AttestationEvidenceQueryPort {
 
   static final String TYPE = "chestertown.prudence.attestation.v1";
 

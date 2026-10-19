@@ -87,9 +87,7 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
   public List<Outcome<EvidenceOutboxJpaEntity>> sendBatch(List<EvidenceOutboxJpaEntity> records) {
     List<DecisionPublisher.Item> items =
         records.stream()
-            .map(
-                e ->
-                    new DecisionPublisher.Item(e.getId(), context(e), decision(e)))
+            .map(e -> new DecisionPublisher.Item(e.getId(), context(e), decision(e)))
             .toList();
     List<Exception> failures = ernest.publishDecisions(items);
     return failures.stream()

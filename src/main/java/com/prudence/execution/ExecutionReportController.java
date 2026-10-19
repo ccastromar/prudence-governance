@@ -107,7 +107,8 @@ public class ExecutionReportController {
       at = Instant.parse(raw);
     } catch (DateTimeParseException e) {
       throw new ResponseStatusException(
-          HttpStatus.BAD_REQUEST, "startedAt must be an ISO-8601 instant, e.g. 2026-10-19T10:15:30Z");
+          HttpStatus.BAD_REQUEST,
+          "startedAt must be an ISO-8601 instant, e.g. 2026-10-19T10:15:30Z");
     }
     if (at.isAfter(Instant.now().plus(MAX_CLOCK_SKEW))) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "startedAt is in the future");

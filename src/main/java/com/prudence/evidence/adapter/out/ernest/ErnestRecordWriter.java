@@ -1,22 +1,25 @@
 package com.prudence.evidence.adapter.out.ernest;
 
-import com.prudence.evidence.delivery.GovernanceRecordWriter;
-
 import com.prudence.config.IntegrationProperties;
+import com.prudence.evidence.delivery.GovernanceRecordWriter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// Records one governance record in Ernest under a well-known model: registers the model once,
 /// hashes the record's content (JCS), qualify-seals it when a QTSP is configured, and posts it
 /// under a stable `inferenceId`. Throws on failure, for the delivery worker to classify.
 @Component
-@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "prudence.evidence",
+    name = "sink",
+    havingValue = "ernest",
+    matchIfMissing = true)
 public class ErnestRecordWriter implements GovernanceRecordWriter {
 
   /// Marks a Prudence register (incidents, reviews, attestations) in Ernest: a stream of

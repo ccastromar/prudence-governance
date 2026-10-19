@@ -90,12 +90,7 @@ public class DriftService implements DriftQuery {
               s.approvalStatus().name(),
               n,
               "VIOLATION",
-              n
-                  + " execution(s) "
-                  + why
-                  + " — now "
-                  + s.approvalStatus()
-                  + ", ungoverned run."));
+              n + " execution(s) " + why + " — now " + s.approvalStatus() + ", ungoverned run."));
     }
 
     // Executions tagged with an id not in the registry at all: fully ungoverned.

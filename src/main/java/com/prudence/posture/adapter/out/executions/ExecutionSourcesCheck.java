@@ -57,7 +57,11 @@ public class ExecutionSourcesCheck {
 
   /// `complete` false: Ernest could not be read in full, so no comparison was made.
   public record Result(
-      String checkedAt, boolean complete, String detail, long graceMinutes, List<Mismatch> mismatches) {}
+      String checkedAt,
+      boolean complete,
+      String detail,
+      long graceMinutes,
+      List<Mismatch> mismatches) {}
 
   public Result check() {
     Instant now = Instant.now();
@@ -105,7 +109,9 @@ public class ExecutionSourcesCheck {
                 "A runtime reported an execution at "
                     + reported
                     + ", but Ernest holds "
-                    + (evidenced == null ? "no execution evidence" : "nothing later than " + evidenced)
+                    + (evidenced == null
+                        ? "no execution evidence"
+                        : "nothing later than " + evidenced)
                     + " for this system: its evidence never arrived."));
       } else if (evidenced != null
           && evidenced.isBefore(now.minus(grace))

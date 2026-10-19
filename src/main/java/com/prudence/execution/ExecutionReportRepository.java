@@ -8,9 +8,11 @@ import org.springframework.data.jpa.repository.Query;
 
 public interface ExecutionReportRepository extends JpaRepository<ExecutionReportJpaEntity, String> {
 
-  Optional<ExecutionReportJpaEntity> findByRuntimeAndExecutionId(String runtime, String executionId);
+  Optional<ExecutionReportJpaEntity> findByRuntimeAndExecutionId(
+      String runtime, String executionId);
 
-  List<ExecutionReportJpaEntity> findByAiSystemIdOrderByStartedAtDesc(String aiSystemId, Limit limit);
+  List<ExecutionReportJpaEntity> findByAiSystemIdOrderByStartedAtDesc(
+      String aiSystemId, Limit limit);
 
   /// Per system: how many executions were reported and the latest start (ISO-8601 UTC, so
   /// the string maximum is the latest instant).

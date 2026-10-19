@@ -1,8 +1,8 @@
 package com.prudence.incident.adapter.out.ernest;
 
-import com.prudence.evidence.delivery.GovernanceRecordWriter;
 import com.prudence.evidence.delivery.Delivery;
 import com.prudence.evidence.delivery.DeliveryTarget;
+import com.prudence.evidence.delivery.GovernanceRecordWriter;
 import com.prudence.incident.adapter.out.persistence.IncidentEventJpaEntity;
 import com.prudence.incident.adapter.out.persistence.IncidentEventJpaRepository;
 import java.util.LinkedHashMap;
@@ -23,7 +23,8 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
   private final IncidentEventJpaRepository events;
   private final GovernanceRecordWriter ernest;
 
-  public IncidentEventDeliveryTarget(IncidentEventJpaRepository events, GovernanceRecordWriter ernest) {
+  public IncidentEventDeliveryTarget(
+      IncidentEventJpaRepository events, GovernanceRecordWriter ernest) {
     this.events = events;
     this.ernest = ernest;
   }

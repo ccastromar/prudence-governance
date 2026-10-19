@@ -42,8 +42,7 @@ public class PolicyController {
 
     return switch (decision) {
       case PolicyDecision.Allow ignored ->
-          ResponseEntity.ok(
-              new DecisionResponse("ALLOW", null, null, decisionId, policyVersion));
+          ResponseEntity.ok(new DecisionResponse("ALLOW", null, null, decisionId, policyVersion));
       case PolicyDecision.ApprovalRequired ar ->
           ResponseEntity.status(HttpStatus.ACCEPTED)
               .body(

@@ -1,8 +1,7 @@
 package com.prudence.evidence.adapter.out.ernest;
 
-import com.prudence.evidence.delivery.DecisionPublisher;
-
 import com.prudence.config.IntegrationProperties;
+import com.prudence.evidence.delivery.DecisionPublisher;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
 import jakarta.annotation.PreDestroy;
@@ -19,9 +18,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// Driven adapter to Ernest. Records each governance decision as a tamper-evident provenance
@@ -34,7 +33,11 @@ import org.springframework.web.client.RestClientResponseException;
 /// Called only by the evidence outbox worker, so recording never blocks or fails a decision.
 /// A QTSP is optional for recording; without it, Ernest still receives an unsigned record.
 @Component
-@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "prudence.evidence",
+    name = "sink",
+    havingValue = "ernest",
+    matchIfMissing = true)
 public class ErnestEvidenceAdapter implements DecisionPublisher {
 
   /// Ernest event type for a PDP decision (its canonical `policy_decision`). The direct

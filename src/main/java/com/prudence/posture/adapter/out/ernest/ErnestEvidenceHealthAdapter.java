@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// ACL adapter over Ernest: reads GET /api/verify and reports whether the hashchain is intact
@@ -23,7 +23,11 @@ import org.springframework.web.client.RestClientResponseException;
 /// evidence is reported as unhealthy rather than optimistically green. Also scans the chain
 /// for runtime execution evidence, grouped by the AI system each run was tagged with.
 @Component
-@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
+@ConditionalOnProperty(
+    prefix = "prudence.evidence",
+    name = "sink",
+    havingValue = "ernest",
+    matchIfMissing = true)
 public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, ExecutionEvidencePort {
 
   private static final Logger log = LoggerFactory.getLogger(ErnestEvidenceHealthAdapter.class);
@@ -202,7 +206,9 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
         // fall back to the block time
       }
     }
-    return blockTimestamp instanceof Number n ? java.time.Instant.ofEpochMilli(n.longValue()) : null;
+    return blockTimestamp instanceof Number n
+        ? java.time.Instant.ofEpochMilli(n.longValue())
+        : null;
   }
 
   private static Map<String, String> isoTimes(Map<String, java.time.Instant> times) {

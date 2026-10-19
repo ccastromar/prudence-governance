@@ -2,12 +2,12 @@ package com.prudence.evidence.sink;
 
 import com.prudence.config.IntegrationProperties;
 import com.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher;
-import org.springframework.beans.factory.ObjectProvider;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -59,15 +59,15 @@ public class EvidenceSinkService {
   public Set<EvidenceCapability> capabilities() {
     if (CLOUDEVENTS.equals(kind)) return EnumSet.of(EvidenceCapability.CUSTODY);
     Set<EvidenceCapability> caps =
-        EnumSet.of(EvidenceCapability.CUSTODY, EvidenceCapability.PROOF, EvidenceCapability.READ_BACK);
+        EnumSet.of(
+            EvidenceCapability.CUSTODY, EvidenceCapability.PROOF, EvidenceCapability.READ_BACK);
     if (ernestAnchors()) caps.add(EvidenceCapability.TIME);
     return caps;
   }
 
   public EvidenceSinkInfo info() {
     Set<EvidenceCapability> caps = capabilities();
-    List<EvidenceSinkInfo.Level> have =
-        caps.stream().map(EvidenceSinkInfo.Level::of).toList();
+    List<EvidenceSinkInfo.Level> have = caps.stream().map(EvidenceSinkInfo.Level::of).toList();
     List<EvidenceSinkInfo.Level> missing =
         Arrays.stream(EvidenceCapability.values())
             .filter(c -> !caps.contains(c))
