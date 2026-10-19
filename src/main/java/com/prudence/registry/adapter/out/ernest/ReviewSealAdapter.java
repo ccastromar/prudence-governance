@@ -2,6 +2,7 @@ package com.prudence.registry.adapter.out.ernest;
 
 import com.prudence.config.IntegrationProperties;
 import com.prudence.evidence.adapter.out.ernest.ErnestHttp;
+import com.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import com.prudence.registry.application.port.out.ReviewSealPort;
 import com.prudence.registry.domain.ReviewEvent;
@@ -81,6 +82,7 @@ public class ReviewSealAdapter implements ReviewSealPort {
     signed.put("version", "1");
     signed.put("modelHash", ErnestSealer.sha256Canonical(MODEL_ID));
     signed.put("gitCommit", "0000000");
+    signed.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
 
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("modelId", MODEL_ID);
@@ -89,6 +91,7 @@ public class ReviewSealAdapter implements ReviewSealPort {
     body.put(
         "mlflow",
         Map.of("modelHash", ErnestSealer.sha256Canonical(MODEL_ID), "gitCommit", "0000000"));
+    body.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
     if (sealer != null) body.put("signature", sealer.seal(signed));
     try {
       ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();

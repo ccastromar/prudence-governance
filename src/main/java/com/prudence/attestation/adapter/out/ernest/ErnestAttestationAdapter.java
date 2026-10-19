@@ -5,6 +5,7 @@ import com.prudence.attestation.application.port.out.AttestationSealPort;
 import com.prudence.config.IntegrationProperties;
 import com.prudence.evidence.adapter.out.ernest.ErnestEventProof;
 import com.prudence.evidence.adapter.out.ernest.ErnestHttp;
+import com.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import com.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -162,6 +163,7 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     signed.put("version", "1");
     signed.put("modelHash", ErnestSealer.sha256Canonical(MODEL_ID));
     signed.put("gitCommit", "0000000");
+    signed.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
 
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("modelId", MODEL_ID);
@@ -170,6 +172,7 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
     body.put(
         "mlflow",
         Map.of("modelHash", ErnestSealer.sha256Canonical(MODEL_ID), "gitCommit", "0000000"));
+    body.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
     if (sealer != null) body.put("signature", sealer.seal(signed));
     try {
       ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();

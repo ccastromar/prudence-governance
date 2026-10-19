@@ -19,6 +19,11 @@ import org.springframework.web.client.RestClientResponseException;
 @ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
 public class ErnestRecordWriter implements GovernanceRecordWriter {
 
+  /// Marks a Prudence register (incidents, reviews, attestations) in Ernest: a stream of
+  /// governance records owned by Prudence, not an AI system or a model.
+  public static final Map<String, Object> REGISTER_METADATA =
+      Map.of("kind", "governance-register", "systemOfRecord", "prudence");
+
   private final RestClient ernest;
   private final ErnestSealer sealer;
   private final boolean enabled;
@@ -70,6 +75,7 @@ public class ErnestRecordWriter implements GovernanceRecordWriter {
     signed.put("version", "1");
     signed.put("modelHash", ErnestSealer.sha256Canonical(modelId));
     signed.put("gitCommit", "0000000");
+    signed.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
 
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("modelId", modelId);
@@ -78,6 +84,7 @@ public class ErnestRecordWriter implements GovernanceRecordWriter {
     body.put(
         "mlflow",
         Map.of("modelHash", ErnestSealer.sha256Canonical(modelId), "gitCommit", "0000000"));
+    body.put("metadata", ErnestRecordWriter.REGISTER_METADATA);
     if (sealer != null) body.put("signature", sealer.seal(signed));
     try {
       ernest.post().uri("/api/models").body(body).retrieve().toBodilessEntity();
