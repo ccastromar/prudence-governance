@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 import httpx
 
@@ -83,3 +85,25 @@ class PrudenceGate:
         except Exception as e:  # noqa: BLE001 — fail closed on any error
             return Decision("DENY", f"PDP unreachable: {e}")
         return Decision(body.get("decision", "DENY"), body.get("reason"), body.get("approver"), body.get("decisionId"))
+
+    def report_execution(self, decision: Decision, ai_system_id: str, pipeline: str, *,
+                         runtime: str = "python", execution_id: str | None = None) -> bool:
+        """Tell Prudence this execution started under `decision` (Decision API v1,
+        POST /api/executions), so drift sees it even without Ernest. Best effort: it runs after
+        the gate allowed the step and never raises; returns whether Prudence recorded it."""
+        report = {
+            "runtime": runtime,
+            "executionId": execution_id or str(uuid.uuid4()),
+            "decisionId": decision.decision_id,
+            "aiSystemId": ai_system_id,
+            "pipeline": pipeline,
+            "startedAt": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        }
+        headers = {}
+        try:
+            if self.auth is not None:
+                headers["Authorization"] = f"Bearer {self.auth.bearer()}"
+            r = httpx.post(f"{self.base_url}/api/executions", json=report, headers=headers, timeout=self.timeout)
+            return r.status_code in (200, 201)
+        except Exception:  # noqa: BLE001 — reporting must never break the governed run
+            return False

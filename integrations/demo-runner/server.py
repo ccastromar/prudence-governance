@@ -84,6 +84,9 @@ class RecordingGate:
         self.last = self.delegate.decide(subject, pipeline, ai_system_id, action)
         return self.last
 
+    def report_execution(self, *args, **kwargs) -> bool:
+        return self.delegate.report_execution(*args, **kwargs)
+
 
 class RecordingEvidence(ErnestEvidence):
     def __init__(self):

@@ -37,6 +37,7 @@ def governed_node(fn: Callable[[dict], dict], *, pipeline: str, action: str = "r
             return {"gate": decision.decision, "reason": decision.reason,
                     "output": f"⛔ Governance {decision.decision}: {decision.reason or 'not permitted'}"}
 
+        gate.report_execution(decision, ai_system, pipeline, runtime="langgraph")
         updates = fn(state) or {}
 
         if evidence is not None and model_id:

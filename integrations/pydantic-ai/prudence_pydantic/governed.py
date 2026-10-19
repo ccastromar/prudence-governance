@@ -48,6 +48,7 @@ def governed(pipeline: str, action: str = "run", *, raise_on_deny: bool = False)
                     raise GovernanceDenied(decision)
                 return f"⛔ Governance {decision.decision}: {decision.reason or 'not permitted'}"
 
+            deps.gate.report_execution(decision, deps.ai_system_id, pipeline, runtime="pydantic-ai")
             result = fn(ctx, *args, **kwargs)
 
             # Seal the execution.
