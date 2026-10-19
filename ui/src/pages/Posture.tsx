@@ -1,3 +1,4 @@
+import { ernestEvidenceUrl } from "../chestertown";
 import { useEffect, useState } from "react";
 import {
   api,
@@ -136,7 +137,17 @@ export default function Posture() {
                 <tr key={s.id}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{s.name}</div>
-                    <code>{s.id}</code>
+                    <code>{s.id}</code>{" "}
+                    <a
+                      href={ernestEvidenceUrl(s.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mut"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                      title="Open this AI system's evidence in Ernest"
+                    >
+                      evidence ↗
+                    </a>
                   </td>
                   <td>
                     <RiskBadge tier={s.riskTier} />
@@ -212,7 +223,17 @@ export default function Posture() {
                 <tr key={f.aiSystemId}>
                   <td>
                     <div style={{ fontWeight: 600 }}>{f.name}</div>
-                    <code>{f.aiSystemId}</code>
+                    <code>{f.aiSystemId}</code>{" "}
+                    <a
+                      href={ernestEvidenceUrl(f.aiSystemId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mut"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                      title="Open this AI system's evidence in Ernest"
+                    >
+                      evidence ↗
+                    </a>
                   </td>
                   <td>
                     <StatusBadge status={f.approvalStatus} />
@@ -250,9 +271,16 @@ export default function Posture() {
             What the store holding Prudence's evidence can guarantee. Anything
             missing is stated here and in attestations, never implied.
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}>
+          <div
+            style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}
+          >
             {sink.capabilities.map((c) => (
-              <span key={c.code} className="badge" title={c.meaning} style={{ color: "var(--ok)" }}>
+              <span
+                key={c.code}
+                className="badge"
+                title={c.meaning}
+                style={{ color: "var(--ok)" }}
+              >
                 ✓ {c.label}
               </span>
             ))}

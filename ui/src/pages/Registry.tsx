@@ -1,3 +1,4 @@
+import { ernestEvidenceUrl } from "../chestertown";
 import { useEffect, useState } from "react";
 import {
   api,
@@ -301,7 +302,9 @@ export default function Registry() {
                 setForm({ ...form, obligations: e.target.value.split("\n") })
               }
               required
-              placeholder="Article 9 risk management\nArticle 10 data governance"
+              placeholder={
+                "Article 9 risk management\nArticle 10 data governance"
+              }
             />
           </div>
           <div className="row between">
@@ -342,7 +345,17 @@ export default function Registry() {
             <tr key={s.id}>
               <td>
                 <div style={{ fontWeight: 600 }}>{s.name}</div>
-                <code>{s.id}</code>
+                <code>{s.id}</code>{" "}
+                <a
+                  href={ernestEvidenceUrl(s.id)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mut"
+                  style={{ fontSize: "var(--fs-sm)" }}
+                  title="Open this AI system's evidence in Ernest"
+                >
+                  evidence ↗
+                </a>
               </td>
               <td>
                 <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />

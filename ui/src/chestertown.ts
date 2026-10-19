@@ -22,3 +22,8 @@ export const APPS = [
   },
 ] as const;
 export const CURRENT = "govern"; // this app
+
+/// Deep link to an AI system's evidence in Ernest: its decisions (from Prudence) and executions
+/// (from AOS) are recorded under the system's id, which Ernest's Models page opens directly.
+export const ernestEvidenceUrl = (aiSystemId: string) =>
+  `${APPS.find((a) => a.key === "assure")!.url.replace(/\/+$/, "")}/models?model=${encodeURIComponent(aiSystemId)}`;
