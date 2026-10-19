@@ -91,6 +91,54 @@ paths:
                 approver: null
                 decisionId: 7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d
                 policyVersion: lab
+  /api/executions:
+    post:
+      operationId: reportExecution
+      summary: Report an execution, citing the decision that allowed it
+      description: |
+        After a runtime runs a governed pipeline, it reports the execution. Prudence uses these
+        reports, together with the evidence store, to detect drift: an execution of a system
+        that was not approved at the time is a violation. A report is accepted whatever the
+        cited decision was — an execution after a DENY, or without any decision, is exactly
+        what drift must see — and Prudence records what it found for that decision.
+
+        Reports are idempotent on (`runtime`, `executionId`): retry freely.
+      security:
+        - workloadToken: [execution.report]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionReport'
+            example:
+              runtime: aos
+              executionId: trace-7f3a9c
+              decisionId: 4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90
+              aiSystemId: 68bf42c1-7b02-46b7-a7d9-68d696620b8a
+              pipeline: credit_prescreening
+              startedAt: '2026-10-19T10:15:30.120Z'
+      responses:
+        '201':
+          description: Recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionReportRecord'
+        '200':
+          description: This execution was already reported with the same facts (a retry).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutionReportRecord'
+        '400':
+          description: A required field is missing, or `startedAt` is not an ISO-8601 instant or is in the future.
+        '401':
+          description: No token, or an invalid one.
+        '403':
+          description: The token lacks the `execution.report` scope.
+        '409':
+          description: This (`runtime`, `executionId`) was already reported with different facts.
 components:
   securitySchemes:
     workloadToken:
@@ -104,6 +152,7 @@ components:
           tokenUrl: https://sso.ccmlab.cc/realms/prudence/protocol/openid-connect/token
           scopes:
             pdp.decide: Ask the Policy Decision Point for decisions
+            execution.report: Report executions to Prudence
   schemas:
     DecisionRequest:
       type: object
@@ -140,3 +189,44 @@ components:
         policyVersion:
           type: string
           description: The policy bundle version that produced the decision.
+    ExecutionReport:
+      type: object
+      required: [runtime, executionId, aiSystemId, pipeline, startedAt]
+      properties:
+        runtime:
+          type: string
+          description: Which runtime ran it, e.g. `aos`, `langgraph`.
+        executionId:
+          type: string
+          description: The runtime's own id for this execution (its trace or run id).
+        decisionId:
+          type: [string, 'null']
+          description: The `decisionId` Prudence returned for it. Omit only when no decision was asked for.
+        aiSystemId:
+          type: string
+        pipeline:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+          description: When the execution started (ISO-8601 instant).
+    ExecutionReportRecord:
+      allOf:
+        - $ref: '#/components/schemas/ExecutionReport'
+        - type: object
+          properties:
+            id:
+              type: string
+            decisionStatus:
+              type: string
+              enum: [ALLOW, DENY, APPROVAL_REQUIRED, NONE, UNKNOWN, OTHER_SYSTEM]
+              description: |
+                What Prudence found for the cited decision: its verdict; NONE when none was
+                cited; UNKNOWN when no recorded decision has that id; OTHER_SYSTEM when the
+                decision was about a different AI system.
+            reportedBy:
+              type: string
+              description: The workload identity of the token that reported it.
+            receivedAt:
+              type: string
+              format: date-time

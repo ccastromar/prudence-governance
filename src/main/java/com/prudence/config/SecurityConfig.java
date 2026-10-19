@@ -57,6 +57,10 @@ public class SecurityConfig {
                     // directly).
                     .requestMatchers(HttpMethod.POST, "/api/policy/decisions")
                     .hasAuthority("SCOPE_pdp.decide")
+                    // A runtime reports what it executed with its own workload token and a
+                    // separate scope: asking for decisions does not imply reporting executions.
+                    .requestMatchers(HttpMethod.POST, "/api/executions")
+                    .hasAuthority("SCOPE_execution.report")
                     .requestMatchers(HttpMethod.POST, "/api/governance/change-assessments")
                     .hasAuthority("SCOPE_pdp.decide")
                     .requestMatchers(
