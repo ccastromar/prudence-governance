@@ -132,6 +132,7 @@ public class AttestationService implements AttestationUseCase {
               String delivery = a.evidence().delivery();
               boolean recorded = "DELIVERED".equals(delivery);
               boolean confirmed = false, chainValid = false, pendingInErnest = false;
+              boolean custodyOnly = false;
               Long blockIndex = a.evidence().blockIndex();
               String detail;
               // A report recorded without a qualified seal is still confirmable in Ernest.
@@ -142,7 +143,13 @@ public class AttestationService implements AttestationUseCase {
                 pendingInErnest = c.pending();
                 chainValid = c.chainValid();
                 if (c.blockIndex() != null) blockIndex = c.blockIndex();
-                if (!c.reachable())
+                if (!c.verifiable()) {
+                  custodyOnly = true;
+                  detail =
+                      "Report is held in a custody-only evidence store, which cannot confirm"
+                          + " whether a record is present or intact: this attestation cannot be"
+                          + " verified independently of that store.";
+                } else if (!c.reachable())
                   detail = "Evidence plane unreachable — the seal could not be confirmed.";
                 else if (c.pending())
                   detail =
@@ -167,6 +174,7 @@ public class AttestationService implements AttestationUseCase {
               else if ("PENDING".equals(delivery)) verdict = "PENDING";
               else if (recorded && pendingInErnest) verdict = "PENDING";
               else if (!recorded) verdict = "UNSEALED";
+              else if (custodyOnly) verdict = "CUSTODY_ONLY";
               else if (confirmed && chainValid) verdict = "VERIFIED";
               else verdict = "UNCONFIRMED";
 

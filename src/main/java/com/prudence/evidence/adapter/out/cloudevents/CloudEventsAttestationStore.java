@@ -11,8 +11,8 @@ import org.springframework.stereotype.Component;
 
 /// Attestations as `chestertown.prudence.attestation.v1` CloudEvents (content hash and
 /// summary). A custody-only store cannot be asked whether a record is present or its history
-/// intact, so a confirmation is never claimed: it reports the store as not consultable, which
-/// readers treat as "not confirmed" (fail-closed), and the receipt says why.
+/// intact, so a confirmation is never claimed: verification reports it as not verifiable
+/// (CUSTODY_ONLY), never as confirmed, and the receipt says why.
 @Component
 @ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "cloudevents")
 public class CloudEventsAttestationStore implements AttestationSealPort, AttestationEvidenceQueryPort {
@@ -44,6 +44,6 @@ public class CloudEventsAttestationStore implements AttestationSealPort, Attesta
 
   @Override
   public Confirmation confirm(String modelId, String eventId, String contentHash) {
-    return new Confirmation(false, false, false, null);
+    return Confirmation.notVerifiable();
   }
 }

@@ -175,6 +175,54 @@ Check on the Ernest side before relying on it: the ingestor trims its stream at
 falls that far behind; and it rate-limits per client IP (`RATE_LIMIT_RPS` 20, burst 40), so many
 agents behind one NAT share that budget (Prudence retries 429s; the SDK does not yet).
 
+## Without Ernest: your own audit store (CloudEvents on Kafka)
+
+Ernest is Prudence's default evidence store and the only one that gives everything: custody,
+offline inclusion proofs, an external anchor (when Ernest anchors) and read-back. A company that
+already runs its own audit store (a SIEM, an object-locked bucket, its own ledger) can point
+Prudence at it instead. Prudence then publishes its evidence as **CloudEvents 1.0** (structured
+mode) on a Kafka topic, and that store keeps it:
+
+```
+PRUDENCE_EVIDENCE_SINK=cloudevents
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_BOOTSTRAP_SERVERS=kafka-1.example.eu:9093
+PRUDENCE_EVIDENCE_CLOUDEVENTS_TOPIC=prudence.evidence
+PRUDENCE_EVIDENCE_CLOUDEVENTS_SOURCE=prudence
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_SECURITY_PROTOCOL=SASL_SSL
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_SASL_MECHANISM=SCRAM-SHA-512
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_SASL_USERNAME=prudence
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_SASL_PASSWORD=<from your secret store>
+# only for a private CA:
+PRUDENCE_EVIDENCE_CLOUDEVENTS_KAFKA_TRUSTSTORE_LOCATION=/etc/prudence/kafka-ca.pem
+```
+
+Event types (the `type` attribute; `subject` is the AI system, or the register):
+
+| Type | What |
+|---|---|
+| `chestertown.prudence.policy.decision.v1` | Each PDP decision: AI system identity (`systemOfRecord: prudence`), outcome, reason, policy version and hash; the caller only as a hash |
+| `chestertown.prudence.review.v1` | Each review event (approve, first approval, reject); the reviewer only as a hash |
+| `chestertown.prudence.record.v1` | Governance records such as incident events: register, record id, content hash, metadata |
+| `chestertown.prudence.attestation.v1` | Each attestation: its content hash and summary |
+
+The event `id` is Prudence's stable record id: consumers deduplicate retries on it. Only
+identifiers, outcomes, times and hashes are sent — never prompts, inputs or outputs.
+
+Outside dev/test, Prudence refuses to start with this sink over anything but `SSL` or
+`SASL_SSL`, and with SASL but no credentials. `prudence.ernest.*` is then not required.
+
+**What you give up, and Prudence says so instead of hiding it** (Posture shows the evidence
+store and each level held or missing; `GET /api/posture/evidence-sink`):
+
+- **Custody only (ADR-001 level C1).** No inclusion proofs, no external anchor, no read-back.
+- **Reviews and attestations are recorded unsealed**, and an attestation's verification is
+  `CUSTODY_ONLY`: the store cannot confirm a record, so it is never shown as verified.
+- **Evidence health means "the store is reachable"**, with a note that Prudence cannot verify
+  the records' integrity there. A system counts as having evidence once one of its decisions
+  was acknowledged by the store.
+- **Drift uses execution reports from runtimes only** (`POST /api/executions`), and the
+  execution-source cross-check has nothing to compare against.
+
 ## Re-driving dead-lettered records
 
 `GET /api/evidence/dead-letters` lists every record the delivery worker gave up on — decisions,

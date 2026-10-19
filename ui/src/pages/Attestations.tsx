@@ -18,6 +18,8 @@ const verdictColor: Record<string, string> = {
   PENDING: "var(--warn)",
   UNSEALED: "var(--warn)",
   UNCONFIRMED: "var(--warn)",
+  // Delivered to a custody-only store: not a failure, but not verifiable either.
+  CUSTODY_ONLY: "var(--text-muted)",
 };
 
 /// Attestations: generate a tamper-evident report of the estate and see it sealed in Ernest.

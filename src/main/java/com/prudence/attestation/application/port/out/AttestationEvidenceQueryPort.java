@@ -10,11 +10,27 @@ public interface AttestationEvidenceQueryPort {
 
   /// `reachable=false` means the evidence plane could not be consulted (fail-closed:
   /// unknown is not confirmed). `pending`: Ernest accepted the record but has not chained it
-  /// yet (ADR-004 batching) — neither confirmed nor missing.
+  /// yet (ADR-004 batching) — neither confirmed nor missing. `verifiable=false`: the store
+  /// keeps custody only (ADR-001 C1) and cannot be asked at all — never confirmed, by design.
   record Confirmation(
-      boolean reachable, boolean present, boolean chainValid, Long blockIndex, boolean pending) {
+      boolean reachable,
+      boolean present,
+      boolean chainValid,
+      Long blockIndex,
+      boolean pending,
+      boolean verifiable) {
+    public Confirmation(
+        boolean reachable, boolean present, boolean chainValid, Long blockIndex, boolean pending) {
+      this(reachable, present, chainValid, blockIndex, pending, true);
+    }
+
     public Confirmation(boolean reachable, boolean present, boolean chainValid, Long blockIndex) {
       this(reachable, present, chainValid, blockIndex, false);
+    }
+
+    /// A custody-only store: nothing can be confirmed there.
+    public static Confirmation notVerifiable() {
+      return new Confirmation(false, false, false, null, false, false);
     }
   }
 }

@@ -11,6 +11,8 @@ package com.prudence.attestation.domain;
 ///   UNSEALED    — the report never reached Ernest (delivery dead-lettered)
 ///   UNCONFIRMED — hash matches but Ernest could not confirm the seal (unreachable / chain
 ///                 broken / hash not found)
+///   CUSTODY_ONLY — hash matches and the report was delivered to a custody-only evidence store
+///                 (ADR-001 C1), which cannot confirm it: not verifiable, by design
 public record Verification(
     String attestationId,
     boolean hashMatches,

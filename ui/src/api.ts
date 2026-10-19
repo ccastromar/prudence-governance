@@ -276,7 +276,8 @@ export type Verdict =
   | "ALTERED"
   | "PENDING"
   | "UNSEALED"
-  | "UNCONFIRMED";
+  | "UNCONFIRMED"
+  | "CUSTODY_ONLY";
 export interface Verification {
   attestationId: string;
   hashMatches: boolean;
