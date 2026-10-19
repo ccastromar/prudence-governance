@@ -4,6 +4,7 @@ import {
   type Posture as PostureData,
   type Drift,
   type ExecutionSources,
+  type EvidenceSink,
   type DeadLetter,
 } from "../api";
 import { RiskBadge, StatusBadge, PostureBadge } from "../components";
@@ -15,6 +16,7 @@ export default function Posture() {
   const [data, setData] = useState<PostureData | null>(null);
   const [drift, setDrift] = useState<Drift | null>(null);
   const [sources, setSources] = useState<ExecutionSources | null>(null);
+  const [sink, setSink] = useState<EvidenceSink | null>(null);
   const [error, setError] = useState("");
   const [dead, setDead] = useState<DeadLetter[]>([]);
   const [busy, setBusy] = useState("");
@@ -31,6 +33,12 @@ export default function Posture() {
       .then(setDrift)
       .catch(() => {
         /* drift is best-effort */
+      });
+    api
+      .evidenceSink()
+      .then(setSink)
+      .catch(() => {
+        /* best-effort */
       });
     api
       .executionSources()
@@ -230,6 +238,30 @@ export default function Posture() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {sink && (
+        <div className="card" style={{ marginTop: "var(--sp-6)" }}>
+          <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
+            Evidence store: {sink.label}
+          </h2>
+          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+            What the store holding Prudence's evidence can guarantee. Anything
+            missing is stated here and in attestations, never implied.
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}>
+            {sink.capabilities.map((c) => (
+              <span key={c.code} className="badge" title={c.meaning} style={{ color: "var(--ok)" }}>
+                ✓ {c.label}
+              </span>
+            ))}
+            {sink.missing.map((c) => (
+              <span key={c.code} className="badge mut" title={c.meaning}>
+                ✗ {c.label}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 

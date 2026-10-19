@@ -115,6 +115,20 @@ export interface ExecutionSources {
   mismatches: ExecutionSourceMismatch[];
 }
 
+/// The evidence store Prudence delivers to and what it guarantees (ADR-001 C1–C4).
+export interface EvidenceLevel {
+  code: string;
+  label: string;
+  meaning: string;
+}
+export interface EvidenceSink {
+  kind: string;
+  label: string;
+  target: string | null;
+  capabilities: EvidenceLevel[];
+  missing: EvidenceLevel[];
+}
+
 export interface RegisterInput {
   name: string;
   intendedPurpose: string;
@@ -801,6 +815,10 @@ export const api = {
     ),
   drift: () =>
     fetch("/api/posture/drift", { headers: withAuth() }).then(json<Drift>),
+  evidenceSink: () =>
+    fetch("/api/posture/evidence-sink", { headers: withAuth() }).then(
+      json<EvidenceSink>,
+    ),
   executionSources: () =>
     fetch("/api/posture/execution-sources", { headers: withAuth() }).then(
       json<ExecutionSources>,
