@@ -31,6 +31,12 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # The SMTP relay only carries alert emails, which have their own outbox and retries. An
+    # unreachable relay must not mark Prudence unhealthy (and block its deploys) while it
+    # still decides, records and governs; undelivered alerts stay visible on their own.
+    mail:
+      enabled: false
 
 # Prudence integrations (control plane): the OPA policy engine (PDP sidecar) and Ernest
 # (evidence + attestation sealing). Fail-closed when unreachable.
