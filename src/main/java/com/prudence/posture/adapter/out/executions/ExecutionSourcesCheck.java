@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -30,13 +31,13 @@ public class ExecutionSourcesCheck {
 
   private static final Duration TOLERANCE = Duration.ofMinutes(2);
 
-  private final ErnestEvidenceHealthAdapter ernest;
+  private final ObjectProvider<ErnestEvidenceHealthAdapter> ernest;
   private final ExecutionReportRepository reports;
   private final SystemInventoryPort inventory;
   private final Duration grace;
 
   public ExecutionSourcesCheck(
-      ErnestEvidenceHealthAdapter ernest,
+      ObjectProvider<ErnestEvidenceHealthAdapter> ernest,
       ExecutionReportRepository reports,
       SystemInventoryPort inventory,
       @Value("${prudence.drift.source-grace:PT15M}") Duration grace) {
@@ -60,7 +61,17 @@ public class ExecutionSourcesCheck {
 
   public Result check() {
     Instant now = Instant.now();
-    var evidence = ernest.scan();
+    ErnestEvidenceHealthAdapter store = ernest.getIfAvailable();
+    if (store == null) {
+      return new Result(
+          now.toString(),
+          false,
+          "The evidence store cannot be read back (custody only): there is nothing to compare"
+              + " runtime reports with.",
+          grace.toMinutes(),
+          List.of());
+    }
+    var evidence = store.scan();
     if (!evidence.complete()) {
       return new Result(
           now.toString(),

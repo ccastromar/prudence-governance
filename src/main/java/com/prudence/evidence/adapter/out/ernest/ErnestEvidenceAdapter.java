@@ -1,5 +1,7 @@
 package com.prudence.evidence.adapter.out.ernest;
 
+import com.prudence.evidence.delivery.DecisionPublisher;
+
 import com.prudence.config.IntegrationProperties;
 import com.prudence.policy.domain.DecisionContext;
 import com.prudence.policy.domain.PolicyDecision;
@@ -19,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// Driven adapter to Ernest. Records each governance decision as a tamper-evident provenance
@@ -31,7 +34,8 @@ import org.springframework.web.client.RestClientResponseException;
 /// Called only by the evidence outbox worker, so recording never blocks or fails a decision.
 /// A QTSP is optional for recording; without it, Ernest still receives an unsigned record.
 @Component
-public class ErnestEvidenceAdapter {
+@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
+public class ErnestEvidenceAdapter implements DecisionPublisher {
 
   /// Ernest event type for a PDP decision (its canonical `policy_decision`). The direct
   /// transport still posts to /api/inferences, which has no type of its own.
@@ -115,6 +119,7 @@ public class ErnestEvidenceAdapter {
   /// Delivers one decision under a caller-supplied, stable `inferenceId` (the outbox event
   /// id), so a retried delivery carries the same id and can be reconciled. Failures propagate
   /// for the caller to classify with [ErnestHttp#classify].
+  @Override
   public void publishDecision(
       String inferenceId, DecisionContext context, PolicyDecision decision) {
     String verdict = verdictOf(decision);
@@ -181,14 +186,11 @@ public class ErnestEvidenceAdapter {
     registeredModels.add(aiSystemId);
   }
 
-  /// One decision waiting to be published, under its stable outbox id.
-  public record DecisionToPublish(
-      String inferenceId, DecisionContext context, PolicyDecision decision) {}
-
   /// Ernest answered 404 to the batch endpoint once: it predates it, so publish one by one.
   private volatile boolean batchUnsupported;
 
   /// Whether [#publishDecisions] sends real batches (direct transport, Ernest supports it).
+  @Override
   public boolean batchCapable() {
     return kafka != null || (ingestor == null && !batchUnsupported);
   }
@@ -198,14 +200,15 @@ public class ErnestEvidenceAdapter {
   /// carrying the status Ernest reported for that item, so [ErnestHttp#classify] treats it
   /// exactly as it would a single submission. Falls back to one-by-one when batching is not
   /// available (ingestor transport, or an Ernest without the batch endpoint).
-  public List<Exception> publishDecisions(List<DecisionToPublish> items) {
+  @Override
+  public List<Exception> publishDecisions(List<Item> items) {
     if (kafka != null) {
       return kafka.send(
           items.stream()
               .map(
                   i ->
                       kafkaEvent(
-                          i.inferenceId(),
+                          i.decisionId(),
                           i.context(),
                           verdictOf(i.decision()),
                           reasonOf(i.decision())))
@@ -220,7 +223,7 @@ public class ErnestEvidenceAdapter {
 
     // Register each AI system's model once; a failure there fails only that system's items.
     Map<String, Exception> modelFailures = new HashMap<>();
-    for (DecisionToPublish item : items) {
+    for (Item item : items) {
       String system = item.context().aiSystemId();
       if (modelFailures.containsKey(system)) continue;
       try {
@@ -233,7 +236,7 @@ public class ErnestEvidenceAdapter {
     List<Map<String, Object>> bodies = new ArrayList<>();
     List<Integer> positions = new ArrayList<>();
     for (int i = 0; i < items.size(); i++) {
-      DecisionToPublish item = items.get(i);
+      Item item = items.get(i);
       Exception modelFailure = modelFailures.get(item.context().aiSystemId());
       if (modelFailure != null) {
         outcomes.set(i, modelFailure);
@@ -241,7 +244,7 @@ public class ErnestEvidenceAdapter {
       }
       bodies.add(
           inferenceBody(
-              item.inferenceId(),
+              item.decisionId(),
               item.context(),
               verdictOf(item.decision()),
               reasonOf(item.decision())));
@@ -285,9 +288,9 @@ public class ErnestEvidenceAdapter {
     return outcomes;
   }
 
-  private Exception publishOne(DecisionToPublish item) {
+  private Exception publishOne(Item item) {
     try {
-      publishDecision(item.inferenceId(), item.context(), item.decision());
+      publishDecision(item.decisionId(), item.context(), item.decision());
       return null;
     } catch (Exception e) {
       return e;

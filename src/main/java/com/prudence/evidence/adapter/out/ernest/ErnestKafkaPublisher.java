@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 /// system, so one system's decisions keep their order. The producer is idempotent with
 /// acks=all: a send that completes means the broker durably holds the record, which is when
 /// the outbox may mark it delivered. Ernest deduplicates replays by the decision id.
-final class ErnestKafkaPublisher implements AutoCloseable {
+public final class ErnestKafkaPublisher implements AutoCloseable {
 
   /// Bounded well below the outbox lease, like the HTTP timeouts.
   static final Duration SEND_TIMEOUT = Duration.ofSeconds(10);
@@ -104,7 +104,7 @@ final class ErnestKafkaPublisher implements AutoCloseable {
   /// Client security from Prudence's settings: protocol, SASL login (SCRAM or PLAIN, built
   /// into a JAAS line so credentials stay in environment variables), optional truststore, then
   /// any `kafka-properties` passthrough.
-  static Map<String, Object> securityConfig(
+  public static Map<String, Object> securityConfig(
       String protocol,
       String mechanism,
       String username,

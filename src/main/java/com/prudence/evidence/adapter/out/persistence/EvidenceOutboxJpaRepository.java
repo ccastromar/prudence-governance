@@ -38,4 +38,11 @@ public interface EvidenceOutboxJpaRepository
       "select e from EvidenceOutboxJpaEntity e where e.delivery.deadAt is not null order by"
           + " e.delivery.deadAt desc")
   List<EvidenceOutboxJpaEntity> deadLettered(Limit limit);
+
+  /// The systems among `ids` with at least one decision acknowledged by the evidence store.
+  @org.springframework.data.jpa.repository.Query(
+      "select distinct e.aiSystemId from EvidenceOutboxJpaEntity e"
+          + " where e.aiSystemId in :ids and e.delivery.deliveredAt is not null")
+  java.util.List<String> deliveredSystems(
+      @org.springframework.data.repository.query.Param("ids") java.util.Collection<String> ids);
 }

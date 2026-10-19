@@ -9,12 +9,14 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// ACL adapter: records a governance review event in Ernest (model "prudence-reviews") and
 /// additionally qualify-seals it (ADR-002 B2) when a QTSP is configured. Failures propagate to
 /// the evidence delivery worker, which retries them under ErnestHttp's contract.
 @Component
+@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
 public class ReviewSealAdapter implements ReviewSealPort {
 
   private static final String MODEL_ID = "prudence-reviews";

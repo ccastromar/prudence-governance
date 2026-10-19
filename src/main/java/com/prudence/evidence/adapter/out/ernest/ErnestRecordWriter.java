@@ -1,5 +1,7 @@
 package com.prudence.evidence.adapter.out.ernest;
 
+import com.prudence.evidence.delivery.GovernanceRecordWriter;
+
 import com.prudence.config.IntegrationProperties;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -7,16 +9,15 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// Records one governance record in Ernest under a well-known model: registers the model once,
 /// hashes the record's content (JCS), qualify-seals it when a QTSP is configured, and posts it
 /// under a stable `inferenceId`. Throws on failure, for the delivery worker to classify.
 @Component
-public class ErnestRecordWriter {
-
-  /// `qualified`: carries a QTSP seal (false when recorded without one).
-  public record Receipt(boolean qualified, Long blockIndex) {}
+@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
+public class ErnestRecordWriter implements GovernanceRecordWriter {
 
   private final RestClient ernest;
   private final ErnestSealer sealer;
@@ -31,6 +32,7 @@ public class ErnestRecordWriter {
   }
 
   /// `content` is what gets hashed (and so proved); `metadata` is stored alongside it.
+  @Override
   public Receipt record(
       String modelId,
       String modelName,

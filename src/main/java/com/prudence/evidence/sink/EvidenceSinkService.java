@@ -1,6 +1,8 @@
 package com.prudence.evidence.sink;
 
 import com.prudence.config.IntegrationProperties;
+import com.prudence.evidence.adapter.out.cloudevents.CloudEventsKafkaPublisher;
+import org.springframework.beans.factory.ObjectProvider;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -13,24 +15,29 @@ import org.springframework.web.client.RestClient;
 
 /// Which evidence store this installation uses (`prudence.evidence.sink`) and what it can
 /// guarantee (ADR-001). Ernest gives custody, proofs and read-back always, and time when its
-/// anchoring is on (asked, never assumed). Only the Ernest sink exists so far: any other value
-/// stops start-up rather than run with a store Prudence cannot deliver to.
+/// anchoring is on (asked, never assumed). `cloudevents` (CloudEvents on Kafka, for a company's
+/// own audit store) gives custody only. Any other value stops start-up.
 @Service
 public class EvidenceSinkService {
 
   public static final String ERNEST = "ernest";
+  public static final String CLOUDEVENTS = "cloudevents";
 
   private final String kind;
   private final String ernestUrl;
   private final RestClient ernest;
+  private final ObjectProvider<CloudEventsKafkaPublisher> cloudEvents;
 
   public EvidenceSinkService(
-      @Value("${prudence.evidence.sink:ernest}") String kind, IntegrationProperties props) {
+      @Value("${prudence.evidence.sink:ernest}") String kind,
+      IntegrationProperties props,
+      ObjectProvider<CloudEventsKafkaPublisher> cloudEvents) {
     this.kind = kind == null || kind.isBlank() ? ERNEST : kind.trim().toLowerCase();
-    if (!ERNEST.equals(this.kind)) {
+    if (!ERNEST.equals(this.kind) && !CLOUDEVENTS.equals(this.kind)) {
       throw new IllegalStateException(
-          "prudence.evidence.sink=" + kind + " is not supported yet (only 'ernest')");
+          "prudence.evidence.sink must be 'ernest' or 'cloudevents' (was " + kind + ")");
     }
+    this.cloudEvents = cloudEvents;
     this.ernestUrl = props.ernest().baseUrl();
     var factory = new SimpleClientHttpRequestFactory();
     factory.setConnectTimeout(2_000);
@@ -50,6 +57,7 @@ public class EvidenceSinkService {
   }
 
   public Set<EvidenceCapability> capabilities() {
+    if (CLOUDEVENTS.equals(kind)) return EnumSet.of(EvidenceCapability.CUSTODY);
     Set<EvidenceCapability> caps =
         EnumSet.of(EvidenceCapability.CUSTODY, EvidenceCapability.PROOF, EvidenceCapability.READ_BACK);
     if (ernestAnchors()) caps.add(EvidenceCapability.TIME);
@@ -65,6 +73,15 @@ public class EvidenceSinkService {
             .filter(c -> !caps.contains(c))
             .map(EvidenceSinkInfo.Level::of)
             .toList();
+    if (CLOUDEVENTS.equals(kind)) {
+      CloudEventsKafkaPublisher publisher = cloudEvents.getIfAvailable();
+      return new EvidenceSinkInfo(
+          kind,
+          "External store (CloudEvents)",
+          publisher == null ? null : publisher.target(),
+          have,
+          missing);
+    }
     return new EvidenceSinkInfo(kind, "Ernest", ernestUrl, have, missing);
   }
 

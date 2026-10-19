@@ -14,12 +14,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.client.RestClientResponseException;
 
 /// ACL adapter: records an attestation's content hash in Ernest under a well-known model
 /// ("prudence-attestations") and additionally qualify-seals it (ADR-002 B2) when a QTSP is
 /// configured. Failures propagate to the evidence delivery worker, which retries them.
 @Component
+@ConditionalOnProperty(prefix = "prudence.evidence", name = "sink", havingValue = "ernest", matchIfMissing = true)
 public class ErnestAttestationAdapter implements AttestationSealPort, AttestationEvidenceQueryPort {
 
   private static final Logger log = LoggerFactory.getLogger(ErnestAttestationAdapter.class);

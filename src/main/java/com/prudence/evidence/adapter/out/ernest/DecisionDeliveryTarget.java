@@ -2,6 +2,7 @@ package com.prudence.evidence.adapter.out.ernest;
 
 import com.prudence.evidence.adapter.out.persistence.EvidenceOutboxJpaEntity;
 import com.prudence.evidence.adapter.out.persistence.EvidenceOutboxJpaRepository;
+import com.prudence.evidence.delivery.DecisionPublisher;
 import com.prudence.evidence.delivery.Delivery;
 import com.prudence.evidence.delivery.DeliveryTarget;
 import com.prudence.policy.domain.DecisionContext;
@@ -18,12 +19,12 @@ import org.springframework.stereotype.Component;
 public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaEntity> {
 
   private final EvidenceOutboxJpaRepository outbox;
-  private final ErnestEvidenceAdapter ernest;
+  private final DecisionPublisher ernest;
   private final int batchSize;
 
   public DecisionDeliveryTarget(
       EvidenceOutboxJpaRepository outbox,
-      ErnestEvidenceAdapter ernest,
+      DecisionPublisher ernest,
       @Value("${prudence.ernest.batch-size:200}") int batchSize) {
     this.outbox = outbox;
     this.ernest = ernest;
@@ -76,7 +77,7 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
   }
 
   /// Decisions are the high-volume stream: batched when Ernest supports it (see
-  /// ErnestEvidenceAdapter#publishDecisions), one at a time otherwise.
+  /// DecisionPublisher#publishDecisions), one at a time otherwise.
   @Override
   public int batchSize() {
     return ernest.batchCapable() ? batchSize : 1;
@@ -84,11 +85,11 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
 
   @Override
   public List<Outcome<EvidenceOutboxJpaEntity>> sendBatch(List<EvidenceOutboxJpaEntity> records) {
-    List<ErnestEvidenceAdapter.DecisionToPublish> items =
+    List<DecisionPublisher.Item> items =
         records.stream()
             .map(
                 e ->
-                    new ErnestEvidenceAdapter.DecisionToPublish(e.getId(), context(e), decision(e)))
+                    new DecisionPublisher.Item(e.getId(), context(e), decision(e)))
             .toList();
     List<Exception> failures = ernest.publishDecisions(items);
     return failures.stream()
@@ -119,7 +120,7 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
   }
 
   @Override
-  public Consumer<EvidenceOutboxJpaEntity> send(EvidenceOutboxJpaEntity e) {
+  public Consumer<EvidenceOutboxJpaEntity> send(EvidenceOutboxJpaEntity e) throws Exception {
     ernest.publishDecision(e.getId(), context(e), decision(e));
     return record -> {}; // nothing beyond "delivered" to record
   }

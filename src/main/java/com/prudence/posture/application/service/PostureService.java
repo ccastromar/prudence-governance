@@ -140,7 +140,7 @@ public class PostureService implements PostureQuery {
           detail = "Approved, but the evidence layer is unavailable.";
         } else if (hasEvidence) {
           status = PostureStatus.GREEN;
-          detail = "Approved and attested by Ernest.";
+          detail = "Approved, with evidence in the evidence store.";
         } else {
           // Approved and the chain is healthy, but nothing has been proved for this
           // system yet — a drift signal (no governed run on record).

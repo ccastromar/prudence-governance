@@ -1,6 +1,6 @@
 package com.prudence.incident.adapter.out.ernest;
 
-import com.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
+import com.prudence.evidence.delivery.GovernanceRecordWriter;
 import com.prudence.evidence.delivery.Delivery;
 import com.prudence.evidence.delivery.DeliveryTarget;
 import com.prudence.incident.adapter.out.persistence.IncidentEventJpaEntity;
@@ -21,9 +21,9 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
   private static final String MODEL_ID = "prudence-incidents";
 
   private final IncidentEventJpaRepository events;
-  private final ErnestRecordWriter ernest;
+  private final GovernanceRecordWriter ernest;
 
-  public IncidentEventDeliveryTarget(IncidentEventJpaRepository events, ErnestRecordWriter ernest) {
+  public IncidentEventDeliveryTarget(IncidentEventJpaRepository events, GovernanceRecordWriter ernest) {
     this.events = events;
     this.ernest = ernest;
   }
@@ -74,7 +74,7 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
   }
 
   @Override
-  public Consumer<IncidentEventJpaEntity> send(IncidentEventJpaEntity e) {
+  public Consumer<IncidentEventJpaEntity> send(IncidentEventJpaEntity e) throws Exception {
     Map<String, Object> content = new LinkedHashMap<>();
     content.put("incidentId", e.getIncidentId());
     content.put("aiSystemId", e.getAiSystemId());
@@ -85,7 +85,7 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
     Map<String, Object> metadata = new LinkedHashMap<>(content);
     metadata.put("stage", "incident");
     metadata.put("eventId", e.getId());
-    ErnestRecordWriter.Receipt receipt =
+    GovernanceRecordWriter.Receipt receipt =
         ernest.record(MODEL_ID, "Prudence incident register", e.getId(), content, metadata);
     return record -> record.recordSeal(receipt.qualified(), receipt.blockIndex());
   }

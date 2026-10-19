@@ -129,35 +129,57 @@ public class SecurityConfig {
       requireNonBlank(environment, "spring.datasource.url");
       requireNonBlank(environment, "spring.datasource.username");
       requireNonBlank(environment, "spring.datasource.password");
-      requireNonBlank(environment, "prudence.ernest.base-url");
-      requireNonBlank(environment, "prudence.ernest.api-key");
-      if ("ingestor"
-          .equals(
-              environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
-        // An ingestor without a shared secret accepts anyone's events as "unverified".
-        requireNonBlank(environment, "prudence.ernest.ingestor-url");
-        requireNonBlank(environment, "prudence.ernest.ingestor-key");
-      }
-      if ("kafka"
-          .equals(
-              environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
-        requireNonBlank(environment, "prudence.ernest.kafka-bootstrap-servers");
-        requireNonBlank(environment, "prudence.ernest.kafka-topic");
-        // Decisions are governance evidence: never over an unencrypted or unauthenticated link.
+      // The evidence store (ADR-001): Ernest by default, or CloudEvents on Kafka for a
+      // company's own audit store. Either way evidence never travels unencrypted.
+      String sink = environment.getProperty("prudence.evidence.sink", "ernest").strip();
+      if ("cloudevents".equals(sink)) {
+        requireNonBlank(environment, "prudence.evidence.cloudevents.kafka-bootstrap-servers");
         String protocol =
             environment
-                .getProperty("prudence.ernest.kafka-security-protocol", "PLAINTEXT")
+                .getProperty("prudence.evidence.cloudevents.kafka-security-protocol", "PLAINTEXT")
                 .strip()
                 .toUpperCase();
         if (!protocol.equals("SSL") && !protocol.equals("SASL_SSL")) {
           throw new IllegalStateException(
-              "Refusing to start outside dev/test with decision-transport=kafka over "
+              "Refusing to start outside dev/test with evidence sink cloudevents over "
                   + protocol
                   + " (use SASL_SSL or SSL)");
         }
         if (protocol.equals("SASL_SSL")) {
-          requireNonBlank(environment, "prudence.ernest.kafka-sasl-username");
-          requireNonBlank(environment, "prudence.ernest.kafka-sasl-password");
+          requireNonBlank(environment, "prudence.evidence.cloudevents.kafka-sasl-username");
+          requireNonBlank(environment, "prudence.evidence.cloudevents.kafka-sasl-password");
+        }
+      } else {
+        requireNonBlank(environment, "prudence.ernest.base-url");
+        requireNonBlank(environment, "prudence.ernest.api-key");
+        if ("ingestor"
+            .equals(
+                environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
+          // An ingestor without a shared secret accepts anyone's events as "unverified".
+          requireNonBlank(environment, "prudence.ernest.ingestor-url");
+          requireNonBlank(environment, "prudence.ernest.ingestor-key");
+        }
+        if ("kafka"
+            .equals(
+                environment.getProperty("prudence.ernest.decision-transport", "direct").strip())) {
+          requireNonBlank(environment, "prudence.ernest.kafka-bootstrap-servers");
+          requireNonBlank(environment, "prudence.ernest.kafka-topic");
+          // Decisions are governance evidence: never over an unencrypted or unauthenticated link.
+          String protocol =
+              environment
+                  .getProperty("prudence.ernest.kafka-security-protocol", "PLAINTEXT")
+                  .strip()
+                  .toUpperCase();
+          if (!protocol.equals("SSL") && !protocol.equals("SASL_SSL")) {
+            throw new IllegalStateException(
+                "Refusing to start outside dev/test with decision-transport=kafka over "
+                    + protocol
+                    + " (use SASL_SSL or SSL)");
+          }
+          if (protocol.equals("SASL_SSL")) {
+            requireNonBlank(environment, "prudence.ernest.kafka-sasl-username");
+            requireNonBlank(environment, "prudence.ernest.kafka-sasl-password");
+          }
         }
       }
       // Alerts are how humans learn about expiries, drift and lost evidence: no silent channel.
