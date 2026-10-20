@@ -6,6 +6,7 @@ import {
   Checkbox,
   Field,
   Input,
+  Page,
   Select,
 } from "@chestertown/design";
 import {
@@ -63,12 +64,10 @@ export default function Oversight() {
     load();
   }, []);
   return (
-    <>
-      <h1>Human oversight</h1>
-      <p className="sub">
-        Named authority, current training and auditable override decisions.
-        Prudence governs capability; AOS executes the intervention.
-      </p>
+    <Page
+      title="Human oversight"
+      subtitle="Named authority, current training and auditable override decisions. Prudence governs capability; AOS executes the intervention."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
       <Field label="AI system" htmlFor="oversight-ai-system">
         <Select
@@ -88,7 +87,7 @@ export default function Oversight() {
         </Select>
       </Field>
       {id && (
-        <div className="grid2">
+        <div className="ct-grid-2">
           <Card>
             <h2>Assignments</h2>
             {assignments.map((x) => (
@@ -163,14 +162,14 @@ export default function Oversight() {
                 }}
               >
                 <b>{x.supervisor}</b> · {x.reason}
-                <div className="mut">
+                <div className="ct-muted">
                   {x.outcome} ·{" "}
                   {x.reviewedBy
                     ? `reviewed by ${x.reviewedBy}`
                     : "review pending"}
                 </div>
                 {!x.reviewedBy && (
-                  <div className="row">
+                  <div className="ct-row">
                     <Input
                       placeholder="Reviewer"
                       value={review.reviewer}
@@ -239,6 +238,6 @@ export default function Oversight() {
           </Card>
         </div>
       )}
-    </>
+    </Page>
   );
 }

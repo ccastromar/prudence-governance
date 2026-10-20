@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Button, Card, Page, Table } from "@chestertown/design";
 import {
   api,
   type Attestation,
@@ -85,92 +85,88 @@ export default function Attestations() {
       .replace("Z", "");
 
   return (
-    <>
-      <div className="row between" style={{ alignItems: "flex-end" }}>
-        <div>
-          <h1>Attestations</h1>
-          <p className="sub">
-            A point-in-time report of the estate, hashed and sealed in Ernest —
-            so the report itself is tamper-evident.
-          </p>
-        </div>
+    <Page
+      title="Attestations"
+      subtitle="A point-in-time report of the estate, hashed and sealed in Ernest — so the report itself is tamper-evident."
+      actions={
         <Button variant="primary" onClick={generate} disabled={busy}>
           {busy ? "Generating…" : "Generate attestation"}
         </Button>
-      </div>
-
+      }
+    >
       {error && (
         <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
           {error}
         </Alert>
       )}
 
-      <table style={{ marginBottom: "var(--sp-8)" }}>
-        <thead>
-          <tr>
-            <th>Issued</th>
-            <th>Estate</th>
-            <th>Content hash</th>
-            <th>Evidence</th>
-          </tr>
-        </thead>
-        <tbody>
-          {list.length === 0 && (
+      <div style={{ marginBottom: "var(--sp-8)" }}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={4} className="mut">
-                No attestations issued yet.
-              </td>
+              <th>Issued</th>
+              <th>Estate</th>
+              <th>Content hash</th>
+              <th>Evidence</th>
             </tr>
-          )}
-          {list.map((a) => (
-            <tr
-              key={a.id}
-              onClick={() => open(a.id)}
-              style={{ cursor: "pointer" }}
-              className={selected?.id === a.id ? "active-row" : ""}
-            >
-              <td>{when(a.generatedAt)}</td>
-              <td>
-                <PostureBadge status={a.overallPosture} />
-              </td>
-              <td>
-                <code>{shortHash(a.contentHash)}</code>
-              </td>
-              <td>
-                <EvidenceState
-                  delivery={a.delivery}
-                  sealed={a.sealed}
-                  blockIndex={a.blockIndex}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {list.length === 0 && (
+              <tr>
+                <td colSpan={4} className="ct-muted">
+                  No attestations issued yet.
+                </td>
+              </tr>
+            )}
+            {list.map((a) => (
+              <tr
+                key={a.id}
+                onClick={() => open(a.id)}
+                style={{ cursor: "pointer" }}
+                className={selected?.id === a.id ? "ct-selected" : ""}
+              >
+                <td>{when(a.generatedAt)}</td>
+                <td>
+                  <PostureBadge status={a.overallPosture} />
+                </td>
+                <td>
+                  <code>{shortHash(a.contentHash)}</code>
+                </td>
+                <td>
+                  <EvidenceState
+                    delivery={a.delivery}
+                    sealed={a.sealed}
+                    blockIndex={a.blockIndex}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
 
       {selected && (
         <Card>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <h2 style={{ marginTop: 0 }}>
               Attestation {selected.id.slice(0, 8)}
             </h2>
             <div
-              className="row"
+              className="ct-row"
               style={{ gap: "var(--sp-3)", alignItems: "center" }}
             >
               <Button
                 onClick={doVerify}
-                style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
+                size="sm"
                 title="Recompute the hash and confirm the seal in Ernest"
               >
                 Verify
               </Button>
               <a
-                className="ct-btn ct-btn-outline"
+                className="ct-btn ct-btn-outline ct-btn-sm"
                 href={`/api/attestations/${selected.id}/oscal`}
                 target="_blank"
                 rel="noreferrer"
-                style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
                 title="NIST OSCAL Assessment Results (machine-readable compliance)"
               >
                 OSCAL
@@ -194,10 +190,10 @@ export default function Attestations() {
               >
                 ● {verification.verdict}
               </div>
-              <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+              <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                 {verification.detail}
               </div>
-              <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+              <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                 hash recomputed{" "}
                 {verification.hashMatches ? "✓ matches" : "✗ differs"}
                 {(verification.verdict === "VERIFIED" ||
@@ -218,7 +214,7 @@ export default function Attestations() {
             </Card>
           )}
           <div
-            className="mut"
+            className="ct-muted"
             style={{ fontSize: "var(--fs-sm)", marginBottom: "var(--sp-4)" }}
           >
             <div>
@@ -240,7 +236,7 @@ export default function Attestations() {
             </div>
           </div>
 
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>AI system</th>
@@ -252,7 +248,7 @@ export default function Attestations() {
             <tbody>
               {selected.systems.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="mut">
+                  <td colSpan={4} className="ct-muted">
                     No systems in this attestation.
                   </td>
                 </tr>
@@ -271,16 +267,19 @@ export default function Attestations() {
                   </td>
                   <td>
                     <PostureBadge status={s.posture} />
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {s.detail}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

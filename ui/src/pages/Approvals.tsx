@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ReviewEvent } from "../api";
 import { EvidenceState, RiskBadge, StatusBadge } from "../components";
-import { Alert, Button, Card, Field, Input } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Page,
+  Table,
+} from "@chestertown/design";
 
 const actionColor: Record<string, string> = {
   APPROVE: "var(--ok)",
@@ -130,13 +138,10 @@ export default function Approvals() {
   };
 
   return (
-    <>
-      <h1>Approvals</h1>
-      <p className="sub">
-        High-risk and prohibited systems may not go live without an explicit
-        governance decision. Review the queue below.
-      </p>
-
+    <Page
+      title="Approvals"
+      subtitle="High-risk and prohibited systems may not go live without an explicit governance decision. Review the queue below."
+    >
       {error && (
         <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
           {error}
@@ -147,177 +152,195 @@ export default function Approvals() {
         Ready to submit — assessed, rejected, expired or suspended (
         {assessed.length})
       </h2>
-      <table style={{ marginBottom: "var(--sp-8)" }}>
-        <thead>
-          <tr>
-            <th>AI system</th>
-            <th>Classification</th>
-            <th>Evidence</th>
-            <th style={{ textAlign: "right" }}>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {assessed.length === 0 && (
+      <div style={{ marginBottom: "var(--sp-8)" }}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={4} className="mut">
-                Nothing awaiting (re)submission.
-              </td>
+              <th>AI system</th>
+              <th>Classification</th>
+              <th>Evidence</th>
+              <th style={{ textAlign: "right" }}>Action</th>
             </tr>
-          )}
-          {assessed.map((s) => (
-            <tr key={s.id}>
-              <td>
-                <div style={{ fontWeight: 600 }}>{s.name}</div>
-                <code>{s.id}</code>
-              </td>
-              <td>
-                <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
-                  {s.regulatoryRole} · v{s.systemVersion}
-                </div>
-              </td>
-              <td className="mut" style={{ fontSize: "var(--fs-sm)" }}>
-                {s.obligations.length} obligations ·{" "}
-                {s.annexI ? "Annex I" : "No Annex I"}
-              </td>
-              <td style={{ textAlign: "right" }}>
-                <Button
-                  variant="primary"
-                  disabled={busyId === s.id}
-                  onClick={() => submit(s)}
-                >
-                  {busyId === s.id ? "…" : "Submit for review"}
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {assessed.length === 0 && (
+              <tr>
+                <td colSpan={4} className="ct-muted">
+                  Nothing awaiting (re)submission.
+                </td>
+              </tr>
+            )}
+            {assessed.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <code>{s.id}</code>
+                </td>
+                <td>
+                  <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
+                  <div
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
+                    {s.regulatoryRole} · v{s.systemVersion}
+                  </div>
+                </td>
+                <td className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                  {s.obligations.length} obligations ·{" "}
+                  {s.annexI ? "Annex I" : "No Annex I"}
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <Button
+                    variant="primary"
+                    disabled={busyId === s.id}
+                    onClick={() => submit(s)}
+                  >
+                    {busyId === s.id ? "…" : "Submit for review"}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
 
       <h2 style={{ fontSize: "var(--fs-lg)" }}>
         Awaiting decision ({pending.length})
       </h2>
-      <table style={{ marginBottom: "var(--sp-8)" }}>
-        <thead>
-          <tr>
-            <th>AI system</th>
-            <th>Risk tier</th>
-            <th>Owner</th>
-            <th style={{ textAlign: "right" }}>Decision</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pending.length === 0 && (
+      <div style={{ marginBottom: "var(--sp-8)" }}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={4} className="mut">
-                Nothing awaiting approval.
-              </td>
+              <th>AI system</th>
+              <th>Risk tier</th>
+              <th>Owner</th>
+              <th style={{ textAlign: "right" }}>Decision</th>
             </tr>
-          )}
-          {pending.map((s) => (
-            <tr key={s.id}>
-              <td>
-                <div style={{ fontWeight: 600 }}>{s.name}</div>
-                <code>{s.id}</code>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
-                  {s.intendedPurpose}
-                </div>
-              </td>
-              <td>
-                <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-              </td>
-              <td className="mut">
-                {s.ownerName}
-                {s.firstApprover && (
-                  <div style={{ fontSize: "var(--fs-sm)" }}>
-                    First sign-off: {s.firstApprover}
+          </thead>
+          <tbody>
+            {pending.length === 0 && (
+              <tr>
+                <td colSpan={4} className="ct-muted">
+                  Nothing awaiting approval.
+                </td>
+              </tr>
+            )}
+            {pending.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <code>{s.id}</code>
+                  <div
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
+                    {s.intendedPurpose}
                   </div>
-                )}
-              </td>
-              <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                <Button
-                  variant="primary"
-                  disabled={busyId === s.id}
-                  onClick={() => approve(s)}
-                  style={{ marginRight: "var(--sp-2)" }}
-                >
-                  {busyId === s.id ? "…" : "Approve"}
-                </Button>
-                <Button
-                  disabled={busyId === s.id}
-                  onClick={() => {
-                    setRejecting(s);
-                    setReason("");
-                  }}
-                >
-                  Reject
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                </td>
+                <td>
+                  <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
+                </td>
+                <td className="ct-muted">
+                  {s.ownerName}
+                  {s.firstApprover && (
+                    <div style={{ fontSize: "var(--fs-sm)" }}>
+                      First sign-off: {s.firstApprover}
+                    </div>
+                  )}
+                </td>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <Button
+                    variant="primary"
+                    disabled={busyId === s.id}
+                    onClick={() => approve(s)}
+                    style={{ marginRight: "var(--sp-2)" }}
+                  >
+                    {busyId === s.id ? "…" : "Approve"}
+                  </Button>
+                  <Button
+                    disabled={busyId === s.id}
+                    onClick={() => {
+                      setRejecting(s);
+                      setReason("");
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
 
       <h2 style={{ fontSize: "var(--fs-lg)" }}>
         Renewal due ({renewalDue.length})
       </h2>
-      <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+      <p
+        className="ct-muted"
+        style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+      >
         Periodic review: renew before expiry and the system keeps running.
         High-risk renewals need two independent sign-offs.
       </p>
-      <table style={{ marginBottom: "var(--sp-8)" }}>
-        <thead>
-          <tr>
-            <th>AI system</th>
-            <th>Risk tier</th>
-            <th>Expires</th>
-            <th style={{ textAlign: "right" }}>Review</th>
-          </tr>
-        </thead>
-        <tbody>
-          {renewalDue.length === 0 && (
+      <div style={{ marginBottom: "var(--sp-8)" }}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={4} className="mut">
-                No approvals inside their review window.
-              </td>
+              <th>AI system</th>
+              <th>Risk tier</th>
+              <th>Expires</th>
+              <th style={{ textAlign: "right" }}>Review</th>
             </tr>
-          )}
-          {renewalDue.map((s) => (
-            <tr key={s.id}>
-              <td>
-                <div style={{ fontWeight: 600 }}>{s.name}</div>
-                <code>{s.id}</code>
-              </td>
-              <td>
-                <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-              </td>
-              <td className="mut">
-                {s.approvalExpiresAt && when(s.approvalExpiresAt)}
-                {s.renewalFirstApprover && (
-                  <div style={{ fontSize: "var(--fs-sm)" }}>
-                    First renewal sign-off: {s.renewalFirstApprover}
-                  </div>
-                )}
-              </td>
-              <td style={{ textAlign: "right" }}>
-                <Button
-                  variant="primary"
-                  disabled={busyId === s.id}
-                  onClick={() => renew(s)}
-                >
-                  {busyId === s.id ? "…" : "Renew"}
-                </Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {renewalDue.length === 0 && (
+              <tr>
+                <td colSpan={4} className="ct-muted">
+                  No approvals inside their review window.
+                </td>
+              </tr>
+            )}
+            {renewalDue.map((s) => (
+              <tr key={s.id}>
+                <td>
+                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <code>{s.id}</code>
+                </td>
+                <td>
+                  <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
+                </td>
+                <td className="ct-muted">
+                  {s.approvalExpiresAt && when(s.approvalExpiresAt)}
+                  {s.renewalFirstApprover && (
+                    <div style={{ fontSize: "var(--fs-sm)" }}>
+                      First renewal sign-off: {s.renewalFirstApprover}
+                    </div>
+                  )}
+                </td>
+                <td style={{ textAlign: "right" }}>
+                  <Button
+                    variant="primary"
+                    disabled={busyId === s.id}
+                    onClick={() => renew(s)}
+                  >
+                    {busyId === s.id ? "…" : "Renew"}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
 
       <h2 style={{ fontSize: "var(--fs-lg)" }}>Recently decided</h2>
-      <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+      <p
+        className="ct-muted"
+        style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+      >
         Click a system to see its sealed audit trail.
       </p>
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>AI system</th>
@@ -329,7 +352,7 @@ export default function Approvals() {
         <tbody>
           {recent.length === 0 && (
             <tr>
-              <td colSpan={4} className="mut">
+              <td colSpan={4} className="ct-muted">
                 No decisions yet.
               </td>
             </tr>
@@ -339,7 +362,7 @@ export default function Approvals() {
               key={s.id}
               onClick={() => openTrail(s)}
               style={{ cursor: "pointer" }}
-              className={trailFor?.id === s.id ? "active-row" : ""}
+              className={trailFor?.id === s.id ? "ct-selected" : ""}
             >
               <td>
                 <div style={{ fontWeight: 600 }}>{s.name}</div>
@@ -351,32 +374,34 @@ export default function Approvals() {
               <td>
                 <StatusBadge status={s.approvalStatus} />
                 {s.approvalExpiresAt && (
-                  <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                  <div
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
                     Expires {when(s.approvalExpiresAt)}
                   </div>
                 )}
               </td>
-              <td className="mut">{s.ownerName}</td>
+              <td className="ct-muted">{s.ownerName}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
 
       {trailFor && (
         <Card style={{ marginTop: "var(--sp-6)" }}>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
               Audit trail — {trailFor.name}
             </h2>
-            <Button
-              style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
-              onClick={() => setTrailFor(null)}
-            >
+            <Button size="sm" onClick={() => setTrailFor(null)}>
               Close
             </Button>
           </div>
           {trail.length === 0 ? (
-            <p className="mut">No review events recorded for this system.</p>
+            <p className="ct-muted">
+              No review events recorded for this system.
+            </p>
           ) : (
             <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
               {trail.map((e) => (
@@ -387,17 +412,23 @@ export default function Approvals() {
                     borderBottom: "1px solid var(--border)",
                   }}
                 >
-                  <div className="row between">
+                  <div className="ct-row ct-between">
                     <span
                       style={{ fontWeight: 700, color: actionColor[e.action] }}
                     >
                       ● {e.action}
                     </span>
-                    <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <span
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {when(e.at)}
                     </span>
                   </div>
-                  <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                  <div
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
                     {e.previousStatus} → {e.newStatus} · by <b>{e.reviewer}</b>
                     {" · "}
                     <EvidenceState
@@ -407,7 +438,10 @@ export default function Approvals() {
                     />
                   </div>
                   {e.reason && (
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       “{e.reason}”
                     </div>
                   )}
@@ -443,7 +477,7 @@ export default function Approvals() {
               autoFocus
             />
           </Field>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <Button onClick={() => setRejecting(null)}>Cancel</Button>
             <Button
               variant="primary"
@@ -455,6 +489,6 @@ export default function Approvals() {
           </div>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

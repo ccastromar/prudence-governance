@@ -6,6 +6,7 @@ import {
   Card,
   Checkbox,
   Input,
+  Page,
   Select,
 } from "@chestertown/design";
 const fields = [
@@ -45,15 +46,13 @@ export default function Changes() {
         : [...form.changedFields, x],
     });
   return (
-    <>
-      <h1>Change assessment</h1>
-      <p className="sub">
-        AOS/MLOps submits the evidence; Prudence classifies the governance
-        consequence and applies the gate.
-      </p>
+    <Page
+      title="Change assessment"
+      subtitle="AOS/MLOps submits the evidence; Prudence classifies the governance consequence and applies the gate."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
       <Card>
-        <div className="grid2">
+        <div className="ct-grid-2">
           <Select
             value={form.aiSystemId}
             onChange={(e) => setForm({ ...form, aiSystemId: e.target.value })}
@@ -73,7 +72,7 @@ export default function Changes() {
             }
           />
         </div>
-        <p className="mut">Changed dimensions</p>
+        <p className="ct-muted">Changed dimensions</p>
         {fields.map((x) => (
           <Checkbox
             key={x}
@@ -109,11 +108,11 @@ export default function Changes() {
         <Card style={{ marginTop: "var(--sp-5)" }}>
           <h2>{result.outcome.replaceAll("_", " ")}</h2>
           <p>{result.rationale}</p>
-          <p className="mut">
+          <p className="ct-muted">
             {result.assessedAt} · {result.assessedBy}
           </p>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

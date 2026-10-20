@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ComplianceSnapshot } from "../api";
-import { Alert, Button, Card, Select } from "@chestertown/design";
+import { Alert, Button, Card, Page, Select } from "@chestertown/design";
 export default function Snapshots() {
   const [systems, setSystems] = useState<AiSystem[]>([]);
   const [id, setId] = useState("");
@@ -13,14 +13,12 @@ export default function Snapshots() {
       .catch((e) => setError((e as Error).message));
   }, []);
   return (
-    <>
-      <h1>Compliance snapshots</h1>
-      <p className="sub">
-        Immutable, hash-addressed manifests for audit and authority portability.
-        They contain evidence references, not document copies.
-      </p>
+    <Page
+      title="Compliance snapshots"
+      subtitle="Immutable, hash-addressed manifests for audit and authority portability. They contain evidence references, not document copies."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
-      <div className="row">
+      <div className="ct-row">
         <Select value={id} onChange={(e) => setId(e.target.value)}>
           <option value="">Select AI system…</option>
           {systems.map((s) => (
@@ -49,7 +47,7 @@ export default function Snapshots() {
           <p>
             <code>{snapshot.id}</code>
           </p>
-          <p className="mut">As of {snapshot.asOf}</p>
+          <p className="ct-muted">As of {snapshot.asOf}</p>
           <p>
             SHA-256: <code>{snapshot.sha256}</code>
           </p>
@@ -61,6 +59,6 @@ export default function Snapshots() {
           </details>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

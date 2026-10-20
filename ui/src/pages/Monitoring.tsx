@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card, Field, Input, Select } from "@chestertown/design";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  Page,
+  Select,
+} from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -101,12 +110,10 @@ export default function Monitoring() {
   };
 
   return (
-    <>
-      <h1>Post-market monitoring</h1>
-      <p className="sub">
-        Aggregated signals only. Ernest remains the evidence plane for execution
-        logs.
-      </p>
+    <Page
+      title="Post-market monitoring"
+      subtitle="Aggregated signals only. Ernest remains the evidence plane for execution logs."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
       <Field label="AI system" htmlFor="monitoring-ai-system">
         <Select
@@ -129,16 +136,13 @@ export default function Monitoring() {
       {id && (
         <>
           <Card style={{ marginBottom: "var(--sp-5)" }}>
-            <h2>
-              Risk posture{" "}
-              {summary && <span className="badge">{summary.status}</span>}
-            </h2>
-            <p className="mut">
+            <h2>Risk posture {summary && <Badge>{summary.status}</Badge>}</h2>
+            <p className="ct-muted">
               {summary?.observations ?? 0} observations ·{" "}
               {summary?.amberSignals ?? 0} amber · {summary?.redSignals ?? 0}{" "}
               red
             </p>
-            <div className="grid2">
+            <div className="ct-grid-2">
               <Select
                 value={form.signal}
                 onChange={(e) =>
@@ -187,11 +191,11 @@ export default function Monitoring() {
           </Card>
           <Card>
             <h2>Corrective and preventive actions</h2>
-            <p className="mut">
+            <p className="ct-muted">
               Create an action from an observed signal, then retain evidence
               that its mitigation worked.
             </p>
-            <div className="grid2">
+            <div className="ct-grid-2">
               <Select
                 value={capa.signalId}
                 onChange={(e) => setCapa({ ...capa, signalId: e.target.value })}
@@ -242,12 +246,12 @@ export default function Monitoring() {
               Open CAPA
             </Button>
             {capas.length === 0 ? (
-              <p className="mut">No CAPA open.</p>
+              <p className="ct-muted">No CAPA open.</p>
             ) : (
               capas.map((item) => (
                 <div key={item.id} className="capa-item">
                   <b>{item.risk}</b>
-                  <div className="mut">
+                  <div className="ct-muted">
                     {item.mitigation} · {item.owner} · due {item.dueAt} ·{" "}
                     {item.status}
                   </div>
@@ -257,7 +261,7 @@ export default function Monitoring() {
                     </Button>
                   )}
                   {item.status === "IMPLEMENTED" && (
-                    <div className="row">
+                    <div className="ct-row">
                       <Input
                         placeholder="Effectiveness evidence reference"
                         value={verification[item.id] ?? ""}
@@ -278,7 +282,7 @@ export default function Monitoring() {
                     </div>
                   )}
                   {item.status === "VERIFIED" && (
-                    <div className="mut">
+                    <div className="ct-muted">
                       Effectiveness evidence: {item.effectivenessEvidence}
                     </div>
                   )}
@@ -288,6 +292,6 @@ export default function Monitoring() {
           </Card>
         </>
       )}
-    </>
+    </Page>
   );
 }

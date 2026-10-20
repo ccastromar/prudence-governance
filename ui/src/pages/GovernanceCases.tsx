@@ -12,7 +12,9 @@ import {
   Card,
   Field,
   Input,
+  Page,
   Select,
+  Table,
   Textarea,
 } from "@chestertown/design";
 
@@ -82,13 +84,10 @@ export default function GovernanceCases() {
   const systemName = (id: string) =>
     systems.find((s) => s.id === id)?.name ?? id;
   return (
-    <>
-      <h1>Governance cases</h1>
-      <p className="sub">
-        Decision dossiers for assessments, changes, exceptions and corrective
-        actions. Prudence stores the process, owners and SHA-256-backed
-        references — never the document itself.
-      </p>
+    <Page
+      title="Governance cases"
+      subtitle="Decision dossiers for assessments, changes, exceptions and corrective actions. Prudence stores the process, owners and SHA-256-backed references — never the document itself."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
       <Card style={{ marginBottom: "var(--sp-6)" }}>
         <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>Open a case</h2>
@@ -101,7 +100,7 @@ export default function GovernanceCases() {
             });
           }}
         >
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="AI system" htmlFor="governancecases-ai-system">
               <Select
                 id="governancecases-ai-system"
@@ -172,7 +171,7 @@ export default function GovernanceCases() {
           </Button>
         </form>
       </Card>
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>Case</th>
@@ -184,7 +183,7 @@ export default function GovernanceCases() {
         <tbody>
           {cases.length === 0 && (
             <tr>
-              <td colSpan={4} className="mut">
+              <td colSpan={4} className="ct-muted">
                 No governance cases.
               </td>
             </tr>
@@ -203,7 +202,7 @@ export default function GovernanceCases() {
             >
               <td>
                 <b>{c.title}</b>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   {c.type.replaceAll("_", " ")} · {when(c.openedAt)}
                 </div>
               </td>
@@ -215,15 +214,15 @@ export default function GovernanceCases() {
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
       {selected && (
         <Card style={{ marginTop: "var(--sp-6)" }}>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <div>
               <h2 style={{ margin: 0, fontSize: "var(--fs-lg)" }}>
                 {selected.title}
               </h2>
-              <p className="mut">
+              <p className="ct-muted">
                 {selected.type.replaceAll("_", " ")} · owner {selected.owner} ·{" "}
                 {systemName(selected.aiSystemId)}
               </p>
@@ -242,11 +241,11 @@ export default function GovernanceCases() {
           {selected.status !== "CLOSED" && (
             <Card style={{ marginTop: "var(--sp-4)" }}>
               <h3 style={{ marginTop: 0 }}>Reference evidence</h3>
-              <p className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+              <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                 Link to the source record and its exact SHA-256; no file is
                 copied here.
               </p>
-              <div className="grid2">
+              <div className="ct-grid-2">
                 <Field label="Label" htmlFor="governancecases-label">
                   <Input
                     id="governancecases-label"
@@ -318,7 +317,7 @@ export default function GovernanceCases() {
           )}
           <h3>Evidence references</h3>
           {selected.evidence.length === 0 ? (
-            <p className="mut">No evidence references yet.</p>
+            <p className="ct-muted">No evidence references yet.</p>
           ) : (
             <ul>
               {selected.evidence.map((e) => (
@@ -363,16 +362,16 @@ export default function GovernanceCases() {
                 }}
               >
                 <b>{e.type.replaceAll("_", " ")}</b>
-                <span className="mut">
+                <span className="ct-muted">
                   {" "}
                   · {when(e.at)} · {e.actor}
                 </span>
-                <div className="mut">{e.details}</div>
+                <div className="ct-muted">{e.details}</div>
               </li>
             ))}
           </ul>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

@@ -9,7 +9,7 @@ import {
   type DeadLetter,
 } from "../api";
 import { RiskBadge, StatusBadge, PostureBadge } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Badge, Button, Card, Page, Table } from "@chestertown/design";
 
 /// Oversight dashboard: the step that closes the control loop. Prudence reads Ernest's evidence
 /// back and colours each registered system — GREEN only when it is both approved to run and
@@ -73,21 +73,18 @@ export default function Posture() {
   }, []);
 
   return (
-    <>
-      <h1>Posture</h1>
-      <p className="sub">
-        The compliance posture of the AI estate — risk tier, approval, and
-        whether the evidence record backs it up.
-      </p>
-
+    <Page
+      title="Posture"
+      subtitle="The compliance posture of the AI estate — risk tier, approval, and whether the evidence record backs it up."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
 
       {data && (
         <>
           <Card style={{ marginBottom: "var(--sp-6)" }}>
-            <div className="row between">
+            <div className="ct-row ct-between">
               <div>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   Estate roll-up
                 </div>
                 <div style={{ fontSize: "var(--fs-lg)", fontWeight: 700 }}>
@@ -95,7 +92,7 @@ export default function Posture() {
                 </div>
               </div>
               <div style={{ textAlign: "right" }}>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   Evidence plane (Ernest)
                 </div>
                 <div
@@ -106,14 +103,14 @@ export default function Posture() {
                 >
                   {data.evidenceHealthy ? "● healthy" : "● unavailable"}
                 </div>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   {data.evidenceDetail}
                 </div>
               </div>
             </div>
           </Card>
 
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>AI system</th>
@@ -125,7 +122,7 @@ export default function Posture() {
             <tbody>
               {data.systems.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="mut">
+                  <td colSpan={4} className="ct-muted">
                     No systems registered yet.
                   </td>
                 </tr>
@@ -139,7 +136,7 @@ export default function Posture() {
                       href={ernestEvidenceUrl(s.id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mut"
+                      className="ct-muted"
                       style={{ fontSize: "var(--fs-sm)" }}
                       title="Open this AI system's evidence in Ernest"
                     >
@@ -154,14 +151,17 @@ export default function Posture() {
                   </td>
                   <td>
                     <PostureBadge status={s.status} />
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {s.detail}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </>
       )}
 
@@ -172,7 +172,7 @@ export default function Posture() {
           <Alert tone="danger">
             ● Policy-drift scan incomplete — results below cannot be trusted.
           </Alert>
-          <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+          <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
             {drift.scanDetail}
           </div>
         </Card>
@@ -187,7 +187,7 @@ export default function Posture() {
               : "var(--border)",
           }}
         >
-          <div className="row between">
+          <div className="ct-row ct-between">
             <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
               Policy drift
             </h2>
@@ -200,11 +200,14 @@ export default function Posture() {
               {drift.hasViolations ? "● violations detected" : "● clean"}
             </span>
           </div>
-          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+          <p
+            className="ct-muted"
+            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+          >
             Executions in the evidence plane checked against the governance
             record.
           </p>
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>AI system</th>
@@ -223,7 +226,7 @@ export default function Posture() {
                       href={ernestEvidenceUrl(f.aiSystemId)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mut"
+                      className="ct-muted"
                       style={{ fontSize: "var(--fs-sm)" }}
                       title="Open this AI system's evidence in Ernest"
                     >
@@ -233,7 +236,7 @@ export default function Posture() {
                   <td>
                     <StatusBadge status={f.approvalStatus} />
                   </td>
-                  <td className="mut">{f.executionCount}</td>
+                  <td className="ct-muted">{f.executionCount}</td>
                   <td>
                     <span
                       style={{
@@ -246,14 +249,17 @@ export default function Posture() {
                     >
                       ● {f.severity}
                     </span>
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {f.detail}
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </Card>
       )}
 
@@ -262,7 +268,10 @@ export default function Posture() {
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
             Evidence store: {sink.label}
           </h2>
-          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+          <p
+            className="ct-muted"
+            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+          >
             What the store holding Prudence's evidence can guarantee. Anything
             missing is stated here and in attestations, never implied.
           </p>
@@ -270,19 +279,14 @@ export default function Posture() {
             style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}
           >
             {sink.capabilities.map((c) => (
-              <span
-                key={c.code}
-                className="badge"
-                title={c.meaning}
-                style={{ color: "var(--ok)" }}
-              >
+              <Badge key={c.code} tone="ok" title={c.meaning}>
                 ✓ {c.label}
-              </span>
+              </Badge>
             ))}
             {sink.missing.map((c) => (
-              <span key={c.code} className="badge mut" title={c.meaning}>
+              <Badge key={c.code} title={c.meaning}>
                 ✗ {c.label}
-              </span>
+              </Badge>
             ))}
           </div>
         </Card>
@@ -293,16 +297,19 @@ export default function Posture() {
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
             Execution sources
           </h2>
-          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+          <p
+            className="ct-muted"
+            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+          >
             What runtimes reported to Prudence and the execution evidence in
             Ernest should agree (after a {sources.graceMinutes}-minute grace for
             delivery). A mismatch is a warning, not a violation: evidence that
             never arrived, or an execution nobody reported.
           </p>
           {!sources.complete ? (
-            <div className="mut">{sources.detail}</div>
+            <div className="ct-muted">{sources.detail}</div>
           ) : (
-            <table>
+            <Table>
               <thead>
                 <tr>
                   <th>AI system</th>
@@ -318,8 +325,8 @@ export default function Posture() {
                       <div style={{ fontWeight: 600 }}>{m.name}</div>
                       <code>{m.aiSystemId}</code>
                     </td>
-                    <td className="mut">{m.lastReportedAt ?? "—"}</td>
-                    <td className="mut">{m.lastEvidencedAt ?? "—"}</td>
+                    <td className="ct-muted">{m.lastReportedAt ?? "—"}</td>
+                    <td className="ct-muted">{m.lastEvidencedAt ?? "—"}</td>
                     <td>
                       <span style={{ fontWeight: 700, color: "var(--warn)" }}>
                         ●{" "}
@@ -327,14 +334,17 @@ export default function Posture() {
                           ? "evidence missing"
                           : "not reported"}
                       </span>
-                      <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                      <div
+                        className="ct-muted"
+                        style={{ fontSize: "var(--fs-sm)" }}
+                      >
                         {m.detail}
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           )}
         </Card>
       )}
@@ -346,12 +356,15 @@ export default function Posture() {
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
             Undelivered records ({dead.length})
           </h2>
-          <p className="mut" style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}>
+          <p
+            className="ct-muted"
+            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
+          >
             Evidence that never reached Ernest, or alerts that were never sent.
             Fix the cause (Ernest reachable, credentials, payload), then retry:
             the record is requeued and delivered at once.
           </p>
-          <table>
+          <Table>
             <thead>
               <tr>
                 <th>Kind</th>
@@ -366,20 +379,26 @@ export default function Posture() {
                   <td>
                     {d.target}
                     {d.aiSystemId && (
-                      <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                      <div
+                        className="ct-muted"
+                        style={{ fontSize: "var(--fs-sm)" }}
+                      >
                         <code>{d.aiSystemId}</code>
                       </div>
                     )}
                   </td>
                   <td>
                     <code>{d.id}</code>
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {d.attempts} attempt(s) · gave up{" "}
                       {d.deadAt.replace("T", " ").replace(/\.\d+Z$/, "")}
                     </div>
                   </td>
                   <td
-                    className="mut"
+                    className="ct-muted"
                     style={{
                       fontSize: "var(--fs-sm)",
                       maxWidth: 360,
@@ -400,9 +419,9 @@ export default function Posture() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

@@ -7,7 +7,16 @@ import {
 } from "../api";
 import { hasRealmRole } from "../auth";
 import { DecisionBadge } from "../components";
-import { Alert, Button, Card, Field, Input, Select } from "@chestertown/design";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  Page,
+  Select,
+} from "@chestertown/design";
 
 type Demo = "bug-triage" | "response-drafter";
 
@@ -67,9 +76,9 @@ function DemoCard({
 
   return (
     <Card>
-      <div className="row between">
+      <div className="ct-row ct-between">
         <h3 style={{ margin: 0 }}>{meta.title}</h3>
-        <span className="badge neutral">{meta.framework}</span>
+        <Badge>{meta.framework}</Badge>
       </div>
       <p className="sub">{meta.detail}</p>
       <Field
@@ -90,8 +99,8 @@ function DemoCard({
           ))}
         </Select>
       </Field>
-      <div className="row between">
-        <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+      <div className="ct-row ct-between">
+        <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
           PDP → runtime hook → Ernest evidence
         </span>
         <Button
@@ -103,7 +112,7 @@ function DemoCard({
         </Button>
       </div>
       {!writeAllowed && (
-        <p className="mut">
+        <p className="ct-muted">
           Read-only visitors can inspect outcomes but cannot start runs.
         </p>
       )}
@@ -112,21 +121,25 @@ function DemoCard({
         <Card
           style={{ marginTop: "var(--sp-4)", background: "var(--bg-subtle)" }}
         >
-          <div className="row between">
+          <div className="ct-row ct-between">
             <DecisionBadge decision={result.decision} />
             {result.evidence?.status && (
-              <span className="mut">Ernest HTTP {result.evidence.status}</span>
+              <span className="ct-muted">
+                Ernest HTTP {result.evidence.status}
+              </span>
             )}
           </div>
-          <p className="mut">{result.reason || "Governance gate completed."}</p>
+          <p className="ct-muted">
+            {result.reason || "Governance gate completed."}
+          </p>
           {result.model && (
-            <p className="mut">
+            <p className="ct-muted">
               Model: <b>{result.model}</b>
             </p>
           )}
-          {result.output && <pre className="code">{result.output}</pre>}
+          {result.output && <pre className="ct-code">{result.output}</pre>}
           {result.continued !== undefined && (
-            <p className="mut">
+            <p className="ct-muted">
               Downstream delivery:{" "}
               {result.continued
                 ? "continued"
@@ -185,14 +198,12 @@ export default function Decisions() {
   };
 
   return (
-    <>
-      <h1>Policy decisions</h1>
-      <p className="sub">
-        Run a real governed framework hook, then inspect the policy verdict and
-        evidence delivery without introducing another public UI.
-      </p>
+    <Page
+      title="Policy decisions"
+      subtitle="Run a real governed framework hook, then inspect the policy verdict and evidence delivery without introducing another public UI."
+    >
       <h2>Governed runs</h2>
-      <div className="grid2" style={{ marginBottom: "var(--sp-8)" }}>
+      <div className="ct-grid-2" style={{ marginBottom: "var(--sp-8)" }}>
         <DemoCard
           demo="bug-triage"
           systems={systems}
@@ -211,7 +222,7 @@ export default function Decisions() {
       </p>
       <Card style={{ marginBottom: "var(--sp-6)" }}>
         <form onSubmit={submit}>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="Subject" htmlFor="decisions-subject">
               <Input
                 id="decisions-subject"
@@ -227,7 +238,7 @@ export default function Decisions() {
               />
             </Field>
           </div>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="AI system id" htmlFor="decisions-ai-system-id">
               <Input
                 id="decisions-ai-system-id"
@@ -244,11 +255,11 @@ export default function Decisions() {
               />
             </Field>
           </div>
-          <div className="row between">
+          <div className="ct-row ct-between">
             {error ? (
               <Alert tone="danger">{error}</Alert>
             ) : (
-              <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+              <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                 Lifecycle facts first, then policy authorization.
               </span>
             )}
@@ -260,21 +271,21 @@ export default function Decisions() {
       </Card>
       {decision && (
         <Card>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <DecisionBadge decision={decision.decision} />
             {decision.approver && (
-              <span className="mut">
+              <span className="ct-muted">
                 approver: <b>{decision.approver}</b>
               </span>
             )}
           </div>
           {decision.reason && (
-            <p className="mut" style={{ marginBottom: 0 }}>
+            <p className="ct-muted" style={{ marginBottom: 0 }}>
               {decision.reason}
             </p>
           )}
         </Card>
       )}
-    </>
+    </Page>
   );
 }

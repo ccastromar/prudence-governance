@@ -16,6 +16,7 @@ import {
   AppShell,
   Button,
   Card,
+  Page,
   Tabs,
   ThemeToggle,
   type TabItem,
@@ -150,7 +151,7 @@ export default function App() {
   if (ssoEnabled && !authed) {
     return (
       <AppShell {...shell}>
-        <main>
+        <Page>
           <Card
             style={{
               maxWidth: 420,
@@ -158,7 +159,7 @@ export default function App() {
               textAlign: "center",
             }}
           >
-            <h1>Sign in to Prudence</h1>
+            <h1 className="ct-title">Sign in to Prudence</h1>
             <p className="sub">
               Governance is a controlled function — sign in with your identity
               provider.
@@ -176,7 +177,7 @@ export default function App() {
             </Button>
             {authError && <Alert tone="danger">{authError}</Alert>}
           </Card>
-        </main>
+        </Page>
       </AppShell>
     );
   }
@@ -193,7 +194,7 @@ export default function App() {
         />
       }
     >
-      <main>
+      <>
         {tab === "registry" && <Registry focusSystem={link.system} />}
         {tab === "approvals" && <Approvals />}
         {tab === "decisions" && <Decisions />}
@@ -206,7 +207,7 @@ export default function App() {
         {tab === "changes" && <Changes />}
         {tab === "snapshots" && <Snapshots />}
         {tab === "attestations" && <Attestations />}
-      </main>
+      </>
     </AppShell>
   );
 }

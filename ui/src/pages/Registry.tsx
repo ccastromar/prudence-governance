@@ -17,7 +17,9 @@ import {
   Checkbox,
   Field,
   Input,
+  Page,
   Select,
+  Table,
   Textarea,
 } from "@chestertown/design";
 
@@ -158,16 +160,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
   };
 
   return (
-    <>
-      <h1>AI system registry</h1>
-      <p className="sub">
-        Every AI use case, its EU AI Act risk tier, owner and approval state —
-        the governance spine.
-      </p>
-
+    <Page
+      title="AI system registry"
+      subtitle="Every AI use case, its EU AI Act risk tier, owner and approval state — the governance spine."
+    >
       <Card style={{ marginBottom: "var(--sp-6)" }}>
         <form onSubmit={submit}>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="Name" htmlFor="registry-name">
               <Input
                 id="registry-name"
@@ -220,7 +219,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               required
             />
           </Field>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="Owner name" htmlFor="registry-owner-name">
               <Input
                 id="registry-owner-name"
@@ -242,7 +241,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               />
             </Field>
           </div>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="System version" htmlFor="registry-system-version">
               <Input
                 id="registry-system-version"
@@ -268,7 +267,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               />
             </Field>
           </div>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field
               label="Operating geography"
               htmlFor="registry-operating-geography"
@@ -297,7 +296,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               />
             </Field>
           </div>
-          <div className="grid2" style={{ marginBottom: "var(--sp-4)" }}>
+          <div className="ct-grid-2" style={{ marginBottom: "var(--sp-4)" }}>
             <Checkbox
               label="Annex I regulated product"
               checked={form.annexI}
@@ -341,11 +340,11 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               }
             />
           </Field>
-          <div className="row between">
+          <div className="ct-row ct-between">
             {error ? (
               <Alert tone="danger">{error}</Alert>
             ) : (
-              <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+              <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                 Registration creates an assessment dossier; submit it for review
                 before it can be approved.
               </span>
@@ -357,7 +356,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
         </form>
       </Card>
 
-      <table>
+      <Table>
         <thead>
           <tr>
             <th>AI system</th>
@@ -370,7 +369,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
         <tbody>
           {systems.length === 0 && (
             <tr>
-              <td colSpan={5} className="mut">
+              <td colSpan={5} className="ct-muted">
                 No systems registered yet.
               </td>
             </tr>
@@ -395,7 +394,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                   href={ernestEvidenceUrl(s.id)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mut"
+                  className="ct-muted"
                   style={{ fontSize: "var(--fs-sm)" }}
                   title="Open this AI system's evidence in Ernest"
                 >
@@ -404,7 +403,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               </td>
               <td>
                 <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   {s.regulatoryRole} · v{s.systemVersion}
                 </div>
               </td>
@@ -414,23 +413,23 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               <td>
                 <Button onClick={() => openControls(s)}>Controls</Button>
               </td>
-              <td className="mut">{s.ownerName}</td>
+              <td className="ct-muted">{s.ownerName}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
 
       {controlsFor && (
         <Card
           id="compliance-controls"
           style={{ marginTop: "var(--sp-6)", scrollMarginTop: "80px" }}
         >
-          <div className="row between">
+          <div className="ct-row ct-between">
             <div>
               <h2 style={{ fontSize: "var(--fs-lg)", margin: 0 }}>
                 Compliance controls
               </h2>
-              <p className="mut" style={{ marginBottom: 0 }}>
+              <p className="ct-muted" style={{ marginBottom: 0 }}>
                 {controlsFor.name} · evidence stays in its source system;
                 Prudence records its reference and hash.
               </p>
@@ -439,7 +438,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
           </div>
           {controlError && <Alert tone="danger">{controlError}</Alert>}
           {controls.length === 0 && !controlError && (
-            <p className="mut">
+            <p className="ct-muted">
               No profile-derived controls apply to this system.
             </p>
           )}
@@ -465,17 +464,20 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                   padding: "var(--sp-4) 0",
                 }}
               >
-                <div className="row between">
+                <div className="ct-row ct-between">
                   <div>
                     <strong>{control.title}</strong>
-                    <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                    <div
+                      className="ct-muted"
+                      style={{ fontSize: "var(--fs-sm)" }}
+                    >
                       {control.profileId} · {control.key}
                       {control.blocking ? " · blocks review" : ""}
                     </div>
                   </div>
                   <StatusBadge status={control.status} />
                 </div>
-                <p className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   {control.requirement}
                   <br />
                   Contract: {control.accepts} · source {control.evidenceSource}{" "}
@@ -491,7 +493,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                     : ""}
                 </p>
                 {done ? (
-                  <p className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                  <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                     Evidence:{" "}
                     <a
                       href={control.evidenceUri ?? "#"}
@@ -504,7 +506,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                     {control.expiresAt ? ` · expires ${control.expiresAt}` : ""}
                   </p>
                 ) : (
-                  <div className="grid2">
+                  <div className="ct-grid-2">
                     <Field
                       label="Evidence URI"
                       htmlFor={`registry-evidence-uri-${control.id}`}
@@ -674,7 +676,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
           })}
         </Card>
       )}
-    </>
+    </Page>
   );
 }
 

@@ -16,7 +16,9 @@ import {
   Checkbox,
   Field,
   Input,
+  Page,
   Select,
+  Table,
   Textarea,
 } from "@chestertown/design";
 
@@ -80,7 +82,7 @@ const EMPTY = (): Omit<
 });
 
 function Countdown({ incident }: { incident: Incident }) {
-  if (!incident.reportingDeadline) return <span className="mut">—</span>;
+  if (!incident.reportingDeadline) return <span className="ct-muted">—</span>;
   const ms = new Date(incident.reportingDeadline).getTime() - Date.now();
   const hours = Math.round(Math.abs(ms) / 3600000);
   const text =
@@ -197,15 +199,10 @@ export default function Incidents() {
   });
 
   return (
-    <>
-      <h1>Incidents</h1>
-      <p className="sub">
-        The AI incident register. Serious incidents (AI Act Art. 3(49)) must be
-        reported within 2, 10 or 15 days of awareness (Art. 73). Prudence tracks
-        the deadline, alerts the owners, and records each filing — it does not
-        file with the authority itself.
-      </p>
-
+    <Page
+      title="Incidents"
+      subtitle="The AI incident register. Serious incidents (AI Act Art. 3(49)) must be reported within 2, 10 or 15 days of awareness (Art. 73). Prudence tracks the deadline, alerts the owners, and records each filing — it does not file with the authority itself."
+    >
       {error && (
         <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
           {error}
@@ -217,7 +214,7 @@ export default function Incidents() {
           Register an incident
         </h2>
         <form onSubmit={submit}>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="AI system" htmlFor="incidents-ai-system">
               <Select
                 id="incidents-ai-system"
@@ -254,7 +251,7 @@ export default function Incidents() {
               required
             />
           </Field>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="Occurred at" htmlFor="incidents-occurred-at">
               <Input
                 id="incidents-occurred-at"
@@ -281,7 +278,7 @@ export default function Incidents() {
               />
             </Field>
           </div>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field label="Classification" htmlFor="incidents-classification">
               <Select
                 id="incidents-classification"
@@ -319,7 +316,7 @@ export default function Incidents() {
               </Select>
             </Field>
           </div>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Field
               label="Member State(s) where it occurred"
               htmlFor="incidents-member-state-s-where-it-occurred"
@@ -361,8 +358,8 @@ export default function Incidents() {
               />
             </div>
           </div>
-          <div className="row between">
-            <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+          <div className="ct-row ct-between">
+            <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
               A serious incident alerts governance and the system owner
               immediately.
             </span>
@@ -373,68 +370,70 @@ export default function Incidents() {
         </form>
       </Card>
 
-      <table style={{ marginBottom: "var(--sp-6)" }}>
-        <thead>
-          <tr>
-            <th>Incident</th>
-            <th>AI system</th>
-            <th>Classification</th>
-            <th>Status</th>
-            <th>Report</th>
-          </tr>
-        </thead>
-        <tbody>
-          {incidents.length === 0 && (
+      <div style={{ marginBottom: "var(--sp-6)" }}>
+        <Table>
+          <thead>
             <tr>
-              <td colSpan={5} className="mut">
-                No incidents registered.
-              </td>
+              <th>Incident</th>
+              <th>AI system</th>
+              <th>Classification</th>
+              <th>Status</th>
+              <th>Report</th>
             </tr>
-          )}
-          {incidents.map((i) => (
-            <tr
-              key={i.id}
-              onClick={() => open(i)}
-              style={{ cursor: "pointer" }}
-              className={selected?.id === i.id ? "active-row" : ""}
-            >
-              <td>
-                <div style={{ fontWeight: 600 }}>{i.title}</div>
-                <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
-                  aware {when(i.detectedAt)}
-                </span>
-              </td>
-              <td>{systemName(i.aiSystemId)}</td>
-              <td className="mut" style={{ fontSize: "var(--fs-sm)" }}>
-                {i.category.replaceAll("_", " ")}
-                {i.widespreadInfringement ? " · widespread" : ""}
-                <div>link {i.causalLink.toLowerCase()}</div>
-              </td>
-              <td className="mut">{i.status.replaceAll("_", " ")}</td>
-              <td>
-                <Countdown incident={i} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {incidents.length === 0 && (
+              <tr>
+                <td colSpan={5} className="ct-muted">
+                  No incidents registered.
+                </td>
+              </tr>
+            )}
+            {incidents.map((i) => (
+              <tr
+                key={i.id}
+                onClick={() => open(i)}
+                style={{ cursor: "pointer" }}
+                className={selected?.id === i.id ? "ct-selected" : ""}
+              >
+                <td>
+                  <div style={{ fontWeight: 600 }}>{i.title}</div>
+                  <span
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
+                    aware {when(i.detectedAt)}
+                  </span>
+                </td>
+                <td>{systemName(i.aiSystemId)}</td>
+                <td className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                  {i.category.replaceAll("_", " ")}
+                  {i.widespreadInfringement ? " · widespread" : ""}
+                  <div>link {i.causalLink.toLowerCase()}</div>
+                </td>
+                <td className="ct-muted">{i.status.replaceAll("_", " ")}</td>
+                <td>
+                  <Countdown incident={i} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      </div>
 
       {selected && (
         <Card>
-          <div className="row between">
+          <div className="ct-row ct-between">
             <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
               {selected.title}
             </h2>
-            <Button
-              style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
-              onClick={() => setSelected(null)}
-            >
+            <Button size="sm" onClick={() => setSelected(null)}>
               Close
             </Button>
           </div>
           <p>{selected.description}</p>
           <div
-            className="mut"
+            className="ct-muted"
             style={{ fontSize: "var(--fs-sm)", marginBottom: "var(--sp-4)" }}
           >
             <div>{selected.reportingBasis}</div>
@@ -481,7 +480,7 @@ export default function Incidents() {
                   selected.status === "INITIAL_REPORT_SUBMITTED") && (
                   <>
                     <h3 style={{ marginTop: 0 }}>Record a filing</h3>
-                    <div className="grid2">
+                    <div className="ct-grid-2">
                       <Field label="Filed with" htmlFor="incidents-filed-with">
                         <Input
                           id="incidents-filed-with"
@@ -518,7 +517,7 @@ export default function Incidents() {
                         }
                       />
                     </Field>
-                    <div className="grid2">
+                    <div className="ct-grid-2">
                       <Field
                         label="Root cause (final report)"
                         htmlFor="incidents-root-cause-final-report"
@@ -590,7 +589,10 @@ export default function Incidents() {
                 />
               </Field>
               {selected.status === "OPEN" && (
-                <div className="grid2" style={{ marginBottom: "var(--sp-3)" }}>
+                <div
+                  className="ct-grid-2"
+                  style={{ marginBottom: "var(--sp-3)" }}
+                >
                   <Select
                     value={triage.category}
                     onChange={(e) =>
@@ -665,13 +667,16 @@ export default function Incidents() {
                   borderBottom: "1px solid var(--border)",
                 }}
               >
-                <div className="row between">
+                <div className="ct-row ct-between">
                   <b>{e.type.replaceAll("_", " ")}</b>
-                  <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                  <span
+                    className="ct-muted"
+                    style={{ fontSize: "var(--fs-sm)" }}
+                  >
                     {when(e.at)} · {e.actor}
                   </span>
                 </div>
-                <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
                   {e.details} ·{" "}
                   <EvidenceState
                     delivery={e.evidence}
@@ -684,6 +689,6 @@ export default function Incidents() {
           </ul>
         </Card>
       )}
-    </>
+    </Page>
   );
 }

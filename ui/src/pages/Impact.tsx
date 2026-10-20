@@ -6,6 +6,7 @@ import {
   Checkbox,
   Field,
   Input,
+  Page,
   Select,
 } from "@chestertown/design";
 import {
@@ -83,13 +84,10 @@ export default function Impact() {
     }
   };
   return (
-    <>
-      <h1>Impact & transparency</h1>
-      <p className="sub">
-        FRIA, linked DPIA and Article 50 notice deployment evidence.
-        Applicability is a governed decision, not an automatic legal
-        classification.
-      </p>
+    <Page
+      title="Impact & transparency"
+      subtitle="FRIA, linked DPIA and Article 50 notice deployment evidence. Applicability is a governed decision, not an automatic legal classification."
+    >
       {error && <Alert tone="danger">{error}</Alert>}
       <Field label="AI system" htmlFor="impact-ai-system">
         <Select
@@ -127,7 +125,7 @@ export default function Impact() {
               Save requirements
             </Button>
           </Card>
-          <div className="grid2">
+          <div className="ct-grid-2">
             <Card>
               <h2>FRIA / DPIA</h2>
               {frias.map((f) => (
@@ -205,7 +203,7 @@ export default function Impact() {
           </div>
         </>
       )}
-    </>
+    </Page>
   );
 }
 function NoticeForm({
