@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ReviewEvent } from "../api";
 import { EvidenceState, RiskBadge, StatusBadge } from "../components";
+import { Alert, Button, Card } from "@chestertown/design";
 
 const actionColor: Record<string, string> = {
   APPROVE: "var(--ok)",
@@ -137,9 +138,9 @@ export default function Approvals() {
       </p>
 
       {error && (
-        <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
-          <span className="err">{error}</span>
-        </div>
+        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+          {error}
+        </Alert>
       )}
 
       <h2 style={{ fontSize: "var(--fs-lg)" }}>
@@ -180,13 +181,13 @@ export default function Approvals() {
                 {s.annexI ? "Annex I" : "No Annex I"}
               </td>
               <td style={{ textAlign: "right" }}>
-                <button
-                  className="btn btn-primary"
+                <Button
+                  variant="primary"
                   disabled={busyId === s.id}
                   onClick={() => submit(s)}
                 >
                   {busyId === s.id ? "…" : "Submit for review"}
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
@@ -234,16 +235,15 @@ export default function Approvals() {
                 )}
               </td>
               <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                <button
-                  className="btn btn-primary"
+                <Button
+                  variant="primary"
                   disabled={busyId === s.id}
                   onClick={() => approve(s)}
                   style={{ marginRight: "var(--sp-2)" }}
                 >
                   {busyId === s.id ? "…" : "Approve"}
-                </button>
-                <button
-                  className="btn btn-outline"
+                </Button>
+                <Button
                   disabled={busyId === s.id}
                   onClick={() => {
                     setRejecting(s);
@@ -251,7 +251,7 @@ export default function Approvals() {
                   }}
                 >
                   Reject
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
@@ -300,13 +300,13 @@ export default function Approvals() {
                 )}
               </td>
               <td style={{ textAlign: "right" }}>
-                <button
-                  className="btn btn-primary"
+                <Button
+                  variant="primary"
                   disabled={busyId === s.id}
                   onClick={() => renew(s)}
                 >
                   {busyId === s.id ? "…" : "Renew"}
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
@@ -363,18 +363,17 @@ export default function Approvals() {
       </table>
 
       {trailFor && (
-        <div className="card" style={{ marginTop: "var(--sp-6)" }}>
+        <Card style={{ marginTop: "var(--sp-6)" }}>
           <div className="row between">
             <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
               Audit trail — {trailFor.name}
             </h2>
-            <button
-              className="btn btn-outline"
+            <Button
               style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
               onClick={() => setTrailFor(null)}
             >
               Close
-            </button>
+            </Button>
           </div>
           {trail.length === 0 ? (
             <p className="mut">No review events recorded for this system.</p>
@@ -416,12 +415,11 @@ export default function Approvals() {
               ))}
             </ul>
           )}
-        </div>
+        </Card>
       )}
 
       {rejecting && (
-        <div
-          className="card"
+        <Card
           style={{
             position: "fixed",
             inset: 0,
@@ -446,21 +444,16 @@ export default function Approvals() {
             />
           </div>
           <div className="row between">
-            <button
-              className="btn btn-outline"
-              onClick={() => setRejecting(null)}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
+            <Button onClick={() => setRejecting(null)}>Cancel</Button>
+            <Button
+              variant="primary"
               disabled={busyId === rejecting.id}
               onClick={confirmReject}
             >
               {busyId === rejecting.id ? "Rejecting…" : "Confirm reject"}
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       )}
     </>
   );

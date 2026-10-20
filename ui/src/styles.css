@@ -28,13 +28,6 @@ h1 {
   font-size: var(--fs-sm);
 }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-sm);
-  padding: var(--sp-5);
-}
 .row {
   display: flex;
   gap: var(--sp-3);
@@ -69,32 +62,6 @@ h1 {
   font-family: var(--font-mono);
   font-size: var(--fs-xs);
   white-space: pre-wrap;
-}
-
-.btn {
-  border: 0;
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
-}
-.btn-primary {
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-.btn-outline {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-}
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 label {
@@ -171,10 +138,6 @@ code {
 }
 .mut {
   color: var(--text-muted);
-}
-.err {
-  color: var(--danger);
-  font-size: var(--fs-sm);
 }
 .capa-item {
   border-bottom: 1px solid var(--border);

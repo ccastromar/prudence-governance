@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ComplianceSnapshot } from "../api";
+import { Alert, Button, Card } from "@chestertown/design";
 export default function Snapshots() {
   const [systems, setSystems] = useState<AiSystem[]>([]);
   const [id, setId] = useState("");
@@ -18,7 +19,7 @@ export default function Snapshots() {
         Immutable, hash-addressed manifests for audit and authority portability.
         They contain evidence references, not document copies.
       </p>
-      {error && <p className="err">{error}</p>}
+      {error && <Alert tone="danger">{error}</Alert>}
       <div className="row">
         <select value={id} onChange={(e) => setId(e.target.value)}>
           <option value="">Select AI system…</option>
@@ -28,8 +29,8 @@ export default function Snapshots() {
             </option>
           ))}
         </select>
-        <button
-          className="btn btn-primary"
+        <Button
+          variant="primary"
           disabled={!id}
           onClick={async () => {
             try {
@@ -40,10 +41,10 @@ export default function Snapshots() {
           }}
         >
           Generate snapshot
-        </button>
+        </Button>
       </div>
       {snapshot && (
-        <section className="card" style={{ marginTop: "var(--sp-5)" }}>
+        <Card style={{ marginTop: "var(--sp-5)" }}>
           <h2>Snapshot created</h2>
           <p>
             <code>{snapshot.id}</code>
@@ -58,7 +59,7 @@ export default function Snapshots() {
               {JSON.stringify(snapshot.manifest, null, 2)}
             </pre>
           </details>
-        </section>
+        </Card>
       )}
     </>
   );

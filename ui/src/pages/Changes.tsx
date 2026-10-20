@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ChangeAssessment } from "../api";
+import { Alert, Button, Card } from "@chestertown/design";
 const fields = [
   "MODEL_VERSION",
   "DATA_OR_EMBEDDINGS",
@@ -43,8 +44,8 @@ export default function Changes() {
         AOS/MLOps submits the evidence; Prudence classifies the governance
         consequence and applies the gate.
       </p>
-      {error && <p className="err">{error}</p>}
-      <div className="card">
+      {error && <Alert tone="danger">{error}</Alert>}
+      <Card>
         <div className="grid2">
           <select
             value={form.aiSystemId}
@@ -86,8 +87,8 @@ export default function Changes() {
           value={form.evidenceSha256}
           onChange={(e) => setForm({ ...form, evidenceSha256: e.target.value })}
         />
-        <button
-          className="btn btn-primary"
+        <Button
+          variant="primary"
           onClick={async () => {
             try {
               setResult(await api.assessChange(form));
@@ -97,16 +98,16 @@ export default function Changes() {
           }}
         >
           Assess change
-        </button>
-      </div>
+        </Button>
+      </Card>
       {result && (
-        <section className="card" style={{ marginTop: "var(--sp-5)" }}>
+        <Card style={{ marginTop: "var(--sp-5)" }}>
           <h2>{result.outcome.replaceAll("_", " ")}</h2>
           <p>{result.rationale}</p>
           <p className="mut">
             {result.assessedAt} · {result.assessedBy}
           </p>
-        </section>
+        </Card>
       )}
     </>
   );

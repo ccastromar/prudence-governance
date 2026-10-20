@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Alert, Button, Card } from "@chestertown/design";
 import {
   api,
   type Attestation,
@@ -93,15 +94,15 @@ export default function Attestations() {
             so the report itself is tamper-evident.
           </p>
         </div>
-        <button className="btn btn-primary" onClick={generate} disabled={busy}>
+        <Button variant="primary" onClick={generate} disabled={busy}>
           {busy ? "Generating…" : "Generate attestation"}
-        </button>
+        </Button>
       </div>
 
       {error && (
-        <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
-          <span className="err">{error}</span>
-        </div>
+        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+          {error}
+        </Alert>
       )}
 
       <table style={{ marginBottom: "var(--sp-8)" }}>
@@ -148,7 +149,7 @@ export default function Attestations() {
       </table>
 
       {selected && (
-        <div className="card">
+        <Card>
           <div className="row between">
             <h2 style={{ marginTop: 0 }}>
               Attestation {selected.id.slice(0, 8)}
@@ -157,16 +158,15 @@ export default function Attestations() {
               className="row"
               style={{ gap: "var(--sp-3)", alignItems: "center" }}
             >
-              <button
-                className="btn btn-outline"
+              <Button
                 onClick={doVerify}
                 style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
                 title="Recompute the hash and confirm the seal in Ernest"
               >
                 Verify
-              </button>
+              </Button>
               <a
-                className="btn btn-outline"
+                className="ct-btn ct-btn-outline"
                 href={`/api/attestations/${selected.id}/oscal`}
                 target="_blank"
                 rel="noreferrer"
@@ -180,8 +180,7 @@ export default function Attestations() {
           </div>
 
           {verification && (
-            <div
-              className="card"
+            <Card
               style={{
                 marginBottom: "var(--sp-4)",
                 borderColor: verdictColor[verification.verdict],
@@ -216,7 +215,7 @@ export default function Attestations() {
                   </>
                 )}
               </div>
-            </div>
+            </Card>
           )}
           <div
             className="mut"
@@ -280,7 +279,7 @@ export default function Attestations() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </>
   );

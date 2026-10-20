@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Alert, Button, Card } from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -81,7 +82,7 @@ export default function Impact() {
         Applicability is a governed decision, not an automatic legal
         classification.
       </p>
-      {error && <p className="err">{error}</p>}
+      {error && <Alert tone="danger">{error}</Alert>}
       <div className="field">
         <label>AI system</label>
         <select value={selected} onChange={(e) => choose(e.target.value)}>
@@ -95,7 +96,7 @@ export default function Impact() {
       </div>
       {selected && (
         <>
-          <div className="card" style={{ marginBottom: "var(--sp-5)" }}>
+          <Card style={{ marginBottom: "var(--sp-5)" }}>
             <h2>Applicability</h2>
             <label>
               <input
@@ -117,12 +118,12 @@ export default function Impact() {
               />{" "}
               Transparency evidence required
             </label>
-            <button className="btn btn-primary" onClick={save}>
+            <Button variant="primary" onClick={save}>
               Save requirements
-            </button>
-          </div>
+            </Button>
+          </Card>
           <div className="grid2">
-            <section className="card">
+            <Card>
               <h2>FRIA / DPIA</h2>
               {frias.map((f) => (
                 <p key={f.id}>
@@ -168,8 +169,8 @@ export default function Impact() {
                 value={fria.signedBy}
                 onChange={(e) => setFria({ ...fria, signedBy: e.target.value })}
               />
-              <button
-                className="btn btn-primary"
+              <Button
+                variant="primary"
                 onClick={async () => {
                   try {
                     await api.createFria(fria);
@@ -180,9 +181,9 @@ export default function Impact() {
                 }}
               >
                 Record FRIA
-              </button>
-            </section>
-            <section className="card">
+              </Button>
+            </Card>
+            <Card>
               <h2>Transparency notices</h2>
               {notices.map((n) => (
                 <p key={n.id}>
@@ -195,7 +196,7 @@ export default function Impact() {
                 done={() => load()}
                 fail={setError}
               />
-            </section>
+            </Card>
           </div>
         </>
       )}
@@ -241,8 +242,8 @@ function NoticeForm({
         value={by}
         onChange={(e) => setBy(e.target.value)}
       />
-      <button
-        className="btn btn-primary"
+      <Button
+        variant="primary"
         onClick={async () => {
           try {
             await api.createTransparencyNotice({
@@ -260,7 +261,7 @@ function NoticeForm({
         }}
       >
         Record notice
-      </button>
+      </Button>
     </>
   );
 }

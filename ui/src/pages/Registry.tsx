@@ -10,6 +10,7 @@ import {
   type RiskTier,
 } from "../api";
 import { RiskBadge, StatusBadge } from "../components";
+import { Alert, Button, Card } from "@chestertown/design";
 
 const EMPTY: RegisterInput = {
   name: "",
@@ -146,7 +147,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
         the governance spine.
       </p>
 
-      <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
+      <Card style={{ marginBottom: "var(--sp-6)" }}>
         <form onSubmit={submit}>
           <div className="grid2">
             <div className="field">
@@ -317,19 +318,19 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
           </div>
           <div className="row between">
             {error ? (
-              <span className="err">{error}</span>
+              <Alert tone="danger">{error}</Alert>
             ) : (
               <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
                 Registration creates an assessment dossier; submit it for review
                 before it can be approved.
               </span>
             )}
-            <button className="btn btn-primary" disabled={busy}>
+            <Button type="submit" variant="primary" disabled={busy}>
               {busy ? "Registering…" : "Register system"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       <table>
         <thead>
@@ -386,12 +387,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 <StatusBadge status={s.approvalStatus} />
               </td>
               <td>
-                <button
-                  className="btn btn-outline"
-                  onClick={() => openControls(s)}
-                >
-                  Controls
-                </button>
+                <Button onClick={() => openControls(s)}>Controls</Button>
               </td>
               <td className="mut">{s.ownerName}</td>
             </tr>
@@ -400,7 +396,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       </table>
 
       {controlsFor && (
-        <section className="card" style={{ marginTop: "var(--sp-6)" }}>
+        <Card style={{ marginTop: "var(--sp-6)" }}>
           <div className="row between">
             <div>
               <h2 style={{ fontSize: "var(--fs-lg)", margin: 0 }}>
@@ -411,14 +407,9 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 Prudence records its reference and hash.
               </p>
             </div>
-            <button
-              className="btn btn-outline"
-              onClick={() => setControlsFor(null)}
-            >
-              Close
-            </button>
+            <Button onClick={() => setControlsFor(null)}>Close</Button>
           </div>
-          {controlError && <p className="err">{controlError}</p>}
+          {controlError && <Alert tone="danger">{controlError}</Alert>}
           {controls.length === 0 && !controlError && (
             <p className="mut">
               No profile-derived controls apply to this system.
@@ -606,22 +597,22 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                       />
                     </div>
                     <div className="field" style={{ alignSelf: "end" }}>
-                      <button
-                        className="btn btn-primary"
+                      <Button
+                        variant="primary"
                         disabled={controlBusy === control.id}
                         onClick={() => satisfy(control)}
                       >
                         {controlBusy === control.id
                           ? "Recording…"
                           : "Record evidence"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 )}
               </div>
             );
           })}
-        </section>
+        </Card>
       )}
     </>
   );

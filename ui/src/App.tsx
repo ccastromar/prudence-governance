@@ -12,8 +12,10 @@ import Oversight from "./pages/Oversight";
 import Snapshots from "./pages/Snapshots";
 import Changes from "./pages/Changes";
 import {
+  Alert,
   AppShell,
   Button,
+  Card,
   Tabs,
   ThemeToggle,
   type TabItem,
@@ -149,8 +151,7 @@ export default function App() {
     return (
       <AppShell {...shell}>
         <main>
-          <div
-            className="card"
+          <Card
             style={{
               maxWidth: 420,
               margin: "var(--sp-12) auto",
@@ -162,8 +163,8 @@ export default function App() {
               Governance is a controlled function — sign in with your identity
               provider.
             </p>
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={() => {
                 setAuthError("");
                 void login().catch((error) =>
@@ -172,9 +173,9 @@ export default function App() {
               }}
             >
               Sign in with SSO
-            </button>
-            {authError && <p className="err">{authError}</p>}
-          </div>
+            </Button>
+            {authError && <Alert tone="danger">{authError}</Alert>}
+          </Card>
         </main>
       </AppShell>
     );

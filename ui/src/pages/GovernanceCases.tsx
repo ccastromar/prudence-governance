@@ -6,6 +6,7 @@ import {
   type GovernanceCaseType,
 } from "../api";
 import { StatusBadge } from "../components";
+import { Alert, Button, Card } from "@chestertown/design";
 
 const TYPES: GovernanceCaseType[] = [
   "ASSESSMENT",
@@ -80,8 +81,8 @@ export default function GovernanceCases() {
         actions. Prudence stores the process, owners and SHA-256-backed
         references — never the document itself.
       </p>
-      {error && <p className="err">{error}</p>}
-      <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
+      {error && <Alert tone="danger">{error}</Alert>}
+      <Card style={{ marginBottom: "var(--sp-6)" }}>
         <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>Open a case</h2>
         <form
           onSubmit={(e) => {
@@ -152,11 +153,11 @@ export default function GovernanceCases() {
               onChange={(e) => setForm({ ...form, summary: e.target.value })}
             />
           </div>
-          <button className="btn btn-primary" disabled={busy}>
+          <Button type="submit" variant="primary" disabled={busy}>
             Open case
-          </button>
+          </Button>
         </form>
-      </div>
+      </Card>
       <table>
         <thead>
           <tr>
@@ -202,7 +203,7 @@ export default function GovernanceCases() {
         </tbody>
       </table>
       {selected && (
-        <section className="card" style={{ marginTop: "var(--sp-6)" }}>
+        <Card style={{ marginTop: "var(--sp-6)" }}>
           <div className="row between">
             <div>
               <h2 style={{ margin: 0, fontSize: "var(--fs-lg)" }}>
@@ -213,25 +214,19 @@ export default function GovernanceCases() {
                 {systemName(selected.aiSystemId)}
               </p>
             </div>
-            <button
-              className="btn btn-outline"
-              onClick={() => setSelected(null)}
-            >
-              Close
-            </button>
+            <Button onClick={() => setSelected(null)}>Close</Button>
           </div>
           <p>{selected.summary}</p>
           {selected.status === "OPEN" && (
-            <button
-              className="btn btn-outline"
+            <Button
               disabled={busy}
               onClick={() => act(() => api.startGovernanceReview(selected.id))}
             >
               Start review
-            </button>
+            </Button>
           )}
           {selected.status !== "CLOSED" && (
-            <div className="card" style={{ marginTop: "var(--sp-4)" }}>
+            <Card style={{ marginTop: "var(--sp-4)" }}>
               <h3 style={{ marginTop: 0 }}>Reference evidence</h3>
               <p className="mut" style={{ fontSize: "var(--fs-sm)" }}>
                 Link to the source record and its exact SHA-256; no file is
@@ -284,8 +279,8 @@ export default function GovernanceCases() {
                   />
                 </div>
               </div>
-              <button
-                className="btn btn-primary"
+              <Button
+                variant="primary"
                 disabled={busy}
                 onClick={() =>
                   act(async () => {
@@ -301,8 +296,8 @@ export default function GovernanceCases() {
                 }
               >
                 Record reference
-              </button>
-            </div>
+              </Button>
+            </Card>
           )}
           <h3>Evidence references</h3>
           {selected.evidence.length === 0 ? (
@@ -327,15 +322,14 @@ export default function GovernanceCases() {
                 onChange={(e) => setDecision(e.target.value)}
                 placeholder="Decision, rationale and any follow-up owner"
               />
-              <button
-                className="btn btn-outline"
+              <Button
                 disabled={busy || !decision}
                 onClick={() =>
                   act(() => api.closeGovernanceCase(selected.id, decision))
                 }
               >
                 Close case
-              </button>
+              </Button>
             </div>
           )}
           <h3>Timeline</h3>
@@ -357,7 +351,7 @@ export default function GovernanceCases() {
               </li>
             ))}
           </ul>
-        </section>
+        </Card>
       )}
     </>
   );

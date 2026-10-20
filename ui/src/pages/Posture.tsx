@@ -9,6 +9,7 @@ import {
   type DeadLetter,
 } from "../api";
 import { RiskBadge, StatusBadge, PostureBadge } from "../components";
+import { Alert, Button, Card } from "@chestertown/design";
 
 /// Oversight dashboard: the step that closes the control loop. Prudence reads Ernest's evidence
 /// back and colours each registered system — GREEN only when it is both approved to run and
@@ -79,15 +80,11 @@ export default function Posture() {
         whether the evidence record backs it up.
       </p>
 
-      {error && (
-        <div className="card">
-          <span className="err">{error}</span>
-        </div>
-      )}
+      {error && <Alert tone="danger">{error}</Alert>}
 
       {data && (
         <>
-          <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
+          <Card style={{ marginBottom: "var(--sp-6)" }}>
             <div className="row between">
               <div>
                 <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
@@ -114,7 +111,7 @@ export default function Posture() {
                 </div>
               </div>
             </div>
-          </div>
+          </Card>
 
           <table>
             <thead>
@@ -169,22 +166,20 @@ export default function Posture() {
       )}
 
       {drift && !drift.complete && (
-        <div
-          className="card"
+        <Card
           style={{ marginTop: "var(--sp-6)", borderColor: "var(--danger)" }}
         >
-          <span className="err">
+          <Alert tone="danger">
             ● Policy-drift scan incomplete — results below cannot be trusted.
-          </span>
+          </Alert>
           <div className="mut" style={{ fontSize: "var(--fs-sm)" }}>
             {drift.scanDetail}
           </div>
-        </div>
+        </Card>
       )}
 
       {drift && drift.findings.length > 0 && (
-        <div
-          className="card"
+        <Card
           style={{
             marginTop: "var(--sp-6)",
             borderColor: drift.hasViolations
@@ -259,11 +254,11 @@ export default function Posture() {
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       {sink && (
-        <div className="card" style={{ marginTop: "var(--sp-6)" }}>
+        <Card style={{ marginTop: "var(--sp-6)" }}>
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
             Evidence store: {sink.label}
           </h2>
@@ -290,14 +285,11 @@ export default function Posture() {
               </span>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
       {sources && (!sources.complete || sources.mismatches.length > 0) && (
-        <div
-          className="card"
-          style={{ marginTop: "var(--sp-6)", borderColor: "var(--warn)" }}
-        >
+        <Card style={{ marginTop: "var(--sp-6)", borderColor: "var(--warn)" }}>
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
             Execution sources
           </h2>
@@ -344,12 +336,11 @@ export default function Posture() {
               </tbody>
             </table>
           )}
-        </div>
+        </Card>
       )}
 
       {dead.length > 0 && (
-        <div
-          className="card"
+        <Card
           style={{ marginTop: "var(--sp-6)", borderColor: "var(--danger)" }}
         >
           <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
@@ -398,19 +389,19 @@ export default function Posture() {
                     {d.lastError}
                   </td>
                   <td style={{ textAlign: "right" }}>
-                    <button
-                      className="btn btn-primary"
+                    <Button
+                      variant="primary"
                       disabled={busy === d.id}
                       onClick={() => retry(d)}
                     >
                       {busy === d.id ? "…" : "Retry"}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
     </>
   );

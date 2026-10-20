@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Alert, Button, Card } from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -106,7 +107,7 @@ export default function Monitoring() {
         Aggregated signals only. Ernest remains the evidence plane for execution
         logs.
       </p>
-      {error && <p className="err">{error}</p>}
+      {error && <Alert tone="danger">{error}</Alert>}
       <div className="field">
         <label>AI system</label>
         <select
@@ -127,7 +128,7 @@ export default function Monitoring() {
       </div>
       {id && (
         <>
-          <div className="card" style={{ marginBottom: "var(--sp-5)" }}>
+          <Card style={{ marginBottom: "var(--sp-5)" }}>
             <h2>
               Risk posture{" "}
               {summary && <span className="badge">{summary.status}</span>}
@@ -180,11 +181,11 @@ export default function Monitoring() {
                 setForm({ ...form, sourceReference: e.target.value })
               }
             />
-            <button className="btn btn-primary" onClick={recordSignal}>
+            <Button variant="primary" onClick={recordSignal}>
               Record signal
-            </button>
-          </div>
-          <section className="card">
+            </Button>
+          </Card>
+          <Card>
             <h2>Corrective and preventive actions</h2>
             <p className="mut">
               Create an action from an observed signal, then retain evidence
@@ -227,8 +228,8 @@ export default function Monitoring() {
                 aria-label="Due date"
               />
             </div>
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               disabled={
                 !capa.signalId ||
                 !capa.risk ||
@@ -239,7 +240,7 @@ export default function Monitoring() {
               onClick={createCapa}
             >
               Open CAPA
-            </button>
+            </Button>
             {capas.length === 0 ? (
               <p className="mut">No CAPA open.</p>
             ) : (
@@ -251,12 +252,9 @@ export default function Monitoring() {
                     {item.status}
                   </div>
                   {item.status === "OPEN" && (
-                    <button
-                      className="btn btn-outline"
-                      onClick={() => implement(item.id)}
-                    >
+                    <Button onClick={() => implement(item.id)}>
                       Mark implemented
-                    </button>
+                    </Button>
                   )}
                   {item.status === "IMPLEMENTED" && (
                     <div className="row">
@@ -270,13 +268,13 @@ export default function Monitoring() {
                           }))
                         }
                       />
-                      <button
-                        className="btn btn-primary"
+                      <Button
+                        variant="primary"
                         disabled={!(verification[item.id] ?? "").trim()}
                         onClick={() => verify(item.id)}
                       >
                         Verify effectiveness
-                      </button>
+                      </Button>
                     </div>
                   )}
                   {item.status === "VERIFIED" && (
@@ -287,7 +285,7 @@ export default function Monitoring() {
                 </div>
               ))
             )}
-          </section>
+          </Card>
         </>
       )}
     </>

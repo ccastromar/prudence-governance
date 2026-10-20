@@ -9,6 +9,7 @@ import {
   type ReportingState,
 } from "../api";
 import { EvidenceState } from "../components";
+import { Alert, Button, Card } from "@chestertown/design";
 
 const CATEGORIES: { value: IncidentCategory; label: string }[] = [
   { value: "DEATH", label: "Death of a person — Art. 3(49)(a)" },
@@ -197,12 +198,12 @@ export default function Incidents() {
       </p>
 
       {error && (
-        <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
-          <span className="err">{error}</span>
-        </div>
+        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+          {error}
+        </Alert>
       )}
 
-      <div className="card" style={{ marginBottom: "var(--sp-6)" }}>
+      <Card style={{ marginBottom: "var(--sp-6)" }}>
         <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
           Register an incident
         </h2>
@@ -346,12 +347,12 @@ export default function Incidents() {
               A serious incident alerts governance and the system owner
               immediately.
             </span>
-            <button className="btn btn-primary" disabled={busy}>
+            <Button type="submit" variant="primary" disabled={busy}>
               {busy ? "Saving…" : "Register incident"}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
 
       <table style={{ marginBottom: "var(--sp-6)" }}>
         <thead>
@@ -400,18 +401,17 @@ export default function Incidents() {
       </table>
 
       {selected && (
-        <div className="card">
+        <Card>
           <div className="row between">
             <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
               {selected.title}
             </h2>
-            <button
-              className="btn btn-outline"
+            <Button
               style={{ fontSize: "var(--fs-sm)", padding: "4px 10px" }}
               onClick={() => setSelected(null)}
             >
               Close
-            </button>
+            </Button>
           </div>
           <p>{selected.description}</p>
           <div
@@ -456,7 +456,7 @@ export default function Incidents() {
           </div>
 
           {selected.status !== "CLOSED" && (
-            <div className="card" style={{ marginBottom: "var(--sp-4)" }}>
+            <Card style={{ marginBottom: "var(--sp-4)" }}>
               {selected.reportable &&
                 (selected.status === "OPEN" ||
                   selected.status === "INITIAL_REPORT_SUBMITTED") && (
@@ -518,8 +518,7 @@ export default function Incidents() {
                     </div>
                     <div style={{ marginBottom: "var(--sp-4)" }}>
                       {selected.status === "OPEN" && (
-                        <button
-                          className="btn btn-outline"
+                        <Button
                           disabled={busy}
                           style={{ marginRight: "var(--sp-2)" }}
                           onClick={() =>
@@ -529,10 +528,10 @@ export default function Incidents() {
                           }
                         >
                           Record initial report
-                        </button>
+                        </Button>
                       )}
-                      <button
-                        className="btn btn-primary"
+                      <Button
+                        variant="primary"
                         disabled={busy}
                         onClick={() =>
                           act(() =>
@@ -545,7 +544,7 @@ export default function Incidents() {
                         }
                       >
                         Record final report
-                      </button>
+                      </Button>
                     </div>
                   </>
                 )}
@@ -604,8 +603,7 @@ export default function Incidents() {
                 </div>
               )}
               {selected.status === "OPEN" && (
-                <button
-                  className="btn btn-outline"
+                <Button
                   disabled={busy || !note}
                   style={{ marginRight: "var(--sp-2)" }}
                   onClick={() =>
@@ -615,16 +613,15 @@ export default function Incidents() {
                   }
                 >
                   Re-triage
-                </button>
+                </Button>
               )}
-              <button
-                className="btn btn-outline"
+              <Button
                 disabled={busy || !note}
                 onClick={() => act(() => api.closeIncident(selected.id, note))}
               >
                 Close incident
-              </button>
-            </div>
+              </Button>
+            </Card>
           )}
 
           <h3>Timeline</h3>
@@ -654,7 +651,7 @@ export default function Incidents() {
               </li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
     </>
   );

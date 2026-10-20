@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Alert, Button, Card } from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -60,7 +61,7 @@ export default function Oversight() {
         Named authority, current training and auditable override decisions.
         Prudence governs capability; AOS executes the intervention.
       </p>
-      {error && <p className="err">{error}</p>}
+      {error && <Alert tone="danger">{error}</Alert>}
       <div className="field">
         <label>AI system</label>
         <select
@@ -80,7 +81,7 @@ export default function Oversight() {
       </div>
       {id && (
         <div className="grid2">
-          <section className="card">
+          <Card>
             <h2>Assignments</h2>
             {assignments.map((x) => (
               <p key={x.id}>
@@ -137,8 +138,8 @@ export default function Oversight() {
               />{" "}
               Stop authority
             </label>
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={async () => {
                 try {
                   await api.addAssignment(id, a);
@@ -149,9 +150,9 @@ export default function Oversight() {
               }}
             >
               Assign
-            </button>
-          </section>
-          <section className="card">
+            </Button>
+          </Card>
+          <Card>
             <h2>Overrides from AOS</h2>
             {overrides.map((x) => (
               <div
@@ -184,8 +185,7 @@ export default function Oversight() {
                         setReview({ ...review, note: e.target.value })
                       }
                     />
-                    <button
-                      className="btn btn-outline"
+                    <Button
                       onClick={async () => {
                         try {
                           await api.reviewOverride(x.id, review);
@@ -197,7 +197,7 @@ export default function Oversight() {
                       }}
                     >
                       Review
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -223,8 +223,8 @@ export default function Oversight() {
               value={o.outcome}
               onChange={(e) => setO({ ...o, outcome: e.target.value })}
             />
-            <button
-              className="btn btn-primary"
+            <Button
+              variant="primary"
               onClick={async () => {
                 try {
                   await api.addOverride(id, o);
@@ -235,8 +235,8 @@ export default function Oversight() {
               }}
             >
               Record override
-            </button>
-          </section>
+            </Button>
+          </Card>
         </div>
       )}
     </>
