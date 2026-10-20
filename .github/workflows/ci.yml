@@ -53,7 +53,7 @@ jobs:
         working-directory: ui
         run: npm ci
 
-      # Type-checks (tsc -b) and bundles; imports the shared design tokens from docs/design.
+      # Type-checks (tsc -b) and bundles.
       - name: Type-check and build
         working-directory: ui
         run: npm run build

@@ -1,6 +1,6 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
-import "../../docs/design/tokens.css";
+import "./chestertown-tokens.css";
 import "./styles.css";
 import App from "./App";
 

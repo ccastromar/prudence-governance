@@ -34,7 +34,7 @@ for the founding architecture.
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
 | `docs/adr/` | Architecture decisions |
-| `docs/design/` | Shared design language (tokens) of the three apps |
+| `ui/src/chestertown-tokens.css` | Synced copy of the shared design tokens (source: the `chestertown-design` repository) |
 | `docs/operations/` | Deployment and load-test results |
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
 

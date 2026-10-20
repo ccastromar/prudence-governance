@@ -61,7 +61,7 @@ services:
 
   ui:
     build:
-      # Repository root: the console imports the shared design tokens from docs/design.
+      # Repository root, as the ui Dockerfile expects.
       context: .
       dockerfile: ui/Dockerfile
     depends_on:

@@ -1,3 +1,6 @@
+/* Synced from chestertown-design v0.1.0 (tokens.css sha256:90eedcc60c13).
+ * Do not edit this copy: change chestertown-design and run its scripts/sync.sh. */
+
 /*
  * Chestertown design tokens — one family, three apps.
  *
@@ -7,7 +10,10 @@
  *   <html data-vertex="govern">   (Prudence)
  *   <html data-vertex="assure">   (Ernest)
  * Everything else — neutrals, type, spacing, semantics — is shared verbatim. Framework
- * agnostic: plain CSS custom properties, usable from React, Svelte or anything.
+ * agnostic: plain CSS custom properties.
+ *
+ * This file is the source of truth. Apps carry a synced copy (scripts/sync.sh); never edit
+ * a copy.
  */
 
 :root {
@@ -46,7 +52,7 @@
   --accent-govern:  #d97706;  /* Prudence — amber: decide/oversee */
   --accent-assure:  #0d9488;  /* Ernest — teal/green: prove */
 
-  /* default accent = govern (this repo is Prudence); apps override via data-vertex */
+  /* fallback accent when an app sets no data-vertex */
   --accent:    var(--accent-govern);
   --accent-fg: #ffffff;
   --accent-weak: color-mix(in srgb, var(--accent) 12%, var(--surface));
@@ -111,4 +117,7 @@
   --text: var(--c-neutral-100); --text-muted: var(--c-neutral-400);
   --ok-bg:#052e16; --warn-bg:#422006; --danger-bg:#450a0a; --info-bg:#172554;
   --risk-prohibited-bg:#450a0a; --risk-high-bg:#422006; --risk-limited-bg:#172554; --risk-minimal-bg:#1e293b;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 1px 3px rgba(0,0,0,.5);
+  --shadow-lg:0 10px 25px -5px rgba(0,0,0,.6);
 }

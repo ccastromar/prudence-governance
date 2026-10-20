@@ -9,6 +9,5 @@ export default defineConfig({
     port: 5200,
     strictPort: true,
     proxy: { '/api': 'http://127.0.0.1:8099' },
-    fs: { allow: ['..'] }, // import the shared design tokens from ../design
   },
 });
