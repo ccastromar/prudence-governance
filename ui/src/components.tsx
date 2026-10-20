@@ -1,20 +1,8 @@
-import type { EvidenceDelivery, RiskTier } from "./api";
+import { Badge, type Tone } from "@chestertown/design";
+import type { EvidenceDelivery } from "./api";
 
-const riskStyle: Record<RiskTier, React.CSSProperties> = {
-  PROHIBITED: {
-    background: "var(--risk-prohibited-bg)",
-    color: "var(--risk-prohibited)",
-  },
-  HIGH: { background: "var(--risk-high-bg)", color: "var(--risk-high)" },
-  LIMITED: {
-    background: "var(--risk-limited-bg)",
-    color: "var(--risk-limited)",
-  },
-  MINIMAL: {
-    background: "var(--risk-minimal-bg)",
-    color: "var(--risk-minimal)",
-  },
-};
+// Risk tiers and PDP decisions look the same in all three modules: the shared components.
+export { DecisionBadge, RiskBadge } from "@chestertown/design";
 
 /// Evidence receipt: queued, recorded (with or without a qualified seal), or failed for good.
 export function EvidenceState({
@@ -44,73 +32,36 @@ export function EvidenceState({
   );
 }
 
-export function RiskBadge({
-  tier,
-  annexIII,
-}: {
-  tier: RiskTier;
-  annexIII?: boolean;
-}) {
-  return (
-    <span className="badge" style={riskStyle[tier]}>
-      {tier}
-      {annexIII ? " · Annex III" : ""}
-    </span>
-  );
-}
-
-const statusStyle: Record<string, React.CSSProperties> = {
-  APPROVED: { background: "var(--ok-bg)", color: "var(--ok)" },
-  EXPIRED: { background: "var(--danger-bg)", color: "var(--danger)" },
-  PENDING_APPROVAL: { background: "var(--warn-bg)", color: "var(--warn)" },
-  PENDING_SECOND_APPROVAL: {
-    background: "var(--warn-bg)",
-    color: "var(--warn)",
-  },
-  REJECTED: { background: "var(--danger-bg)", color: "var(--danger)" },
-  BLOCKED: { background: "var(--danger-bg)", color: "var(--danger)" },
-  DRAFT: { background: "var(--surface-muted)", color: "var(--text-muted)" },
-  UNDER_ASSESSMENT: {
-    background: "var(--surface-muted)",
-    color: "var(--text-muted)",
-  },
-  EVIDENCE_PENDING: { background: "var(--warn-bg)", color: "var(--warn)" },
-  SUSPENDED: { background: "var(--danger-bg)", color: "var(--danger)" },
-  RETIRED: { background: "var(--surface-muted)", color: "var(--text-muted)" },
+const STATUS_TONE: Record<string, Tone> = {
+  APPROVED: "ok",
+  EXPIRED: "danger",
+  PENDING_APPROVAL: "warn",
+  PENDING_SECOND_APPROVAL: "warn",
+  REJECTED: "danger",
+  BLOCKED: "danger",
+  DRAFT: "neutral",
+  UNDER_ASSESSMENT: "neutral",
+  EVIDENCE_PENDING: "warn",
+  SUSPENDED: "danger",
+  RETIRED: "neutral",
 };
 export function StatusBadge({ status }: { status: string }) {
   return (
-    <span className="badge" style={statusStyle[status] ?? statusStyle.DRAFT}>
+    <Badge tone={STATUS_TONE[status] ?? "neutral"}>
       {status.replace("_", " ")}
-    </span>
+    </Badge>
   );
 }
 
-const postureStyle: Record<string, React.CSSProperties> = {
-  GREEN: { background: "var(--ok-bg)", color: "var(--ok)" },
-  AMBER: { background: "var(--warn-bg)", color: "var(--warn)" },
-  RED: { background: "var(--danger-bg)", color: "var(--danger)" },
+const POSTURE_TONE: Record<string, Tone> = {
+  GREEN: "ok",
+  AMBER: "warn",
+  RED: "danger",
 };
 export function PostureBadge({ status }: { status: string }) {
   return (
-    <span className="badge" style={postureStyle[status] ?? postureStyle.AMBER}>
-      ● {status}
-    </span>
-  );
-}
-
-const decisionStyle: Record<string, React.CSSProperties> = {
-  ALLOW: { background: "var(--ok-bg)", color: "var(--ok)" },
-  APPROVAL_REQUIRED: { background: "var(--warn-bg)", color: "var(--warn)" },
-  DENY: { background: "var(--danger-bg)", color: "var(--danger)" },
-};
-export function DecisionBadge({ decision }: { decision: string }) {
-  return (
-    <span
-      className="badge"
-      style={decisionStyle[decision] ?? decisionStyle.DENY}
-    >
-      ● {decision.replace("_", " ")}
-    </span>
+    <Badge tone={POSTURE_TONE[status] ?? "warn"} dot>
+      {status}
+    </Badge>
   );
 }

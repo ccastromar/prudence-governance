@@ -12,88 +12,6 @@ body {
 a {
   color: var(--accent);
 }
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* top bar */
-.topbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-4);
-  padding: var(--sp-3) var(--sp-6);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-}
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  font-weight: var(--fw-bold);
-}
-.brand .mark {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: var(--accent);
-  color: var(--accent-fg);
-  display: grid;
-  place-items: center;
-  font-weight: var(--fw-bold);
-}
-.brand .vertex {
-  color: var(--text-muted);
-  font-weight: var(--fw-medium);
-  font-size: var(--fs-sm);
-}
-.switcher {
-  margin-left: auto;
-  display: flex;
-  gap: var(--sp-1);
-}
-.switcher a {
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  text-decoration: none;
-  padding: 4px 10px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-}
-.switcher a.here {
-  color: var(--accent-fg);
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-/* nav tabs */
-.tabs {
-  display: flex;
-  gap: var(--sp-1);
-  padding: 0 var(--sp-6);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.tabs button {
-  background: none;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  padding: var(--sp-3) var(--sp-3);
-  color: var(--text-muted);
-  font-size: var(--fs-sm);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
-}
-.tabs button.active {
-  color: var(--text);
-  border-bottom-color: var(--accent);
-}
-
 main {
   padding: var(--sp-6);
   max-width: 1040px;
@@ -267,23 +185,6 @@ code {
 }
 
 @media (max-width: 760px) {
-  .topbar {
-    padding: var(--sp-3) var(--sp-4);
-    flex-wrap: wrap;
-  }
-  .switcher {
-    margin-left: 0;
-    order: 3;
-    width: 100%;
-    overflow-x: auto;
-  }
-  .tabs {
-    overflow-x: auto;
-    padding: 0 var(--sp-4);
-  }
-  .tabs button {
-    white-space: nowrap;
-  }
   main {
     padding: var(--sp-4);
   }

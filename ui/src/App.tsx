@@ -11,7 +11,14 @@ import Monitoring from "./pages/Monitoring";
 import Oversight from "./pages/Oversight";
 import Snapshots from "./pages/Snapshots";
 import Changes from "./pages/Changes";
-import { APPS, CURRENT } from "./chestertown";
+import {
+  AppShell,
+  Button,
+  Tabs,
+  ThemeToggle,
+  type TabItem,
+} from "@chestertown/design";
+import { APPS } from "./chestertown";
 import {
   ssoEnabled,
   getToken,
@@ -34,20 +41,21 @@ type Tab =
   | "snapshots"
   | "attestations";
 
-const TABS: readonly Tab[] = [
-  "registry",
-  "approvals",
-  "decisions",
-  "posture",
-  "incidents",
-  "cases",
-  "impact",
-  "monitoring",
-  "oversight",
-  "changes",
-  "snapshots",
-  "attestations",
+const TAB_ITEMS: TabItem<Tab>[] = [
+  { id: "registry", label: "AI system registry" },
+  { id: "approvals", label: "Approvals" },
+  { id: "decisions", label: "Policy decisions" },
+  { id: "posture", label: "Posture" },
+  { id: "incidents", label: "Incidents" },
+  { id: "cases", label: "Governance cases" },
+  { id: "impact", label: "Impact & transparency" },
+  { id: "monitoring", label: "Monitoring" },
+  { id: "oversight", label: "Human oversight" },
+  { id: "changes", label: "Changes" },
+  { id: "snapshots", label: "Snapshots" },
+  { id: "attestations", label: "Attestations" },
 ];
+const TABS: readonly Tab[] = TAB_ITEMS.map((item) => item.id);
 
 /// Deep links from the other Chestertown apps: `?tab=registry&system=<id>` opens a tab and
 /// highlights one AI system. The SSO round-trip reloads the page without them, so they are
@@ -73,23 +81,6 @@ function readDeepLink(): { tab?: Tab; system?: string } {
     tab: tab && TABS.includes(tab) ? tab : undefined,
     system: params.get("system") ?? undefined,
   };
-}
-
-function Switcher() {
-  return (
-    <nav className="switcher">
-      {APPS.map((app) => (
-        <a
-          key={app.key}
-          href={app.url}
-          className={app.vertex === CURRENT ? "here" : ""}
-          title={`${app.label} — ${app.vertex}`}
-        >
-          {app.label}
-        </a>
-      ))}
-    </nav>
-  );
 }
 
 export default function App() {
@@ -132,33 +123,31 @@ export default function App() {
 
   if (!ready) return null;
 
-  const topbar = (
-    <header className="topbar">
-      <div className="brand">
-        <span className="mark">P</span>
-        <span>Prudence</span>
-        <span className="vertex">· govern</span>
-      </div>
-      <Switcher />
-      {ssoEnabled && authed && (
-        <button
-          className="btn btn-outline"
-          style={{ marginLeft: "var(--sp-3)" }}
-          onClick={() => {
-            clearToken();
-            setAuthed(false);
-          }}
-        >
-          Sign out
-        </button>
-      )}
-    </header>
-  );
+  const shell = {
+    vertex: "govern" as const,
+    name: "Prudence",
+    apps: APPS,
+    actions: (
+      <>
+        <ThemeToggle storageKey="prudence.theme" />
+        {ssoEnabled && authed && (
+          <Button
+            size="sm"
+            onClick={() => {
+              clearToken();
+              setAuthed(false);
+            }}
+          >
+            Sign out
+          </Button>
+        )}
+      </>
+    ),
+  };
 
   if (ssoEnabled && !authed) {
     return (
-      <div className="app">
-        {topbar}
+      <AppShell {...shell}>
         <main>
           <div
             className="card"
@@ -187,87 +176,22 @@ export default function App() {
             {authError && <p className="err">{authError}</p>}
           </div>
         </main>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="app">
-      {topbar}
-      <nav className="tabs">
-        <button
-          className={tab === "registry" ? "active" : ""}
-          onClick={() => setTab("registry")}
-        >
-          AI system registry
-        </button>
-        <button
-          className={tab === "approvals" ? "active" : ""}
-          onClick={() => setTab("approvals")}
-        >
-          Approvals
-        </button>
-        <button
-          className={tab === "decisions" ? "active" : ""}
-          onClick={() => setTab("decisions")}
-        >
-          Policy decisions
-        </button>
-        <button
-          className={tab === "posture" ? "active" : ""}
-          onClick={() => setTab("posture")}
-        >
-          Posture
-        </button>
-        <button
-          className={tab === "incidents" ? "active" : ""}
-          onClick={() => setTab("incidents")}
-        >
-          Incidents
-        </button>
-        <button
-          className={tab === "cases" ? "active" : ""}
-          onClick={() => setTab("cases")}
-        >
-          Governance cases
-        </button>
-        <button
-          className={tab === "impact" ? "active" : ""}
-          onClick={() => setTab("impact")}
-        >
-          Impact & transparency
-        </button>
-        <button
-          className={tab === "monitoring" ? "active" : ""}
-          onClick={() => setTab("monitoring")}
-        >
-          Monitoring
-        </button>
-        <button
-          className={tab === "oversight" ? "active" : ""}
-          onClick={() => setTab("oversight")}
-        >
-          Human oversight
-        </button>
-        <button
-          className={tab === "changes" ? "active" : ""}
-          onClick={() => setTab("changes")}
-        >
-          Changes
-        </button>
-        <button
-          className={tab === "snapshots" ? "active" : ""}
-          onClick={() => setTab("snapshots")}
-        >
-          Snapshots
-        </button>
-        <button
-          className={tab === "attestations" ? "active" : ""}
-          onClick={() => setTab("attestations")}
-        >
-          Attestations
-        </button>
-      </nav>
+    <AppShell
+      {...shell}
+      nav={
+        <Tabs
+          label="Prudence sections"
+          items={TAB_ITEMS}
+          value={tab}
+          onChange={setTab}
+        />
+      }
+    >
       <main>
         {tab === "registry" && <Registry focusSystem={link.system} />}
         {tab === "approvals" && <Approvals />}
@@ -282,6 +206,6 @@ export default function App() {
         {tab === "snapshots" && <Snapshots />}
         {tab === "attestations" && <Attestations />}
       </main>
-    </div>
+    </AppShell>
   );
 }

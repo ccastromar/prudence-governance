@@ -1,5 +1,5 @@
-# Console image. Build from the repository root (compose does). The shared design tokens are a
-# synced copy inside ui/src (chestertown-design), so nothing outside ui/ is needed.
+# Console image. Build from the repository root (compose does). The design system is a vendored
+# package in ui/vendor, so nothing outside ui/ is needed.
 FROM node:22-alpine AS build
 WORKDIR /workspace/ui
 # Vite substitutes only VITE_* variables at build time. These optional arguments let a deployer
@@ -15,6 +15,8 @@ ENV VITE_AOS_URL=$VITE_AOS_URL
 ENV VITE_PRUDENCE_URL=$VITE_PRUDENCE_URL
 ENV VITE_ERNEST_URL=$VITE_ERNEST_URL
 COPY ui/package*.json ./
+# @chestertown/design comes from the vendored tarball pinned in package.json.
+COPY ui/vendor ./vendor
 RUN npm ci
 COPY ui/ ./
 RUN npm run build
