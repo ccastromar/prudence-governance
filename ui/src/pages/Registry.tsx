@@ -68,6 +68,15 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusSystem, systems]);
 
+  // The controls panel opens below the whole table: bring it into view, or the Controls
+  // button looks like it did nothing when the list is long.
+  useEffect(() => {
+    if (!controlsFor) return;
+    document
+      .getElementById("compliance-controls")
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [controlsFor?.id]);
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true);
@@ -396,7 +405,10 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       </table>
 
       {controlsFor && (
-        <Card style={{ marginTop: "var(--sp-6)" }}>
+        <Card
+          id="compliance-controls"
+          style={{ marginTop: "var(--sp-6)", scrollMarginTop: "80px" }}
+        >
           <div className="row between">
             <div>
               <h2 style={{ fontSize: "var(--fs-lg)", margin: 0 }}>
