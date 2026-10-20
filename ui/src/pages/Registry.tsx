@@ -10,7 +10,16 @@ import {
   type RiskTier,
 } from "../api";
 import { RiskBadge, StatusBadge } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from "@chestertown/design";
 
 const EMPTY: RegisterInput = {
   name: "",
@@ -159,17 +168,17 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       <Card style={{ marginBottom: "var(--sp-6)" }}>
         <form onSubmit={submit}>
           <div className="grid2">
-            <div className="field">
-              <label>Name</label>
-              <input
+            <Field label="Name" htmlFor="registry-name">
+              <Input
+                id="registry-name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 required
               />
-            </div>
-            <div className="field">
-              <label>Risk tier</label>
-              <select
+            </Field>
+            <Field label="Risk tier" htmlFor="registry-risk-tier">
+              <Select
+                id="registry-risk-tier"
                 value={form.riskTier}
                 onChange={(e) =>
                   setForm({ ...form, riskTier: e.target.value as RiskTier })
@@ -180,11 +189,11 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                     {t}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>EU AI Act role</label>
-              <select
+              </Select>
+            </Field>
+            <Field label="EU AI Act role" htmlFor="registry-eu-ai-act-role">
+              <Select
+                id="registry-eu-ai-act-role"
                 value={form.regulatoryRole}
                 onChange={(e) =>
                   setForm({
@@ -198,45 +207,45 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                     {r}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
-          <div className="field">
-            <label>Intended purpose</label>
-            <input
+          <Field label="Intended purpose" htmlFor="registry-intended-purpose">
+            <Input
+              id="registry-intended-purpose"
               value={form.intendedPurpose}
               onChange={(e) =>
                 setForm({ ...form, intendedPurpose: e.target.value })
               }
               required
             />
-          </div>
+          </Field>
           <div className="grid2">
-            <div className="field">
-              <label>Owner name</label>
-              <input
+            <Field label="Owner name" htmlFor="registry-owner-name">
+              <Input
+                id="registry-owner-name"
                 value={form.ownerName}
                 onChange={(e) =>
                   setForm({ ...form, ownerName: e.target.value })
                 }
                 required
               />
-            </div>
-            <div className="field">
-              <label>Owner email</label>
-              <input
+            </Field>
+            <Field label="Owner email" htmlFor="registry-owner-email">
+              <Input
+                id="registry-owner-email"
                 type="email"
                 value={form.ownerEmail}
                 onChange={(e) =>
                   setForm({ ...form, ownerEmail: e.target.value })
                 }
               />
-            </div>
+            </Field>
           </div>
           <div className="grid2">
-            <div className="field">
-              <label>System version</label>
-              <input
+            <Field label="System version" htmlFor="registry-system-version">
+              <Input
+                id="registry-system-version"
                 value={form.systemVersion}
                 onChange={(e) =>
                   setForm({ ...form, systemVersion: e.target.value })
@@ -244,32 +253,41 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 required
                 placeholder="e.g. 2026.10"
               />
-            </div>
-            <div className="field">
-              <label>Model / build SHA-256</label>
-              <input
+            </Field>
+            <Field
+              label="Model / build SHA-256"
+              htmlFor="registry-model-build-sha-256"
+            >
+              <Input
+                id="registry-model-build-sha-256"
                 value={form.modelHash}
                 onChange={(e) =>
                   setForm({ ...form, modelHash: e.target.value })
                 }
                 required
               />
-            </div>
+            </Field>
           </div>
           <div className="grid2">
-            <div className="field">
-              <label>Operating geography</label>
-              <input
+            <Field
+              label="Operating geography"
+              htmlFor="registry-operating-geography"
+            >
+              <Input
+                id="registry-operating-geography"
                 value={form.operatingGeography}
                 onChange={(e) =>
                   setForm({ ...form, operatingGeography: e.target.value })
                 }
                 required
               />
-            </div>
-            <div className="field">
-              <label>Affected population</label>
-              <input
+            </Field>
+            <Field
+              label="Affected population"
+              htmlFor="registry-affected-population"
+            >
+              <Input
+                id="registry-affected-population"
                 value={form.affectedPopulation}
                 onChange={(e) =>
                   setForm({ ...form, affectedPopulation: e.target.value })
@@ -277,31 +295,26 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 required
                 placeholder="e.g. retail credit applicants"
               />
-            </div>
+            </Field>
           </div>
-          <div className="grid2">
-            <label className="field">
-              <input
-                type="checkbox"
-                checked={form.annexI}
-                onChange={(e) => setForm({ ...form, annexI: e.target.checked })}
-              />{" "}
-              Annex I regulated product
-            </label>
-            <label className="field">
-              <input
-                type="checkbox"
-                checked={form.annexIII}
-                onChange={(e) =>
-                  setForm({ ...form, annexIII: e.target.checked })
-                }
-              />{" "}
-              Annex III use case
-            </label>
+          <div className="grid2" style={{ marginBottom: "var(--sp-4)" }}>
+            <Checkbox
+              label="Annex I regulated product"
+              checked={form.annexI}
+              onChange={(e) => setForm({ ...form, annexI: e.target.checked })}
+            />
+            <Checkbox
+              label="Annex III use case"
+              checked={form.annexIII}
+              onChange={(e) => setForm({ ...form, annexIII: e.target.checked })}
+            />
           </div>
-          <div className="field">
-            <label>Classification justification</label>
-            <textarea
+          <Field
+            label="Classification justification"
+            htmlFor="registry-classification-justification"
+          >
+            <Textarea
+              id="registry-classification-justification"
               value={form.classificationJustification}
               onChange={(e) =>
                 setForm({
@@ -311,10 +324,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               }
               required
             />
-          </div>
-          <div className="field">
-            <label>Applicable obligations (one per line)</label>
-            <textarea
+          </Field>
+          <Field
+            label="Applicable obligations (one per line)"
+            htmlFor="registry-applicable-obligations-one-per-line"
+          >
+            <Textarea
+              id="registry-applicable-obligations-one-per-line"
               value={form.obligations.join("\n")}
               onChange={(e) =>
                 setForm({ ...form, obligations: e.target.value.split("\n") })
@@ -324,7 +340,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 "Article 9 risk management\nArticle 10 data governance"
               }
             />
-          </div>
+          </Field>
           <div className="row between">
             {error ? (
               <Alert tone="danger">{error}</Alert>
@@ -489,9 +505,12 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                   </p>
                 ) : (
                   <div className="grid2">
-                    <div className="field">
-                      <label>Evidence URI</label>
-                      <input
+                    <Field
+                      label="Evidence URI"
+                      htmlFor={`registry-evidence-uri-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-evidence-uri-${control.id}`}
                         value={draft.evidenceUri}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -500,10 +519,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                         }
                         placeholder="https://…"
                       />
-                    </div>
-                    <div className="field">
-                      <label>SHA-256</label>
-                      <input
+                    </Field>
+                    <Field
+                      label="SHA-256"
+                      htmlFor={`registry-sha-256-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-sha-256-${control.id}`}
                         value={draft.evidenceSha256}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -512,10 +534,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                         }
                         placeholder="64 hex characters"
                       />
-                    </div>
-                    <div className="field">
-                      <label>Evidence version</label>
-                      <input
+                    </Field>
+                    <Field
+                      label="Evidence version"
+                      htmlFor={`registry-evidence-version-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-evidence-version-${control.id}`}
                         value={draft.evidenceVersion}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -523,10 +548,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                           })
                         }
                       />
-                    </div>
-                    <div className="field">
-                      <label>Evidence owner</label>
-                      <input
+                    </Field>
+                    <Field
+                      label="Evidence owner"
+                      htmlFor={`registry-evidence-owner-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-evidence-owner-${control.id}`}
                         value={draft.evidenceOwner}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -534,12 +562,15 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                           })
                         }
                       />
-                    </div>
+                    </Field>
                     {control.accepts.includes("dataset-version") && (
                       <>
-                        <div className="field">
-                          <label>Dataset version</label>
-                          <input
+                        <Field
+                          label="Dataset version"
+                          htmlFor={`registry-dataset-version-${control.id}`}
+                        >
+                          <Input
+                            id={`registry-dataset-version-${control.id}`}
                             value={draft.datasetVersion}
                             onChange={(e) =>
                               updateEvidence(control.id, {
@@ -547,10 +578,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                               })
                             }
                           />
-                        </div>
-                        <div className="field">
-                          <label>Metrics by group</label>
-                          <input
+                        </Field>
+                        <Field
+                          label="Metrics by group"
+                          htmlFor={`registry-metrics-by-group-${control.id}`}
+                        >
+                          <Input
+                            id={`registry-metrics-by-group-${control.id}`}
                             value={draft.metricsByGroup}
                             onChange={(e) =>
                               updateEvidence(control.id, {
@@ -558,10 +592,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                               })
                             }
                           />
-                        </div>
-                        <div className="field">
-                          <label>Approver</label>
-                          <input
+                        </Field>
+                        <Field
+                          label="Approver"
+                          htmlFor={`registry-approver-${control.id}`}
+                        >
+                          <Input
+                            id={`registry-approver-${control.id}`}
                             value={draft.approver}
                             onChange={(e) =>
                               updateEvidence(control.id, {
@@ -569,12 +606,15 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                               })
                             }
                           />
-                        </div>
+                        </Field>
                       </>
                     )}
-                    <div className="field">
-                      <label>Signed connector attestation</label>
-                      <input
+                    <Field
+                      label="Signed connector attestation"
+                      htmlFor={`registry-signed-connector-attestation-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-signed-connector-attestation-${control.id}`}
                         value={draft.signedAttestation}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -583,10 +623,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                         }
                         placeholder="attestation id or signed payload reference"
                       />
-                    </div>
-                    <div className="field">
-                      <label>Ernest receipt (optional)</label>
-                      <input
+                    </Field>
+                    <Field
+                      label="Ernest receipt (optional)"
+                      htmlFor={`registry-ernest-receipt-optional-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-ernest-receipt-optional-${control.id}`}
                         value={draft.ernestReceipt}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -595,10 +638,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                         }
                         placeholder="ernest://…"
                       />
-                    </div>
-                    <div className="field">
-                      <label>Expires at (optional, ISO instant)</label>
-                      <input
+                    </Field>
+                    <Field
+                      label="Expires at (optional, ISO instant)"
+                      htmlFor={`registry-expires-at-optional-iso-instant-${control.id}`}
+                    >
+                      <Input
+                        id={`registry-expires-at-optional-iso-instant-${control.id}`}
                         value={draft.expiresAt ?? ""}
                         onChange={(e) =>
                           updateEvidence(control.id, {
@@ -607,8 +653,10 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                         }
                         placeholder="derived automatically if blank"
                       />
-                    </div>
-                    <div className="field" style={{ alignSelf: "end" }}>
+                    </Field>
+                    <div
+                      style={{ alignSelf: "end", marginBottom: "var(--sp-4)" }}
+                    >
                       <Button
                         variant="primary"
                         disabled={controlBusy === control.id}

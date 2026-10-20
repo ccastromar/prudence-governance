@@ -9,7 +9,16 @@ import {
   type ReportingState,
 } from "../api";
 import { EvidenceState } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from "@chestertown/design";
 
 const CATEGORIES: { value: IncidentCategory; label: string }[] = [
   { value: "DEATH", label: "Death of a person — Art. 3(49)(a)" },
@@ -209,9 +218,9 @@ export default function Incidents() {
         </h2>
         <form onSubmit={submit}>
           <div className="grid2">
-            <div className="field">
-              <label>AI system</label>
-              <select
+            <Field label="AI system" htmlFor="incidents-ai-system">
+              <Select
+                id="incidents-ai-system"
                 value={form.aiSystemId}
                 onChange={(e) =>
                   setForm({ ...form, aiSystemId: e.target.value })
@@ -224,31 +233,31 @@ export default function Incidents() {
                     {s.name} ({s.regulatoryRole})
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Title</label>
-              <input
+              </Select>
+            </Field>
+            <Field label="Title" htmlFor="incidents-title">
+              <Input
+                id="incidents-title"
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 required
               />
-            </div>
+            </Field>
           </div>
-          <div className="field">
-            <label>What happened</label>
-            <textarea
+          <Field label="What happened" htmlFor="incidents-what-happened">
+            <Textarea
+              id="incidents-what-happened"
               value={form.description}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
               required
             />
-          </div>
+          </Field>
           <div className="grid2">
-            <div className="field">
-              <label>Occurred at</label>
-              <input
+            <Field label="Occurred at" htmlFor="incidents-occurred-at">
+              <Input
+                id="incidents-occurred-at"
                 type="datetime-local"
                 value={form.occurredAt}
                 onChange={(e) =>
@@ -256,10 +265,13 @@ export default function Incidents() {
                 }
                 required
               />
-            </div>
-            <div className="field">
-              <label>Became aware at (deadline runs from here)</label>
-              <input
+            </Field>
+            <Field
+              label="Became aware at (deadline runs from here)"
+              htmlFor="incidents-became-aware-at-deadline-runs-from-here"
+            >
+              <Input
+                id="incidents-became-aware-at-deadline-runs-from-here"
                 type="datetime-local"
                 value={form.detectedAt}
                 onChange={(e) =>
@@ -267,12 +279,12 @@ export default function Incidents() {
                 }
                 required
               />
-            </div>
+            </Field>
           </div>
           <div className="grid2">
-            <div className="field">
-              <label>Classification</label>
-              <select
+            <Field label="Classification" htmlFor="incidents-classification">
+              <Select
+                id="incidents-classification"
                 value={form.category}
                 onChange={(e) =>
                   setForm({
@@ -286,11 +298,14 @@ export default function Incidents() {
                     {c.label}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Causal link to the AI system</label>
-              <select
+              </Select>
+            </Field>
+            <Field
+              label="Causal link to the AI system"
+              htmlFor="incidents-causal-link-to-the-ai-system"
+            >
+              <Select
+                id="incidents-causal-link-to-the-ai-system"
                 value={form.causalLink}
                 onChange={(e) =>
                   setForm({ ...form, causalLink: e.target.value as CausalLink })
@@ -301,13 +316,16 @@ export default function Incidents() {
                     {l}
                   </option>
                 ))}
-              </select>
-            </div>
+              </Select>
+            </Field>
           </div>
           <div className="grid2">
-            <div className="field">
-              <label>Member State(s) where it occurred</label>
-              <input
+            <Field
+              label="Member State(s) where it occurred"
+              htmlFor="incidents-member-state-s-where-it-occurred"
+            >
+              <Input
+                id="incidents-member-state-s-where-it-occurred"
                 value={form.memberStates}
                 onChange={(e) =>
                   setForm({ ...form, memberStates: e.target.value })
@@ -315,31 +333,32 @@ export default function Incidents() {
                 required
                 placeholder="e.g. ES, PT"
               />
-            </div>
-            <div>
-              <label className="field" style={{ display: "block" }}>
-                <input
-                  type="checkbox"
-                  checked={form.widespreadInfringement}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      widespreadInfringement: e.target.checked,
-                    })
-                  }
-                />{" "}
-                Widespread infringement (2-day deadline)
-              </label>
-              <label className="field" style={{ display: "block" }}>
-                <input
-                  type="checkbox"
-                  checked={form.suspendSystem}
-                  onChange={(e) =>
-                    setForm({ ...form, suspendSystem: e.target.checked })
-                  }
-                />{" "}
-                Suspend the AI system now
-              </label>
+            </Field>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "var(--sp-2)",
+                marginBottom: "var(--sp-4)",
+              }}
+            >
+              <Checkbox
+                label="Widespread infringement (2-day deadline)"
+                checked={form.widespreadInfringement}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    widespreadInfringement: e.target.checked,
+                  })
+                }
+              />
+              <Checkbox
+                label="Suspend the AI system now"
+                checked={form.suspendSystem}
+                onChange={(e) =>
+                  setForm({ ...form, suspendSystem: e.target.checked })
+                }
+              />
             </div>
           </div>
           <div className="row between">
@@ -463,49 +482,61 @@ export default function Incidents() {
                   <>
                     <h3 style={{ marginTop: 0 }}>Record a filing</h3>
                     <div className="grid2">
-                      <div className="field">
-                        <label>Filed with</label>
-                        <input
+                      <Field label="Filed with" htmlFor="incidents-filed-with">
+                        <Input
+                          id="incidents-filed-with"
                           value={report.recipient}
                           onChange={(e) =>
                             setReport({ ...report, recipient: e.target.value })
                           }
                           placeholder="e.g. AESIA (ES)"
                         />
-                      </div>
-                      <div className="field">
-                        <label>Their reference</label>
-                        <input
+                      </Field>
+                      <Field
+                        label="Their reference"
+                        htmlFor="incidents-their-reference"
+                      >
+                        <Input
+                          id="incidents-their-reference"
                           value={report.reference}
                           onChange={(e) =>
                             setReport({ ...report, reference: e.target.value })
                           }
                         />
-                      </div>
+                      </Field>
                     </div>
-                    <div className="field">
-                      <label>Submitted at</label>
-                      <input
+                    <Field
+                      label="Submitted at"
+                      htmlFor="incidents-submitted-at"
+                    >
+                      <Input
+                        id="incidents-submitted-at"
                         type="datetime-local"
                         value={report.submittedAt}
                         onChange={(e) =>
                           setReport({ ...report, submittedAt: e.target.value })
                         }
                       />
-                    </div>
+                    </Field>
                     <div className="grid2">
-                      <div className="field">
-                        <label>Root cause (final report)</label>
-                        <textarea
+                      <Field
+                        label="Root cause (final report)"
+                        htmlFor="incidents-root-cause-final-report"
+                      >
+                        <Textarea
+                          id="incidents-root-cause-final-report"
                           value={report.rootCause}
                           onChange={(e) =>
                             setReport({ ...report, rootCause: e.target.value })
                           }
                         />
-                      </div>
-                      <div className="field">
-                        <label>Corrective actions (final report)</label>
-                        <textarea
+                      </Field>
+                      <Field
+                        label="Corrective actions (final report)"
+                        htmlFor="incidents-corrective-actions-final-report"
+                      >
+                        <Textarea
+                          id="incidents-corrective-actions-final-report"
                           value={report.correctiveActions}
                           onChange={(e) =>
                             setReport({
@@ -514,7 +545,7 @@ export default function Incidents() {
                             })
                           }
                         />
-                      </div>
+                      </Field>
                     </div>
                     <div style={{ marginBottom: "var(--sp-4)" }}>
                       {selected.status === "OPEN" && (
@@ -548,16 +579,19 @@ export default function Incidents() {
                     </div>
                   </>
                 )}
-              <div className="field">
-                <label>Note (required to re-triage or close)</label>
-                <textarea
+              <Field
+                label="Note (required to re-triage or close)"
+                htmlFor="incidents-note-required-to-re-triage-or-close"
+              >
+                <Textarea
+                  id="incidents-note-required-to-re-triage-or-close"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
-              </div>
+              </Field>
               {selected.status === "OPEN" && (
                 <div className="grid2" style={{ marginBottom: "var(--sp-3)" }}>
-                  <select
+                  <Select
                     value={triage.category}
                     onChange={(e) =>
                       setTriage({
@@ -571,8 +605,8 @@ export default function Incidents() {
                         {c.label}
                       </option>
                     ))}
-                  </select>
-                  <select
+                  </Select>
+                  <Select
                     value={triage.causalLink}
                     onChange={(e) =>
                       setTriage({
@@ -586,20 +620,17 @@ export default function Incidents() {
                         {l}
                       </option>
                     ))}
-                  </select>
-                  <label>
-                    <input
-                      type="checkbox"
-                      checked={triage.widespreadInfringement}
-                      onChange={(e) =>
-                        setTriage({
-                          ...triage,
-                          widespreadInfringement: e.target.checked,
-                        })
-                      }
-                    />{" "}
-                    Widespread infringement
-                  </label>
+                  </Select>
+                  <Checkbox
+                    label="Widespread infringement"
+                    checked={triage.widespreadInfringement}
+                    onChange={(e) =>
+                      setTriage({
+                        ...triage,
+                        widespreadInfringement: e.target.checked,
+                      })
+                    }
+                  />
                 </div>
               )}
               {selected.status === "OPEN" && (

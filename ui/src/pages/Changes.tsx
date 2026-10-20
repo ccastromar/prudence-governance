@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ChangeAssessment } from "../api";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Input,
+  Select,
+} from "@chestertown/design";
 const fields = [
   "MODEL_VERSION",
   "DATA_OR_EMBEDDINGS",
@@ -47,7 +54,7 @@ export default function Changes() {
       {error && <Alert tone="danger">{error}</Alert>}
       <Card>
         <div className="grid2">
-          <select
+          <Select
             value={form.aiSystemId}
             onChange={(e) => setForm({ ...form, aiSystemId: e.target.value })}
           >
@@ -57,8 +64,8 @@ export default function Changes() {
                 {s.name}
               </option>
             ))}
-          </select>
-          <input
+          </Select>
+          <Input
             placeholder="Proposed version"
             value={form.proposedVersion}
             onChange={(e) =>
@@ -68,21 +75,19 @@ export default function Changes() {
         </div>
         <p className="mut">Changed dimensions</p>
         {fields.map((x) => (
-          <label key={x}>
-            <input
-              type="checkbox"
-              checked={form.changedFields.includes(x)}
-              onChange={() => toggle(x)}
-            />{" "}
-            {x.replaceAll("_", " ")}
-          </label>
+          <Checkbox
+            key={x}
+            label={x.replaceAll("_", " ")}
+            checked={form.changedFields.includes(x)}
+            onChange={() => toggle(x)}
+          />
         ))}
-        <input
+        <Input
           placeholder="Evidence URI"
           value={form.evidenceUri}
           onChange={(e) => setForm({ ...form, evidenceUri: e.target.value })}
         />
-        <input
+        <Input
           placeholder="Evidence SHA-256"
           value={form.evidenceSha256}
           onChange={(e) => setForm({ ...form, evidenceSha256: e.target.value })}

@@ -6,7 +6,15 @@ import {
   type GovernanceCaseType,
 } from "../api";
 import { StatusBadge } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from "@chestertown/design";
 
 const TYPES: GovernanceCaseType[] = [
   "ASSESSMENT",
@@ -94,9 +102,9 @@ export default function GovernanceCases() {
           }}
         >
           <div className="grid2">
-            <div className="field">
-              <label>AI system</label>
-              <select
+            <Field label="AI system" htmlFor="governancecases-ai-system">
+              <Select
+                id="governancecases-ai-system"
                 required
                 value={form.aiSystemId}
                 onChange={(e) =>
@@ -109,11 +117,11 @@ export default function GovernanceCases() {
                     {s.name}
                   </option>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Case type</label>
-              <select
+              </Select>
+            </Field>
+            <Field label="Case type" htmlFor="governancecases-case-type">
+              <Select
+                id="governancecases-case-type"
                 value={form.type}
                 onChange={(e) =>
                   setForm({
@@ -125,34 +133,40 @@ export default function GovernanceCases() {
                 {TYPES.map((t) => (
                   <option key={t}>{t.replaceAll("_", " ")}</option>
                 ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Title</label>
-              <input
+              </Select>
+            </Field>
+            <Field label="Title" htmlFor="governancecases-title">
+              <Input
+                id="governancecases-title"
                 required
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
               />
-            </div>
-            <div className="field">
-              <label>Accountable owner</label>
-              <input
+            </Field>
+            <Field
+              label="Accountable owner"
+              htmlFor="governancecases-accountable-owner"
+            >
+              <Input
+                id="governancecases-accountable-owner"
                 required
                 value={form.owner}
                 onChange={(e) => setForm({ ...form, owner: e.target.value })}
                 placeholder="governance@company.eu"
               />
-            </div>
+            </Field>
           </div>
-          <div className="field">
-            <label>Decision context</label>
-            <textarea
+          <Field
+            label="Decision context"
+            htmlFor="governancecases-decision-context"
+          >
+            <Textarea
+              id="governancecases-decision-context"
               required
               value={form.summary}
               onChange={(e) => setForm({ ...form, summary: e.target.value })}
             />
-          </div>
+          </Field>
           <Button type="submit" variant="primary" disabled={busy}>
             Open case
           </Button>
@@ -233,51 +247,54 @@ export default function GovernanceCases() {
                 copied here.
               </p>
               <div className="grid2">
-                <div className="field">
-                  <label>Label</label>
-                  <input
+                <Field label="Label" htmlFor="governancecases-label">
+                  <Input
+                    id="governancecases-label"
                     value={evidence.label}
                     onChange={(e) =>
                       setEvidence({ ...evidence, label: e.target.value })
                     }
                   />
-                </div>
-                <div className="field">
-                  <label>URI</label>
-                  <input
+                </Field>
+                <Field label="URI" htmlFor="governancecases-uri">
+                  <Input
+                    id="governancecases-uri"
                     value={evidence.uri}
                     onChange={(e) =>
                       setEvidence({ ...evidence, uri: e.target.value })
                     }
                   />
-                </div>
-                <div className="field">
-                  <label>SHA-256</label>
-                  <input
+                </Field>
+                <Field label="SHA-256" htmlFor="governancecases-sha-256">
+                  <Input
+                    id="governancecases-sha-256"
                     value={evidence.sha256}
                     onChange={(e) =>
                       setEvidence({ ...evidence, sha256: e.target.value })
                     }
                   />
-                </div>
-                <div className="field">
-                  <label>Version</label>
-                  <input
+                </Field>
+                <Field label="Version" htmlFor="governancecases-version">
+                  <Input
+                    id="governancecases-version"
                     value={evidence.version}
                     onChange={(e) =>
                       setEvidence({ ...evidence, version: e.target.value })
                     }
                   />
-                </div>
-                <div className="field">
-                  <label>Evidence owner</label>
-                  <input
+                </Field>
+                <Field
+                  label="Evidence owner"
+                  htmlFor="governancecases-evidence-owner"
+                >
+                  <Input
+                    id="governancecases-evidence-owner"
                     value={evidence.owner}
                     onChange={(e) =>
                       setEvidence({ ...evidence, owner: e.target.value })
                     }
                   />
-                </div>
+                </Field>
               </div>
               <Button
                 variant="primary"
@@ -315,9 +332,12 @@ export default function GovernanceCases() {
             </ul>
           )}
           {selected.status !== "CLOSED" && (
-            <div className="field">
-              <label>Closing decision</label>
-              <textarea
+            <Field
+              label="Closing decision"
+              htmlFor="governancecases-closing-decision"
+            >
+              <Textarea
+                id="governancecases-closing-decision"
                 value={decision}
                 onChange={(e) => setDecision(e.target.value)}
                 placeholder="Decision, rationale and any follow-up owner"
@@ -330,7 +350,7 @@ export default function GovernanceCases() {
               >
                 Close case
               </Button>
-            </div>
+            </Field>
           )}
           <h3>Timeline</h3>
           <ul style={{ listStyle: "none", padding: 0 }}>

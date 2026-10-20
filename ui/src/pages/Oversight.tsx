@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+} from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -62,9 +70,9 @@ export default function Oversight() {
         Prudence governs capability; AOS executes the intervention.
       </p>
       {error && <Alert tone="danger">{error}</Alert>}
-      <div className="field">
-        <label>AI system</label>
-        <select
+      <Field label="AI system" htmlFor="oversight-ai-system">
+        <Select
+          id="oversight-ai-system"
           value={id}
           onChange={(e) => {
             setId(e.target.value);
@@ -77,8 +85,8 @@ export default function Oversight() {
               {s.name}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
       {id && (
         <div className="grid2">
           <Card>
@@ -91,7 +99,7 @@ export default function Oversight() {
                 {x.trainingExpiresAt}
               </p>
             ))}
-            <select
+            <Select
               value={a.role}
               onChange={(e) =>
                 setA({ ...a, role: e.target.value as OversightRole })
@@ -100,44 +108,36 @@ export default function Oversight() {
               {roles.map((r) => (
                 <option key={r}>{r}</option>
               ))}
-            </select>
-            <input
+            </Select>
+            <Input
               placeholder="Person"
               value={a.person}
               onChange={(e) => setA({ ...a, person: e.target.value })}
             />
-            <input
+            <Input
               placeholder="Training evidence URI"
               value={a.trainingEvidence}
               onChange={(e) => setA({ ...a, trainingEvidence: e.target.value })}
             />
-            <input
+            <Input
               placeholder="Training expiry ISO instant"
               value={a.trainingExpiresAt}
               onChange={(e) =>
                 setA({ ...a, trainingExpiresAt: e.target.value })
               }
             />
-            <label>
-              <input
-                type="checkbox"
-                checked={a.overrideAuthority}
-                onChange={(e) =>
-                  setA({ ...a, overrideAuthority: e.target.checked })
-                }
-              />{" "}
-              Override authority
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={a.stopAuthority}
-                onChange={(e) =>
-                  setA({ ...a, stopAuthority: e.target.checked })
-                }
-              />{" "}
-              Stop authority
-            </label>
+            <Checkbox
+              label="Override authority"
+              checked={a.overrideAuthority}
+              onChange={(e) =>
+                setA({ ...a, overrideAuthority: e.target.checked })
+              }
+            />
+            <Checkbox
+              label="Stop authority"
+              checked={a.stopAuthority}
+              onChange={(e) => setA({ ...a, stopAuthority: e.target.checked })}
+            />
             <Button
               variant="primary"
               onClick={async () => {
@@ -171,14 +171,14 @@ export default function Oversight() {
                 </div>
                 {!x.reviewedBy && (
                   <div className="row">
-                    <input
+                    <Input
                       placeholder="Reviewer"
                       value={review.reviewer}
                       onChange={(e) =>
                         setReview({ ...review, reviewer: e.target.value })
                       }
                     />
-                    <input
+                    <Input
                       placeholder="Review note"
                       value={review.note}
                       onChange={(e) =>
@@ -203,22 +203,22 @@ export default function Oversight() {
               </div>
             ))}
             <h3>Record override</h3>
-            <input
+            <Input
               placeholder="AOS reference"
               value={o.aosReference}
               onChange={(e) => setO({ ...o, aosReference: e.target.value })}
             />
-            <input
+            <Input
               placeholder="Supervisor"
               value={o.supervisor}
               onChange={(e) => setO({ ...o, supervisor: e.target.value })}
             />
-            <input
+            <Input
               placeholder="Reason"
               value={o.reason}
               onChange={(e) => setO({ ...o, reason: e.target.value })}
             />
-            <input
+            <Input
               placeholder="Outcome"
               value={o.outcome}
               onChange={(e) => setO({ ...o, outcome: e.target.value })}

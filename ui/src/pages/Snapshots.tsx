@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ComplianceSnapshot } from "../api";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Button, Card, Select } from "@chestertown/design";
 export default function Snapshots() {
   const [systems, setSystems] = useState<AiSystem[]>([]);
   const [id, setId] = useState("");
@@ -21,14 +21,14 @@ export default function Snapshots() {
       </p>
       {error && <Alert tone="danger">{error}</Alert>}
       <div className="row">
-        <select value={id} onChange={(e) => setId(e.target.value)}>
+        <Select value={id} onChange={(e) => setId(e.target.value)}>
           <option value="">Select AI system…</option>
           {systems.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
+        </Select>
         <Button
           variant="primary"
           disabled={!id}

@@ -7,7 +7,7 @@ import {
 } from "../api";
 import { hasRealmRole } from "../auth";
 import { DecisionBadge } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Button, Card, Field, Input, Select } from "@chestertown/design";
 
 type Demo = "bug-triage" | "response-drafter";
 
@@ -72,9 +72,12 @@ function DemoCard({
         <span className="badge neutral">{meta.framework}</span>
       </div>
       <p className="sub">{meta.detail}</p>
-      <div className="field">
-        <label>Registered AI system</label>
-        <select
+      <Field
+        label="Registered AI system"
+        htmlFor="decisions-registered-ai-system"
+      >
+        <Select
+          id="decisions-registered-ai-system"
           value={systemId}
           onChange={(e) => setSystemId(e.target.value)}
           disabled={busy}
@@ -85,8 +88,8 @@ function DemoCard({
               {system.name} · {system.approvalStatus}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
       <div className="row between">
         <span className="mut" style={{ fontSize: "var(--fs-sm)" }}>
           PDP → runtime hook → Ernest evidence
@@ -209,28 +212,37 @@ export default function Decisions() {
       <Card style={{ marginBottom: "var(--sp-6)" }}>
         <form onSubmit={submit}>
           <div className="grid2">
-            <div className="field">
-              <label>Subject</label>
-              <input value={req.subject} onChange={set("subject")} />
-            </div>
-            <div className="field">
-              <label>Pipeline</label>
-              <input value={req.pipeline} onChange={set("pipeline")} />
-            </div>
+            <Field label="Subject" htmlFor="decisions-subject">
+              <Input
+                id="decisions-subject"
+                value={req.subject}
+                onChange={set("subject")}
+              />
+            </Field>
+            <Field label="Pipeline" htmlFor="decisions-pipeline">
+              <Input
+                id="decisions-pipeline"
+                value={req.pipeline}
+                onChange={set("pipeline")}
+              />
+            </Field>
           </div>
           <div className="grid2">
-            <div className="field">
-              <label>AI system id</label>
-              <input
+            <Field label="AI system id" htmlFor="decisions-ai-system-id">
+              <Input
+                id="decisions-ai-system-id"
                 value={req.aiSystemId}
                 onChange={set("aiSystemId")}
                 placeholder="paste an id from the registry"
               />
-            </div>
-            <div className="field">
-              <label>Action</label>
-              <input value={req.action} onChange={set("action")} />
-            </div>
+            </Field>
+            <Field label="Action" htmlFor="decisions-action">
+              <Input
+                id="decisions-action"
+                value={req.action}
+                onChange={set("action")}
+              />
+            </Field>
           </div>
           <div className="row between">
             {error ? (

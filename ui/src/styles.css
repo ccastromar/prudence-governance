@@ -64,35 +64,6 @@ h1 {
   white-space: pre-wrap;
 }
 
-label {
-  display: block;
-  font-size: var(--fs-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  font-weight: var(--fw-semibold);
-  margin-bottom: 4px;
-}
-input,
-select {
-  width: 100%;
-  background: var(--bg);
-  color: var(--text);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  font-size: var(--fs-sm);
-  font-family: inherit;
-}
-input:focus,
-select:focus {
-  outline: none;
-  box-shadow: var(--ring);
-  border-color: var(--accent);
-}
-.field {
-  margin-bottom: var(--sp-3);
-}
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

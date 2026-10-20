@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ReviewEvent } from "../api";
 import { EvidenceState, RiskBadge, StatusBadge } from "../components";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Button, Card, Field, Input } from "@chestertown/design";
 
 const actionColor: Record<string, string> = {
   APPROVE: "var(--ok)",
@@ -434,15 +434,15 @@ export default function Approvals() {
             The system stays off-limits to the PDP until it is re-submitted or
             reclassified.
           </p>
-          <div className="field">
-            <label>Reason</label>
-            <input
+          <Field label="Reason" htmlFor="approvals-reason">
+            <Input
+              id="approvals-reason"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="why this is being declined"
               autoFocus
             />
-          </div>
+          </Field>
           <div className="row between">
             <Button onClick={() => setRejecting(null)}>Cancel</Button>
             <Button

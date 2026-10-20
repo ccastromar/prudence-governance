@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@chestertown/design";
+import {
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+} from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -83,41 +91,38 @@ export default function Impact() {
         classification.
       </p>
       {error && <Alert tone="danger">{error}</Alert>}
-      <div className="field">
-        <label>AI system</label>
-        <select value={selected} onChange={(e) => choose(e.target.value)}>
+      <Field label="AI system" htmlFor="impact-ai-system">
+        <Select
+          id="impact-ai-system"
+          value={selected}
+          onChange={(e) => choose(e.target.value)}
+        >
           <option value="">Select…</option>
           {systems.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
       {selected && (
         <>
           <Card style={{ marginBottom: "var(--sp-5)" }}>
             <h2>Applicability</h2>
-            <label>
-              <input
-                type="checkbox"
-                checked={req.friaRequired}
-                onChange={(e) =>
-                  setReq({ ...req, friaRequired: e.target.checked })
-                }
-              />{" "}
-              FRIA required
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={req.transparencyRequired}
-                onChange={(e) =>
-                  setReq({ ...req, transparencyRequired: e.target.checked })
-                }
-              />{" "}
-              Transparency evidence required
-            </label>
+            <Checkbox
+              label="FRIA required"
+              checked={req.friaRequired}
+              onChange={(e) =>
+                setReq({ ...req, friaRequired: e.target.checked })
+              }
+            />
+            <Checkbox
+              label="Transparency evidence required"
+              checked={req.transparencyRequired}
+              onChange={(e) =>
+                setReq({ ...req, transparencyRequired: e.target.checked })
+              }
+            />
             <Button variant="primary" onClick={save}>
               Save requirements
             </Button>
@@ -131,40 +136,40 @@ export default function Impact() {
                   <a href={f.dpiaUri}>DPIA</a>
                 </p>
               ))}
-              <input
+              <Input
                 placeholder="Affected groups"
                 value={fria.affectedGroups}
                 onChange={(e) =>
                   setFria({ ...fria, affectedGroups: e.target.value })
                 }
               />
-              <input
+              <Input
                 placeholder="Assumptions"
                 value={fria.assumptions}
                 onChange={(e) =>
                   setFria({ ...fria, assumptions: e.target.value })
                 }
               />
-              <input
+              <Input
                 placeholder="Mitigations"
                 value={fria.mitigations}
                 onChange={(e) =>
                   setFria({ ...fria, mitigations: e.target.value })
                 }
               />
-              <input
+              <Input
                 placeholder="DPIA URI"
                 value={fria.dpiaUri}
                 onChange={(e) => setFria({ ...fria, dpiaUri: e.target.value })}
               />
-              <input
+              <Input
                 placeholder="DPIA SHA-256"
                 value={fria.dpiaSha256}
                 onChange={(e) =>
                   setFria({ ...fria, dpiaSha256: e.target.value })
                 }
               />
-              <input
+              <Input
                 placeholder="Signed by"
                 value={fria.signedBy}
                 onChange={(e) => setFria({ ...fria, signedBy: e.target.value })}
@@ -219,25 +224,25 @@ function NoticeForm({
   const [by, setBy] = useState("");
   return (
     <>
-      <select
+      <Select
         value={kind}
         onChange={(e) => setKind(e.target.value as TransparencyKind)}
       >
         {kinds.map((k) => (
           <option key={k}>{k}</option>
         ))}
-      </select>
-      <input
+      </Select>
+      <Input
         placeholder="Audience"
         value={audience}
         onChange={(e) => setAudience(e.target.value)}
       />
-      <input
+      <Input
         placeholder="Deployment evidence URI"
         value={evidence}
         onChange={(e) => setEvidence(e.target.value)}
       />
-      <input
+      <Input
         placeholder="Deployed by"
         value={by}
         onChange={(e) => setBy(e.target.value)}

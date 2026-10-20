@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@chestertown/design";
+import { Alert, Button, Card, Field, Input, Select } from "@chestertown/design";
 import {
   api,
   type AiSystem,
@@ -108,9 +108,9 @@ export default function Monitoring() {
         logs.
       </p>
       {error && <Alert tone="danger">{error}</Alert>}
-      <div className="field">
-        <label>AI system</label>
-        <select
+      <Field label="AI system" htmlFor="monitoring-ai-system">
+        <Select
+          id="monitoring-ai-system"
           value={id}
           onChange={(e) => {
             setId(e.target.value);
@@ -124,8 +124,8 @@ export default function Monitoring() {
               {s.name}
             </option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
       {id && (
         <>
           <Card style={{ marginBottom: "var(--sp-5)" }}>
@@ -139,7 +139,7 @@ export default function Monitoring() {
               red
             </p>
             <div className="grid2">
-              <select
+              <Select
                 value={form.signal}
                 onChange={(e) =>
                   setForm({ ...form, signal: e.target.value as RiskSignal })
@@ -148,14 +148,14 @@ export default function Monitoring() {
                 {signals.map((signal) => (
                   <option key={signal}>{signal.replaceAll("_", " ")}</option>
                 ))}
-              </select>
-              <input
+              </Select>
+              <Input
                 type="number"
                 aria-label="Signal value"
                 value={form.value}
                 onChange={(e) => setForm({ ...form, value: +e.target.value })}
               />
-              <input
+              <Input
                 type="number"
                 value={form.amberThreshold}
                 onChange={(e) =>
@@ -164,7 +164,7 @@ export default function Monitoring() {
                 placeholder="Amber threshold"
                 aria-label="Amber threshold"
               />
-              <input
+              <Input
                 type="number"
                 value={form.redThreshold}
                 onChange={(e) =>
@@ -174,7 +174,7 @@ export default function Monitoring() {
                 aria-label="Red threshold"
               />
             </div>
-            <input
+            <Input
               placeholder="Ernest aggregate / source reference"
               value={form.sourceReference}
               onChange={(e) =>
@@ -192,7 +192,7 @@ export default function Monitoring() {
               that its mitigation worked.
             </p>
             <div className="grid2">
-              <select
+              <Select
                 value={capa.signalId}
                 onChange={(e) => setCapa({ ...capa, signalId: e.target.value })}
                 aria-label="Source signal"
@@ -203,25 +203,25 @@ export default function Monitoring() {
                     {signal.signal.replaceAll("_", " ")} · {signal.status}
                   </option>
                 ))}
-              </select>
-              <input
+              </Select>
+              <Input
                 placeholder="Risk"
                 value={capa.risk}
                 onChange={(e) => setCapa({ ...capa, risk: e.target.value })}
               />
-              <input
+              <Input
                 placeholder="Mitigation"
                 value={capa.mitigation}
                 onChange={(e) =>
                   setCapa({ ...capa, mitigation: e.target.value })
                 }
               />
-              <input
+              <Input
                 placeholder="Owner"
                 value={capa.owner}
                 onChange={(e) => setCapa({ ...capa, owner: e.target.value })}
               />
-              <input
+              <Input
                 type="datetime-local"
                 value={capa.dueAt}
                 onChange={(e) => setCapa({ ...capa, dueAt: e.target.value })}
@@ -258,7 +258,7 @@ export default function Monitoring() {
                   )}
                   {item.status === "IMPLEMENTED" && (
                     <div className="row">
-                      <input
+                      <Input
                         placeholder="Effectiveness evidence reference"
                         value={verification[item.id] ?? ""}
                         onChange={(e) =>
