@@ -42,3 +42,32 @@ Prudence's outbox.
 
 What this does not cover: real tokens (the dev profile takes the subject from the request;
 the adapters send their runtime name) and a real model choosing whether to call the tool.
+The second run covers the tokens.
+
+## With real login
+
+`run-sso.py` takes the ADK agent through what an adopter does, against Prudence in its secured
+configuration (Keycloak JWTs, PostgreSQL, the production start checks):
+
+1. `scripts/provision-runtime.py` registers the runtime `conformance-adk`: Keycloak client,
+   `preferred_username` mapper, and the OPA grant. OPA starts with **no grant** for it, so an
+   ALLOW can only come from the identity in the token, never from the name the adapter sends.
+2. The test user `alice` registers and reviews two AI systems.
+3. The agent runs with the runtime's client credentials.
+
+| Case | Expected |
+|---|---|
+| the runtime's token | `preferred_username = service-account-conformance-adk-pdp`, scopes `pdp.decide execution.report` |
+| ALLOW | the tool runs; the execution is recorded and cites an ALLOW decision |
+| APPROVAL_REQUIRED, DENY (not granted) | the tool does not run; the model is told |
+| wrong client secret | no token, so the gate fails closed and the tool does not run |
+| no token / a person's token | Prudence answers 401 / 403 |
+
+```bash
+../../scripts/keycloak.sh   # the dev realm chestertown on :8081
+./stack-sso.sh              # OPA :18181, Prudence secured :18099, database prudence_conformance (recreated each start)
+./run-sso.py                # needs .venv-adk
+```
+
+It uses the dev realm's test credentials (`admin`/`admin`, `alice`/`alice`) and leaves the
+client `conformance-adk-pdp` in the local Keycloak; delete it there if you want a clean realm.
