@@ -7,6 +7,7 @@ import {
   Card,
   Field,
   Input,
+  Modal,
   Page,
   Table,
 } from "@chestertown/design";
@@ -417,18 +418,24 @@ export default function Approvals() {
       )}
 
       {rejecting && (
-        <Card
-          style={{
-            position: "fixed",
-            inset: 0,
-            margin: "auto",
-            maxWidth: 440,
-            height: "fit-content",
-            boxShadow: "var(--shadow-lg, 0 12px 40px rgba(0,0,0,.3))",
-          }}
+        <Modal
+          title={`Reject “${rejecting.name}”?`}
+          onClose={() => setRejecting(null)}
+          width={440}
+          actions={
+            <>
+              <Button onClick={() => setRejecting(null)}>Cancel</Button>
+              <Button
+                variant="danger"
+                disabled={busyId === rejecting.id}
+                onClick={confirmReject}
+              >
+                {busyId === rejecting.id ? "Rejecting…" : "Confirm reject"}
+              </Button>
+            </>
+          }
         >
-          <h2 className="ct-mt-0">Reject “{rejecting.name}”?</h2>
-          <p className="sub">
+          <p className="ct-muted ct-mt-0">
             The system stays off-limits to the PDP until it is re-submitted or
             reclassified.
           </p>
@@ -441,17 +448,7 @@ export default function Approvals() {
               autoFocus
             />
           </Field>
-          <div className="ct-row ct-between">
-            <Button onClick={() => setRejecting(null)}>Cancel</Button>
-            <Button
-              variant="primary"
-              disabled={busyId === rejecting.id}
-              onClick={confirmReject}
-            >
-              {busyId === rejecting.id ? "Rejecting…" : "Confirm reject"}
-            </Button>
-          </div>
-        </Card>
+        </Modal>
       )}
     </Page>
   );
