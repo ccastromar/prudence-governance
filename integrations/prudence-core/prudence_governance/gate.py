@@ -34,6 +34,16 @@ class Decision:
     def allowed(self) -> bool:
         return self.decision == "ALLOW"
 
+    def refusal(self) -> str:
+        """What to tell the model when the step may not run: the verdict, why, and who must
+        approve. Adapters return it instead of the tool's result."""
+        text = f"Not permitted by governance (Prudence {self.decision})"
+        if self.reason:
+            text += f": {self.reason}"
+        if self.approver:
+            text += f". Approval required from: {self.approver}"
+        return text + "."
+
 
 @dataclass
 class M2MAuth:

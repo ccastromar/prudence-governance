@@ -11,6 +11,9 @@ prudence-core/        prudence_governance — the shared core
 
 pydantic-ai/          prudence_pydantic — @governed decorator for a Pydantic AI tool
 langgraph/            prudence_langgraph — governed_node + gate_route for a LangGraph graph
+google-adk/           prudence_adk — a runner plugin that gates every tool call (Google ADK)
+openai-agents/        prudence_openai_agents — a tool input guardrail (OpenAI Agents SDK)
+agent-framework/      prudence_agent_framework — function middleware (Microsoft Agent Framework)
 demo-runner/          internal HTTP runner used by Prudence's visible framework demos
 ```
 
@@ -22,7 +25,7 @@ Every adapter does the same two things at its framework's natural hook point: co
 PDP before a step runs (allow / deny / approval-required), and seal the execution in Ernest
 afterwards. The decision is sealed by Prudence itself (the PDP records every decision it
 makes), so adapters never record it twice: per governed call that is one PDP call and one
-Ernest write from the agent. Adding a runtime (OpenAI Agents SDK, CrewAI, …) is a new
+Ernest write from the agent. Adding a runtime (CrewAI, …) is a new
 thin adapter, not a new core.
 
 ## Console demonstrations

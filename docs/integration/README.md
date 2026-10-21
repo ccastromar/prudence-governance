@@ -188,6 +188,9 @@ external store; not independently verifiable"), and never claims a seal it does 
 | Any Python code | [`integrations/prudence-core`](../../integrations/prudence-core) | `PrudenceGate.decide()` and `report_execution()` |
 | LangGraph | [`integrations/langgraph`](../../integrations/langgraph) | a governed node and a routing gate |
 | Pydantic AI | [`integrations/pydantic-ai`](../../integrations/pydantic-ai) | a `@governed` decorator for a tool |
+| Google ADK | [`integrations/google-adk`](../../integrations/google-adk) | a runner plugin: every tool of every agent |
+| OpenAI Agents SDK | [`integrations/openai-agents`](../../integrations/openai-agents) | a tool input guardrail |
+| Microsoft Agent Framework | [`integrations/agent-framework`](../../integrations/agent-framework) | function middleware |
 | Go | AOS `internal/governance` | the reference implementation |
 | MCP gateway (AuthZEN) | none needed | `resource.type: tool`, see step 3 |
 
