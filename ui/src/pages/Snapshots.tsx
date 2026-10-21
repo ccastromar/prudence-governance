@@ -42,7 +42,7 @@ export default function Snapshots() {
         </Button>
       </div>
       {snapshot && (
-        <Card style={{ marginTop: "var(--sp-5)" }}>
+        <Card className="ct-mt-5">
           <h2>Snapshot created</h2>
           <p>
             <code>{snapshot.id}</code>

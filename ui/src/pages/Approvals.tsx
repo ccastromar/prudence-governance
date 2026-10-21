@@ -143,23 +143,23 @@ export default function Approvals() {
       subtitle="High-risk and prohibited systems may not go live without an explicit governance decision. Review the queue below."
     >
       {error && (
-        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+        <Alert tone="danger" className="ct-mb-6">
           {error}
         </Alert>
       )}
 
-      <h2 style={{ fontSize: "var(--fs-lg)" }}>
+      <h2 className="ct-text-lg">
         Ready to submit — assessed, rejected, expired or suspended (
         {assessed.length})
       </h2>
-      <div style={{ marginBottom: "var(--sp-8)" }}>
+      <div className="ct-mb-8">
         <Table>
           <thead>
             <tr>
               <th>AI system</th>
               <th>Classification</th>
               <th>Evidence</th>
-              <th style={{ textAlign: "right" }}>Action</th>
+              <th className="ct-num">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -173,23 +173,20 @@ export default function Approvals() {
             {assessed.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <div className="ct-strong">{s.name}</div>
                   <code>{s.id}</code>
                 </td>
                 <td>
                   <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-                  <div
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
+                  <div className="ct-muted ct-text-sm">
                     {s.regulatoryRole} · v{s.systemVersion}
                   </div>
                 </td>
-                <td className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <td className="ct-muted ct-text-sm">
                   {s.obligations.length} obligations ·{" "}
                   {s.annexI ? "Annex I" : "No Annex I"}
                 </td>
-                <td style={{ textAlign: "right" }}>
+                <td className="ct-num">
                   <Button
                     variant="primary"
                     disabled={busyId === s.id}
@@ -204,17 +201,15 @@ export default function Approvals() {
         </Table>
       </div>
 
-      <h2 style={{ fontSize: "var(--fs-lg)" }}>
-        Awaiting decision ({pending.length})
-      </h2>
-      <div style={{ marginBottom: "var(--sp-8)" }}>
+      <h2 className="ct-text-lg">Awaiting decision ({pending.length})</h2>
+      <div className="ct-mb-8">
         <Table>
           <thead>
             <tr>
               <th>AI system</th>
               <th>Risk tier</th>
               <th>Owner</th>
-              <th style={{ textAlign: "right" }}>Decision</th>
+              <th className="ct-num">Decision</th>
             </tr>
           </thead>
           <tbody>
@@ -228,14 +223,9 @@ export default function Approvals() {
             {pending.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <div className="ct-strong">{s.name}</div>
                   <code>{s.id}</code>
-                  <div
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
-                    {s.intendedPurpose}
-                  </div>
+                  <div className="ct-muted ct-text-sm">{s.intendedPurpose}</div>
                 </td>
                 <td>
                   <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
@@ -243,7 +233,7 @@ export default function Approvals() {
                 <td className="ct-muted">
                   {s.ownerName}
                   {s.firstApprover && (
-                    <div style={{ fontSize: "var(--fs-sm)" }}>
+                    <div className="ct-text-sm">
                       First sign-off: {s.firstApprover}
                     </div>
                   )}
@@ -273,24 +263,19 @@ export default function Approvals() {
         </Table>
       </div>
 
-      <h2 style={{ fontSize: "var(--fs-lg)" }}>
-        Renewal due ({renewalDue.length})
-      </h2>
-      <p
-        className="ct-muted"
-        style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-      >
+      <h2 className="ct-text-lg">Renewal due ({renewalDue.length})</h2>
+      <p className="ct-muted ct-text-sm ct-mt-0">
         Periodic review: renew before expiry and the system keeps running.
         High-risk renewals need two independent sign-offs.
       </p>
-      <div style={{ marginBottom: "var(--sp-8)" }}>
+      <div className="ct-mb-8">
         <Table>
           <thead>
             <tr>
               <th>AI system</th>
               <th>Risk tier</th>
               <th>Expires</th>
-              <th style={{ textAlign: "right" }}>Review</th>
+              <th className="ct-num">Review</th>
             </tr>
           </thead>
           <tbody>
@@ -304,7 +289,7 @@ export default function Approvals() {
             {renewalDue.map((s) => (
               <tr key={s.id}>
                 <td>
-                  <div style={{ fontWeight: 600 }}>{s.name}</div>
+                  <div className="ct-strong">{s.name}</div>
                   <code>{s.id}</code>
                 </td>
                 <td>
@@ -313,12 +298,12 @@ export default function Approvals() {
                 <td className="ct-muted">
                   {s.approvalExpiresAt && when(s.approvalExpiresAt)}
                   {s.renewalFirstApprover && (
-                    <div style={{ fontSize: "var(--fs-sm)" }}>
+                    <div className="ct-text-sm">
                       First renewal sign-off: {s.renewalFirstApprover}
                     </div>
                   )}
                 </td>
-                <td style={{ textAlign: "right" }}>
+                <td className="ct-num">
                   <Button
                     variant="primary"
                     disabled={busyId === s.id}
@@ -333,11 +318,8 @@ export default function Approvals() {
         </Table>
       </div>
 
-      <h2 style={{ fontSize: "var(--fs-lg)" }}>Recently decided</h2>
-      <p
-        className="ct-muted"
-        style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-      >
+      <h2 className="ct-text-lg">Recently decided</h2>
+      <p className="ct-muted ct-text-sm ct-mt-0">
         Click a system to see its sealed audit trail.
       </p>
       <Table>
@@ -365,7 +347,7 @@ export default function Approvals() {
               className={trailFor?.id === s.id ? "ct-selected" : ""}
             >
               <td>
-                <div style={{ fontWeight: 600 }}>{s.name}</div>
+                <div className="ct-strong">{s.name}</div>
                 <code>{s.id}</code>
               </td>
               <td>
@@ -374,10 +356,7 @@ export default function Approvals() {
               <td>
                 <StatusBadge status={s.approvalStatus} />
                 {s.approvalExpiresAt && (
-                  <div
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
+                  <div className="ct-muted ct-text-sm">
                     Expires {when(s.approvalExpiresAt)}
                   </div>
                 )}
@@ -389,11 +368,9 @@ export default function Approvals() {
       </Table>
 
       {trailFor && (
-        <Card style={{ marginTop: "var(--sp-6)" }}>
+        <Card className="ct-mt-6">
           <div className="ct-row ct-between">
-            <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-              Audit trail — {trailFor.name}
-            </h2>
+            <h2 className="ct-section-title">Audit trail — {trailFor.name}</h2>
             <Button size="sm" onClick={() => setTrailFor(null)}>
               Close
             </Button>
@@ -403,7 +380,7 @@ export default function Approvals() {
               No review events recorded for this system.
             </p>
           ) : (
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            <ul className="ct-plain-list">
               {trail.map((e) => (
                 <li
                   key={e.id}
@@ -418,17 +395,9 @@ export default function Approvals() {
                     >
                       ● {e.action}
                     </span>
-                    <span
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      {when(e.at)}
-                    </span>
+                    <span className="ct-muted ct-text-sm">{when(e.at)}</span>
                   </div>
-                  <div
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
+                  <div className="ct-muted ct-text-sm">
                     {e.previousStatus} → {e.newStatus} · by <b>{e.reviewer}</b>
                     {" · "}
                     <EvidenceState
@@ -438,12 +407,7 @@ export default function Approvals() {
                     />
                   </div>
                   {e.reason && (
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      “{e.reason}”
-                    </div>
+                    <div className="ct-muted ct-text-sm">“{e.reason}”</div>
                   )}
                 </li>
               ))}
@@ -463,7 +427,7 @@ export default function Approvals() {
             boxShadow: "var(--shadow-lg, 0 12px 40px rgba(0,0,0,.3))",
           }}
         >
-          <h2 style={{ marginTop: 0 }}>Reject “{rejecting.name}”?</h2>
+          <h2 className="ct-mt-0">Reject “{rejecting.name}”?</h2>
           <p className="sub">
             The system stays off-limits to the PDP until it is re-submitted or
             reclassified.

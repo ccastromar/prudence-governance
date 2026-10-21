@@ -164,7 +164,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       title="AI system registry"
       subtitle="Every AI use case, its EU AI Act risk tier, owner and approval state — the governance spine."
     >
-      <Card style={{ marginBottom: "var(--sp-6)" }}>
+      <Card className="ct-mb-6">
         <form onSubmit={submit}>
           <div className="ct-grid-2">
             <Field label="Name" htmlFor="registry-name">
@@ -296,7 +296,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               />
             </Field>
           </div>
-          <div className="ct-grid-2" style={{ marginBottom: "var(--sp-4)" }}>
+          <div className="ct-grid-2 ct-mb-4">
             <Checkbox
               label="Annex I regulated product"
               checked={form.annexI}
@@ -344,7 +344,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
             {error ? (
               <Alert tone="danger">{error}</Alert>
             ) : (
-              <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+              <span className="ct-muted ct-text-sm">
                 Registration creates an assessment dossier; submit it for review
                 before it can be approved.
               </span>
@@ -388,14 +388,13 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               }
             >
               <td>
-                <div style={{ fontWeight: 600 }}>{s.name}</div>
+                <div className="ct-strong">{s.name}</div>
                 <code>{s.id}</code>{" "}
                 <a
                   href={ernestEvidenceUrl(s.id)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="ct-muted"
-                  style={{ fontSize: "var(--fs-sm)" }}
+                  className="ct-muted ct-text-sm"
                   title="Open this AI system's evidence in Ernest"
                 >
                   evidence ↗
@@ -403,7 +402,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               </td>
               <td>
                 <RiskBadge tier={s.riskTier} annexIII={s.annexIII} />
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted ct-text-sm">
                   {s.regulatoryRole} · v{s.systemVersion}
                 </div>
               </td>
@@ -429,7 +428,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               <h2 style={{ fontSize: "var(--fs-lg)", margin: 0 }}>
                 Compliance controls
               </h2>
-              <p className="ct-muted" style={{ marginBottom: 0 }}>
+              <p className="ct-muted ct-mb-0">
                 {controlsFor.name} · evidence stays in its source system;
                 Prudence records its reference and hash.
               </p>
@@ -467,17 +466,14 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                 <div className="ct-row ct-between">
                   <div>
                     <strong>{control.title}</strong>
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
+                    <div className="ct-muted ct-text-sm">
                       {control.profileId} · {control.key}
                       {control.blocking ? " · blocks review" : ""}
                     </div>
                   </div>
                   <StatusBadge status={control.status} />
                 </div>
-                <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <p className="ct-muted ct-text-sm">
                   {control.requirement}
                   <br />
                   Contract: {control.accepts} · source {control.evidenceSource}{" "}
@@ -493,7 +489,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                     : ""}
                 </p>
                 {done ? (
-                  <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                  <p className="ct-muted ct-text-sm">
                     Evidence:{" "}
                     <a
                       href={control.evidenceUri ?? "#"}

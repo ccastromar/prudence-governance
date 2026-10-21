@@ -105,7 +105,7 @@ export default function Impact() {
       </Field>
       {selected && (
         <>
-          <Card style={{ marginBottom: "var(--sp-5)" }}>
+          <Card className="ct-mb-5">
             <h2>Applicability</h2>
             <Checkbox
               label="FRIA required"

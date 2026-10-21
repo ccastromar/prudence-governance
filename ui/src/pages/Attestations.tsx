@@ -95,12 +95,12 @@ export default function Attestations() {
       }
     >
       {error && (
-        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+        <Alert tone="danger" className="ct-mb-6">
           {error}
         </Alert>
       )}
 
-      <div style={{ marginBottom: "var(--sp-8)" }}>
+      <div className="ct-mb-8">
         <Table>
           <thead>
             <tr>
@@ -148,9 +148,7 @@ export default function Attestations() {
       {selected && (
         <Card>
           <div className="ct-row ct-between">
-            <h2 style={{ marginTop: 0 }}>
-              Attestation {selected.id.slice(0, 8)}
-            </h2>
+            <h2 className="ct-mt-0">Attestation {selected.id.slice(0, 8)}</h2>
             <div
               className="ct-row"
               style={{ gap: "var(--sp-3)", alignItems: "center" }}
@@ -190,10 +188,8 @@ export default function Attestations() {
               >
                 ● {verification.verdict}
               </div>
-              <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
-                {verification.detail}
-              </div>
-              <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+              <div className="ct-muted ct-text-sm">{verification.detail}</div>
+              <div className="ct-muted ct-text-sm">
                 hash recomputed{" "}
                 {verification.hashMatches ? "✓ matches" : "✗ differs"}
                 {(verification.verdict === "VERIFIED" ||
@@ -213,10 +209,7 @@ export default function Attestations() {
               </div>
             </Card>
           )}
-          <div
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginBottom: "var(--sp-4)" }}
-          >
+          <div className="ct-muted ct-text-sm ct-mb-4">
             <div>
               Issued: <b>{when(selected.generatedAt)}</b>
             </div>
@@ -256,7 +249,7 @@ export default function Attestations() {
               {selected.systems.map((s) => (
                 <tr key={s.aiSystemId}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{s.name}</div>
+                    <div className="ct-strong">{s.name}</div>
                     <code>{s.aiSystemId}</code>
                   </td>
                   <td>
@@ -267,12 +260,7 @@ export default function Attestations() {
                   </td>
                   <td>
                     <PostureBadge status={s.posture} />
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      {s.detail}
-                    </div>
+                    <div className="ct-muted ct-text-sm">{s.detail}</div>
                   </td>
                 </tr>
               ))}

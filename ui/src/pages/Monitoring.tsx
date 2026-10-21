@@ -135,7 +135,7 @@ export default function Monitoring() {
       </Field>
       {id && (
         <>
-          <Card style={{ marginBottom: "var(--sp-5)" }}>
+          <Card className="ct-mb-5">
             <h2>Risk posture {summary && <Badge>{summary.status}</Badge>}</h2>
             <p className="ct-muted">
               {summary?.observations ?? 0} observations ·{" "}

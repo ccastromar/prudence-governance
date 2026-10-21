@@ -81,18 +81,16 @@ export default function Posture() {
 
       {data && (
         <>
-          <Card style={{ marginBottom: "var(--sp-6)" }}>
+          <Card className="ct-mb-6">
             <div className="ct-row ct-between">
               <div>
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
-                  Estate roll-up
-                </div>
+                <div className="ct-muted ct-text-sm">Estate roll-up</div>
                 <div style={{ fontSize: "var(--fs-lg)", fontWeight: 700 }}>
                   <PostureBadge status={data.overall} />
                 </div>
               </div>
-              <div style={{ textAlign: "right" }}>
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+              <div className="ct-num">
+                <div className="ct-muted ct-text-sm">
                   Evidence plane (Ernest)
                 </div>
                 <div
@@ -103,9 +101,7 @@ export default function Posture() {
                 >
                   {data.evidenceHealthy ? "● healthy" : "● unavailable"}
                 </div>
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
-                  {data.evidenceDetail}
-                </div>
+                <div className="ct-muted ct-text-sm">{data.evidenceDetail}</div>
               </div>
             </div>
           </Card>
@@ -130,14 +126,13 @@ export default function Posture() {
               {data.systems.map((s) => (
                 <tr key={s.id}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{s.name}</div>
+                    <div className="ct-strong">{s.name}</div>
                     <code>{s.id}</code>{" "}
                     <a
                       href={ernestEvidenceUrl(s.id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
+                      className="ct-muted ct-text-sm"
                       title="Open this AI system's evidence in Ernest"
                     >
                       evidence ↗
@@ -151,12 +146,7 @@ export default function Posture() {
                   </td>
                   <td>
                     <PostureBadge status={s.status} />
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      {s.detail}
-                    </div>
+                    <div className="ct-muted ct-text-sm">{s.detail}</div>
                   </td>
                 </tr>
               ))}
@@ -172,9 +162,7 @@ export default function Posture() {
           <Alert tone="danger">
             ● Policy-drift scan incomplete — results below cannot be trusted.
           </Alert>
-          <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
-            {drift.scanDetail}
-          </div>
+          <div className="ct-muted ct-text-sm">{drift.scanDetail}</div>
         </Card>
       )}
 
@@ -188,9 +176,7 @@ export default function Posture() {
           }}
         >
           <div className="ct-row ct-between">
-            <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-              Policy drift
-            </h2>
+            <h2 className="ct-section-title">Policy drift</h2>
             <span
               style={{
                 fontWeight: 700,
@@ -200,10 +186,7 @@ export default function Posture() {
               {drift.hasViolations ? "● violations detected" : "● clean"}
             </span>
           </div>
-          <p
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-          >
+          <p className="ct-muted ct-text-sm ct-mt-0">
             Executions in the evidence plane checked against the governance
             record.
           </p>
@@ -220,14 +203,13 @@ export default function Posture() {
               {drift.findings.map((f) => (
                 <tr key={f.aiSystemId}>
                   <td>
-                    <div style={{ fontWeight: 600 }}>{f.name}</div>
+                    <div className="ct-strong">{f.name}</div>
                     <code>{f.aiSystemId}</code>{" "}
                     <a
                       href={ernestEvidenceUrl(f.aiSystemId)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
+                      className="ct-muted ct-text-sm"
                       title="Open this AI system's evidence in Ernest"
                     >
                       evidence ↗
@@ -249,12 +231,7 @@ export default function Posture() {
                     >
                       ● {f.severity}
                     </span>
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
-                      {f.detail}
-                    </div>
+                    <div className="ct-muted ct-text-sm">{f.detail}</div>
                   </td>
                 </tr>
               ))}
@@ -264,14 +241,9 @@ export default function Posture() {
       )}
 
       {sink && (
-        <Card style={{ marginTop: "var(--sp-6)" }}>
-          <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-            Evidence store: {sink.label}
-          </h2>
-          <p
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-          >
+        <Card className="ct-mt-6">
+          <h2 className="ct-section-title">Evidence store: {sink.label}</h2>
+          <p className="ct-muted ct-text-sm ct-mt-0">
             What the store holding Prudence's evidence can guarantee. Anything
             missing is stated here and in attestations, never implied.
           </p>
@@ -294,13 +266,8 @@ export default function Posture() {
 
       {sources && (!sources.complete || sources.mismatches.length > 0) && (
         <Card style={{ marginTop: "var(--sp-6)", borderColor: "var(--warn)" }}>
-          <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-            Execution sources
-          </h2>
-          <p
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-          >
+          <h2 className="ct-section-title">Execution sources</h2>
+          <p className="ct-muted ct-text-sm ct-mt-0">
             What runtimes reported to Prudence and the execution evidence in
             Ernest should agree (after a {sources.graceMinutes}-minute grace for
             delivery). A mismatch is a warning, not a violation: evidence that
@@ -322,7 +289,7 @@ export default function Posture() {
                 {sources.mismatches.map((m) => (
                   <tr key={m.aiSystemId}>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{m.name}</div>
+                      <div className="ct-strong">{m.name}</div>
                       <code>{m.aiSystemId}</code>
                     </td>
                     <td className="ct-muted">{m.lastReportedAt ?? "—"}</td>
@@ -334,12 +301,7 @@ export default function Posture() {
                           ? "evidence missing"
                           : "not reported"}
                       </span>
-                      <div
-                        className="ct-muted"
-                        style={{ fontSize: "var(--fs-sm)" }}
-                      >
-                        {m.detail}
-                      </div>
+                      <div className="ct-muted ct-text-sm">{m.detail}</div>
                     </td>
                   </tr>
                 ))}
@@ -353,13 +315,10 @@ export default function Posture() {
         <Card
           style={{ marginTop: "var(--sp-6)", borderColor: "var(--danger)" }}
         >
-          <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
+          <h2 className="ct-section-title">
             Undelivered records ({dead.length})
           </h2>
-          <p
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginTop: 0 }}
-          >
+          <p className="ct-muted ct-text-sm ct-mt-0">
             Evidence that never reached Ernest, or alerts that were never sent.
             Fix the cause (Ernest reachable, credentials, payload), then retry:
             the record is requeued and delivered at once.
@@ -370,7 +329,7 @@ export default function Posture() {
                 <th>Kind</th>
                 <th>Record</th>
                 <th>Last error</th>
-                <th style={{ textAlign: "right" }}>Action</th>
+                <th className="ct-num">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -379,20 +338,14 @@ export default function Posture() {
                   <td>
                     {d.target}
                     {d.aiSystemId && (
-                      <div
-                        className="ct-muted"
-                        style={{ fontSize: "var(--fs-sm)" }}
-                      >
+                      <div className="ct-muted ct-text-sm">
                         <code>{d.aiSystemId}</code>
                       </div>
                     )}
                   </td>
                   <td>
                     <code>{d.id}</code>
-                    <div
-                      className="ct-muted"
-                      style={{ fontSize: "var(--fs-sm)" }}
-                    >
+                    <div className="ct-muted ct-text-sm">
                       {d.attempts} attempt(s) · gave up{" "}
                       {d.deadAt.replace("T", " ").replace(/\.\d+Z$/, "")}
                     </div>
@@ -407,7 +360,7 @@ export default function Posture() {
                   >
                     {d.lastError}
                   </td>
-                  <td style={{ textAlign: "right" }}>
+                  <td className="ct-num">
                     <Button
                       variant="primary"
                       disabled={busy === d.id}

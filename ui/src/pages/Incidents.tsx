@@ -204,15 +204,13 @@ export default function Incidents() {
       subtitle="The AI incident register. Serious incidents (AI Act Art. 3(49)) must be reported within 2, 10 or 15 days of awareness (Art. 73). Prudence tracks the deadline, alerts the owners, and records each filing — it does not file with the authority itself."
     >
       {error && (
-        <Alert tone="danger" style={{ marginBottom: "var(--sp-6)" }}>
+        <Alert tone="danger" className="ct-mb-6">
           {error}
         </Alert>
       )}
 
-      <Card style={{ marginBottom: "var(--sp-6)" }}>
-        <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-          Register an incident
-        </h2>
+      <Card className="ct-mb-6">
+        <h2 className="ct-section-title">Register an incident</h2>
         <form onSubmit={submit}>
           <div className="ct-grid-2">
             <Field label="AI system" htmlFor="incidents-ai-system">
@@ -359,7 +357,7 @@ export default function Incidents() {
             </div>
           </div>
           <div className="ct-row ct-between">
-            <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+            <span className="ct-muted ct-text-sm">
               A serious incident alerts governance and the system owner
               immediately.
             </span>
@@ -370,7 +368,7 @@ export default function Incidents() {
         </form>
       </Card>
 
-      <div style={{ marginBottom: "var(--sp-6)" }}>
+      <div className="ct-mb-6">
         <Table>
           <thead>
             <tr>
@@ -397,16 +395,13 @@ export default function Incidents() {
                 className={selected?.id === i.id ? "ct-selected" : ""}
               >
                 <td>
-                  <div style={{ fontWeight: 600 }}>{i.title}</div>
-                  <span
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
+                  <div className="ct-strong">{i.title}</div>
+                  <span className="ct-muted ct-text-sm">
                     aware {when(i.detectedAt)}
                   </span>
                 </td>
                 <td>{systemName(i.aiSystemId)}</td>
-                <td className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <td className="ct-muted ct-text-sm">
                   {i.category.replaceAll("_", " ")}
                   {i.widespreadInfringement ? " · widespread" : ""}
                   <div>link {i.causalLink.toLowerCase()}</div>
@@ -424,18 +419,13 @@ export default function Incidents() {
       {selected && (
         <Card>
           <div className="ct-row ct-between">
-            <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>
-              {selected.title}
-            </h2>
+            <h2 className="ct-section-title">{selected.title}</h2>
             <Button size="sm" onClick={() => setSelected(null)}>
               Close
             </Button>
           </div>
           <p>{selected.description}</p>
-          <div
-            className="ct-muted"
-            style={{ fontSize: "var(--fs-sm)", marginBottom: "var(--sp-4)" }}
-          >
+          <div className="ct-muted ct-text-sm ct-mb-4">
             <div>{selected.reportingBasis}</div>
             {selected.reportable && (
               <div>
@@ -474,12 +464,12 @@ export default function Incidents() {
           </div>
 
           {selected.status !== "CLOSED" && (
-            <Card style={{ marginBottom: "var(--sp-4)" }}>
+            <Card className="ct-mb-4">
               {selected.reportable &&
                 (selected.status === "OPEN" ||
                   selected.status === "INITIAL_REPORT_SUBMITTED") && (
                   <>
-                    <h3 style={{ marginTop: 0 }}>Record a filing</h3>
+                    <h3 className="ct-mt-0">Record a filing</h3>
                     <div className="ct-grid-2">
                       <Field label="Filed with" htmlFor="incidents-filed-with">
                         <Input
@@ -546,7 +536,7 @@ export default function Incidents() {
                         />
                       </Field>
                     </div>
-                    <div style={{ marginBottom: "var(--sp-4)" }}>
+                    <div className="ct-mb-4">
                       {selected.status === "OPEN" && (
                         <Button
                           disabled={busy}
@@ -658,7 +648,7 @@ export default function Incidents() {
           )}
 
           <h3>Timeline</h3>
-          <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+          <ul className="ct-plain-list">
             {selected.timeline.map((e) => (
               <li
                 key={e.id}
@@ -669,14 +659,11 @@ export default function Incidents() {
               >
                 <div className="ct-row ct-between">
                   <b>{e.type.replaceAll("_", " ")}</b>
-                  <span
-                    className="ct-muted"
-                    style={{ fontSize: "var(--fs-sm)" }}
-                  >
+                  <span className="ct-muted ct-text-sm">
                     {when(e.at)} · {e.actor}
                   </span>
                 </div>
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted ct-text-sm">
                   {e.details} ·{" "}
                   <EvidenceState
                     delivery={e.evidence}

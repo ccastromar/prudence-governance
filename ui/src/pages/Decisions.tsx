@@ -116,7 +116,7 @@ function DemoCard({
         </Select>
       </Field>
       <div className="ct-row ct-between">
-        <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+        <span className="ct-muted ct-text-sm">
           PDP → runtime hook → Ernest evidence
         </span>
         <Button
@@ -219,7 +219,7 @@ export default function Decisions() {
       subtitle="Run a real governed framework hook, then inspect the policy verdict and evidence delivery without introducing another public UI."
     >
       <h2>Governed runs</h2>
-      <div className="ct-grid-2" style={{ marginBottom: "var(--sp-8)" }}>
+      <div className="ct-grid-2 ct-mb-8">
         <DemoCard
           demo="bug-triage"
           systems={systems}
@@ -251,7 +251,7 @@ export default function Decisions() {
         The raw policy endpoint a workload gate consults. It is normally called
         by a machine identity, not a browser.
       </p>
-      <Card style={{ marginBottom: "var(--sp-6)" }}>
+      <Card className="ct-mb-6">
         <form onSubmit={submit}>
           <div className="ct-grid-2">
             <Field label="Subject" htmlFor="decisions-subject">
@@ -290,7 +290,7 @@ export default function Decisions() {
             {error ? (
               <Alert tone="danger">{error}</Alert>
             ) : (
-              <span className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+              <span className="ct-muted ct-text-sm">
                 Lifecycle facts first, then policy authorization.
               </span>
             )}
@@ -311,9 +311,7 @@ export default function Decisions() {
             )}
           </div>
           {decision.reason && (
-            <p className="ct-muted" style={{ marginBottom: 0 }}>
-              {decision.reason}
-            </p>
+            <p className="ct-muted ct-mb-0">{decision.reason}</p>
           )}
         </Card>
       )}

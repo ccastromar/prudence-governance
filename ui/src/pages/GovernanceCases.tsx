@@ -89,8 +89,8 @@ export default function GovernanceCases() {
       subtitle="Decision dossiers for assessments, changes, exceptions and corrective actions. Prudence stores the process, owners and SHA-256-backed references — never the document itself."
     >
       {error && <Alert tone="danger">{error}</Alert>}
-      <Card style={{ marginBottom: "var(--sp-6)" }}>
-        <h2 style={{ marginTop: 0, fontSize: "var(--fs-lg)" }}>Open a case</h2>
+      <Card className="ct-mb-6">
+        <h2 className="ct-section-title">Open a case</h2>
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -202,7 +202,7 @@ export default function GovernanceCases() {
             >
               <td>
                 <b>{c.title}</b>
-                <div className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+                <div className="ct-muted ct-text-sm">
                   {c.type.replaceAll("_", " ")} · {when(c.openedAt)}
                 </div>
               </td>
@@ -216,7 +216,7 @@ export default function GovernanceCases() {
         </tbody>
       </Table>
       {selected && (
-        <Card style={{ marginTop: "var(--sp-6)" }}>
+        <Card className="ct-mt-6">
           <div className="ct-row ct-between">
             <div>
               <h2 style={{ margin: 0, fontSize: "var(--fs-lg)" }}>
@@ -239,9 +239,9 @@ export default function GovernanceCases() {
             </Button>
           )}
           {selected.status !== "CLOSED" && (
-            <Card style={{ marginTop: "var(--sp-4)" }}>
-              <h3 style={{ marginTop: 0 }}>Reference evidence</h3>
-              <p className="ct-muted" style={{ fontSize: "var(--fs-sm)" }}>
+            <Card className="ct-mt-4">
+              <h3 className="ct-mt-0">Reference evidence</h3>
+              <p className="ct-muted ct-text-sm">
                 Link to the source record and its exact SHA-256; no file is
                 copied here.
               </p>

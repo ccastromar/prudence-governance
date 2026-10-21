@@ -105,7 +105,7 @@ export default function Changes() {
         </Button>
       </Card>
       {result && (
-        <Card style={{ marginTop: "var(--sp-5)" }}>
+        <Card className="ct-mt-5">
           <h2>{result.outcome.replaceAll("_", " ")}</h2>
           <p>{result.rationale}</p>
           <p className="ct-muted">
