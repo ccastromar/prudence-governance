@@ -3,6 +3,7 @@ import {
   api,
   type AiSystem,
   type Decision,
+  type GovernedDemo,
   type GovernedDemoRun,
 } from "../api";
 import { hasRealmRole } from "../auth";
@@ -18,7 +19,7 @@ import {
   Select,
 } from "@chestertown/design";
 
-type Demo = "bug-triage" | "response-drafter";
+type Demo = GovernedDemo;
 
 const demos: Record<
   Demo,
@@ -35,6 +36,24 @@ const demos: Record<
     framework: "LangGraph",
     detail:
       "A governed graph node drafts a synthetic customer response; delivery only follows ALLOW.",
+  },
+  "claims-letter": {
+    title: "Claims letter",
+    framework: "Google ADK",
+    detail:
+      "An ADK agent's tool queues a synthetic claim acknowledgement; a runner plugin asks Prudence first.",
+  },
+  "refund-check": {
+    title: "Refund approval",
+    framework: "OpenAI Agents SDK",
+    detail:
+      "An Agents SDK tool approves a small synthetic refund; a tool guardrail asks Prudence first.",
+  },
+  "crm-update": {
+    title: "CRM update",
+    framework: "Microsoft Agent Framework",
+    detail:
+      "An Agent Framework tool logs a synthetic call summary; function middleware asks Prudence first.",
   },
 };
 
@@ -81,12 +100,9 @@ function DemoCard({
         <Badge>{meta.framework}</Badge>
       </div>
       <p className="sub">{meta.detail}</p>
-      <Field
-        label="Registered AI system"
-        htmlFor="decisions-registered-ai-system"
-      >
+      <Field label="Registered AI system" htmlFor={`decisions-system-${demo}`}>
         <Select
-          id="decisions-registered-ai-system"
+          id={`decisions-system-${demo}`}
           value={systemId}
           onChange={(e) => setSystemId(e.target.value)}
           disabled={busy}
@@ -213,6 +229,21 @@ export default function Decisions() {
           demo="response-drafter"
           systems={systems}
           latest={latest["response-drafter"]}
+        />
+        <DemoCard
+          demo="claims-letter"
+          systems={systems}
+          latest={latest["claims-letter"]}
+        />
+        <DemoCard
+          demo="refund-check"
+          systems={systems}
+          latest={latest["refund-check"]}
+        />
+        <DemoCard
+          demo="crm-update"
+          systems={systems}
+          latest={latest["crm-update"]}
         />
       </div>
       <h2>Advanced PDP query</h2>

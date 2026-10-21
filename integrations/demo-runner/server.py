@@ -1,8 +1,10 @@
 """Private, deterministic demonstrations for the Prudence console.
 
 The HTTP surface is intentionally tiny and intended only for the Prudence backend on the Docker
-application network. It executes the real framework adapters: ``@governed`` for Pydantic AI and
-``governed_node`` / ``gate_route`` for LangGraph. No user data and no real LLM are used.
+application network. It executes the real framework adapters: ``@governed`` for Pydantic AI,
+``governed_node`` / ``gate_route`` for LangGraph, and (agent_demos.py) the Google ADK plugin, the
+OpenAI Agents SDK guardrail and the Microsoft Agent Framework middleware. No user data and no
+real LLM are used.
 
 The model is Pydantic AI's offline ``TestModel`` by default. With PRUDENCE_DEMO_LLM_BASE_URL set
 (an OpenAI-compatible ``/v1`` endpoint, e.g. AOS's deterministic mock LLM), both frameworks talk
@@ -30,6 +32,8 @@ from pydantic_ai.models.test import TestModel
 from prudence_governance import ErnestEvidence, M2MAuth, PrudenceGate
 from prudence_langgraph import gate_route, governed_node
 from prudence_pydantic import GovDeps, governed
+
+from agent_demos import AGENT_DEMOS
 
 PORT = int(os.getenv("PORT", "9100"))
 SHARED_TOKEN = os.getenv("PRUDENCE_DEMO_RUNNER_TOKEN", "")
@@ -216,6 +220,17 @@ def response(
     return body
 
 
+def run_agent_demo(demo: str, system_id: str) -> dict[str, Any]:
+    """ADK, Agents SDK or Agent Framework: the adapter seals each allowed execution in Ernest under
+    the AI system's id, next to Prudence's own decision."""
+    framework, step, run = AGENT_DEMOS[demo]
+    gate, evidence = clients()
+    outcome = run(system_id, gate, evidence)
+    body = response(framework, step, gate, evidence, outcome["output"], outcome["continued"], system_id)
+    body["model"] = outcome["model"]
+    return body
+
+
 class Handler(BaseHTTPRequestHandler):
     def _authorized(self) -> bool:
         return bool(SHARED_TOKEN) and hmac.compare_digest(
@@ -235,7 +250,8 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             self.send_error(HTTPStatus.UNAUTHORIZED, "runner token required")
             return
-        if self.path not in ("/runs/bug-triage", "/runs/response-drafter"):
+        demo = self.path.removeprefix("/runs/")
+        if not self.path.startswith("/runs/") or demo not in ("bug-triage", "response-drafter", *AGENT_DEMOS):
             self.send_error(HTTPStatus.NOT_FOUND)
             return
         try:
@@ -244,8 +260,13 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(system_id, str) or not system_id.strip():
                 raise ValueError("aiSystemId is required")
             initiator = self.headers.get("X-Prudence-Demo-Initiator", "unknown")
-            result = run_bug_triage(system_id, initiator) if self.path.endswith("bug-triage") else run_response_drafter(system_id, initiator)
-            LATEST[self.path.rsplit("/", 1)[-1]] = result
+            if demo in AGENT_DEMOS:
+                result = run_agent_demo(demo, system_id)
+            elif demo == "bug-triage":
+                result = run_bug_triage(system_id, initiator)
+            else:
+                result = run_response_drafter(system_id, initiator)
+            LATEST[demo] = result
             self.reply(HTTPStatus.OK, result)
         except ValueError as error:
             self.reply(HTTPStatus.BAD_REQUEST, {"error": str(error)})

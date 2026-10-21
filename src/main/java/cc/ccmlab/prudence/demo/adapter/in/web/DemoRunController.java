@@ -14,14 +14,20 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
- * Human-facing entry point for the two framework demos. It is deliberately a relay: the Python
- * process executes the actual Pydantic AI/LangGraph hook and owns the M2M PDP and Ernest secrets.
+ * Human-facing entry point for the framework demos (Pydantic AI, LangGraph, Google ADK, the OpenAI
+ * Agents SDK, Microsoft Agent Framework). It is deliberately a relay: the Python process executes
+ * the actual framework hook and owns the M2M PDP and Ernest secrets.
  */
 @RestController
 @RequestMapping("/api/demos")
 public class DemoRunController {
   private static final Map<String, String> RUNNERS =
-      Map.of("bug-triage", "bug-triage", "response-drafter", "response-drafter");
+      Map.of(
+          "bug-triage", "bug-triage",
+          "response-drafter", "response-drafter",
+          "claims-letter", "claims-letter",
+          "refund-check", "refund-check",
+          "crm-update", "crm-update");
 
   private final DemoRunnerProperties properties;
 

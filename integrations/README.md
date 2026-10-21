@@ -33,15 +33,18 @@ thin adapter, not a new core.
 ## Console demonstrations
 
 The optional `demo-runner` executes the deterministic examples exposed in Prudence's **Policy
-decisions → Governed runs** panel: a Pydantic AI bug-triage tool and a LangGraph
-response-drafting node. It is internal-only: the browser calls Prudence with a `read-write`
+decisions → Governed runs** panel, one per framework adapter: a Pydantic AI bug-triage tool, a
+LangGraph response-drafting node, a Google ADK claims-letter tool, an OpenAI Agents SDK refund
+tool and a Microsoft Agent Framework CRM tool (`agent_demos.py`). The last three seal each
+allowed execution in Ernest under the AI system's id. It is internal-only: the browser calls Prudence with a `read-write`
 session, Prudence relays to the runner using a private token, and the runner uses its own
 least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never receives a PDP
 or Ernest credential. `chestertown-infra/scripts/provision-framework-demo-runner-client.sh`
 creates the runner identity and bridge token on the MVP host.
 
-By default the runner needs no model: Pydantic AI uses its offline `TestModel` and the LangGraph
-node returns a fixed draft. Set `PRUDENCE_DEMO_LLM_BASE_URL` to an OpenAI-compatible `/v1`
+By default the runner needs no model: Pydantic AI uses its offline `TestModel`, the LangGraph
+node returns a fixed draft, and the three agent frameworks talk to the conformance run's scripted
+endpoint (`fake_llm.py`), started in-process. Set `PRUDENCE_DEMO_LLM_BASE_URL` to an OpenAI-compatible `/v1`
 endpoint (optionally `PRUDENCE_DEMO_LLM_MODEL`, default `aos-deterministic-mock`, and
 `PRUDENCE_DEMO_LLM_API_KEY`) and both frameworks make a real model call over HTTP instead: the
 Pydantic AI agent lets the model choose the governed tool, and the LangGraph node asks it for

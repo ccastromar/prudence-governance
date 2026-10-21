@@ -3,7 +3,8 @@ no API key. It is not a language model and says so in its name (`conformance-scr
 
 Chat Completions only (`POST /v1/chat/completions`), streaming or not. Its whole behaviour:
 - tools offered and no tool result yet: call the first tool, filling each required argument
-  from its JSON schema (strings "C-1", numbers 1, booleans true);
+  from its JSON schema (strings: the first id-like word in the user's message, such as
+  "CL-2041", else "C-1"; numbers 1; booleans true);
 - a tool result came back: answer with it ("Tool result: …");
 - no tools: answer "OK".
 
@@ -12,6 +13,7 @@ Run it alone with `python fake_llm.py [port]`, or start it in-process with `serv
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 import time
@@ -21,7 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 MODEL = "conformance-scripted"
 
 
-def _argument(schema: dict):
+def _argument(schema: dict, text_default: str = "C-1"):
     kind = schema.get("type")
     if kind in ("number", "integer"):
         return 1
@@ -31,6 +33,16 @@ def _argument(schema: dict):
         return []
     if kind == "object":
         return {}
+    return text_default
+
+
+def _user_id(messages: list) -> str:
+    """The first id-like word (ORD-7731, CL-2041) the user wrote, so the call reads naturally."""
+    for m in messages:
+        if m.get("role") == "user" and isinstance(m.get("content"), str):
+            found = re.search(r"\b[A-Z]{1,5}-\d+\b", m["content"])
+            if found:
+                return found.group(0)
     return "C-1"
 
 
@@ -48,7 +60,8 @@ def reply(request: dict) -> dict:
         fn = tools[0].get("function", tools[0])
         params = fn.get("parameters") or {}
         props = params.get("properties") or {}
-        args = {name: _argument(props.get(name, {})) for name in params.get("required", list(props))}
+        default = _user_id(messages)
+        args = {name: _argument(props.get(name, {}), default) for name in params.get("required", list(props))}
         return {"role": "assistant", "content": None, "tool_calls": [{
             "id": f"call_{uuid.uuid4().hex[:12]}", "type": "function",
             "function": {"name": fn["name"], "arguments": json.dumps(args)}}]}

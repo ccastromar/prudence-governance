@@ -198,6 +198,14 @@ export interface Decision {
   approver?: string;
 }
 
+/// The framework demos the private runner executes (one per governed framework adapter).
+export type GovernedDemo =
+  | "bug-triage"
+  | "response-drafter"
+  | "claims-letter"
+  | "refund-check"
+  | "crm-update";
+
 export interface GovernedDemoRun {
   framework: "Pydantic AI" | "LangGraph";
   step: string;
@@ -764,7 +772,7 @@ export const api = {
       headers: withAuth(json_ct),
       body: JSON.stringify(body),
     }).then(json<Decision>),
-  runDemo: (demo: "bug-triage" | "response-drafter", aiSystemId: string) =>
+  runDemo: (demo: GovernedDemo, aiSystemId: string) =>
     fetch(`/api/demos/${demo}/runs`, {
       method: "POST",
       headers: withAuth(json_ct),
@@ -772,7 +780,7 @@ export const api = {
     }).then(ok<GovernedDemoRun>),
   demoRuns: () =>
     fetch("/api/demos/runs", { headers: withAuth() }).then(
-      json<Partial<Record<"bug-triage" | "response-drafter", GovernedDemoRun>>>,
+      json<Partial<Record<GovernedDemo, GovernedDemoRun>>>,
     ),
   approveSystem: (id: string) =>
     fetch(`/api/registry/systems/${id}/approve`, {

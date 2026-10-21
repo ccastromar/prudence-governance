@@ -7,9 +7,15 @@ test_operator_can_run if {
 	allow with input as {"subject": "alice@bank.eu", "pipeline": "credit-risk-scoring", "aiSystemId": "sys-1", "action": "run"}
 }
 
-# The private framework demo runner may execute exactly its two visible demonstrations.
+# The private framework demo runner may execute exactly its visible demonstrations.
 test_framework_demo_runner_can_run_bug_triage if {
 	allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": "pipeline_bug_triage", "aiSystemId": "sys-1", "action": "run"}
+}
+
+test_framework_demo_runner_can_run_the_agent_framework_demos if {
+	every pipeline in ["pipeline_claims_letter", "pipeline_refund_check", "pipeline_crm_update"] {
+		allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": pipeline, "aiSystemId": "sys-1", "action": "run"}
+	}
 }
 
 test_framework_demo_runner_cannot_run_other_pipeline if {
