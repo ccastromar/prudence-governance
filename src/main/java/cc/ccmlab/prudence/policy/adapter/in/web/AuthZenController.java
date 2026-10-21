@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
+import cc.ccmlab.prudence.config.AuthZenProperties;
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.policy.application.port.in.DecidePolicyUseCase;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
@@ -23,8 +24,11 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 /// OpenID AuthZEN Authorization API 1.0 in front of Prudence's PDP (ADR-001), so any
 /// orchestrator that speaks AuthZEN can be governed by Prudence without Prudence's own API.
 ///
-/// Mapping: `resource` is `{type: "pipeline", id: <pipeline>, properties: {aiSystemId}}`;
-/// `action.name` is the action; the subject is the authenticated workload identity, as in
+/// Mapping: `resource` is `{type: "pipeline", id: <pipeline>, properties: {aiSystemId}}`, or,
+/// for an MCP gateway asking about a tool call, `{type: "tool", id: <tool name>}`. A tool is
+/// checked as the pipeline `tool:<name>` of the AI system it acts for: `properties.aiSystemId`
+/// when the gateway sends it, otherwise `prudence.authzen.tool-systems`; an unmapped tool is
+/// refused. `action.name` is the action; the subject is the authenticated workload identity, as in
 /// Decision API v1 (the body's `subject` is required by AuthZEN and ignored). Every evaluation
 /// is a recorded decision. AuthZEN decisions are booleans: only ALLOW is `true`, so a generic
 /// client fails closed on APPROVAL_REQUIRED; `context` carries Prudence's verdict, the reason,
@@ -38,14 +42,17 @@ public class AuthZenController {
 
   private final DecidePolicyUseCase pdp;
   private final IntegrationProperties properties;
+  private final Map<String, String> toolSystems;
   private final String publicUrl;
 
   public AuthZenController(
       DecidePolicyUseCase pdp,
       IntegrationProperties properties,
+      AuthZenProperties authZen,
       @Value("${prudence.authzen.pdp-url:${PRUDENCE_CONSOLE_URL:}}") String publicUrl) {
     this.pdp = pdp;
     this.properties = properties;
+    this.toolSystems = authZen.toolSystems();
     this.publicUrl = publicUrl == null ? "" : publicUrl.strip().replaceAll("/+$", "");
   }
 
@@ -70,7 +77,7 @@ public class AuthZenController {
       Authentication authentication) {
     Evaluation e;
     try {
-      e = Evaluation.parse(body == null ? Map.of() : body, Map.of());
+      e = Evaluation.parse(body == null ? Map.of() : body, Map.of(), toolSystems);
     } catch (IllegalArgumentException invalid) {
       return withRequestId(ResponseEntity.status(HttpStatus.BAD_REQUEST), requestId)
           .body(Map.of("error", Map.of("status", 400, "message", invalid.getMessage())));
@@ -106,7 +113,7 @@ public class AuthZenController {
     for (Object item : items) {
       Map<String, Object> result;
       try {
-        Evaluation e = Evaluation.parse(asMap(item), request);
+        Evaluation e = Evaluation.parse(asMap(item), request, toolSystems);
         result = decide(e, authentication);
       } catch (IllegalArgumentException invalid) {
         // A per-evaluation error is a denial carrying the error (AuthZEN batch semantics).
@@ -188,7 +195,8 @@ public class AuthZenController {
   /// One evaluation, with the batch's top-level subject/resource/action as defaults.
   record Evaluation(String subjectId, String pipeline, String aiSystemId, String action) {
 
-    static Evaluation parse(Map<String, Object> item, Map<String, Object> defaults) {
+    static Evaluation parse(
+        Map<String, Object> item, Map<String, Object> defaults, Map<String, String> toolSystems) {
       Map<String, Object> subject = pick(item, defaults, "subject");
       Map<String, Object> resource = pick(item, defaults, "resource");
       Map<String, Object> action = pick(item, defaults, "action");
@@ -196,16 +204,36 @@ public class AuthZenController {
       String subjectId = required(subject, "id", "subject.id");
       required(subject, "type", "subject.type");
       String resourceType = required(resource, "type", "resource.type");
-      if (!"pipeline".equals(resourceType)) {
-        throw new IllegalArgumentException(
-            "resource.type must be \"pipeline\" (was \"" + resourceType + "\")");
+      String resourceId = required(resource, "id", "resource.id");
+      Map<String, Object> properties = asMapOrEmpty(resource.get("properties"));
+      String pipeline;
+      String aiSystemId;
+      switch (resourceType) {
+        case "pipeline" -> {
+          pipeline = resourceId;
+          aiSystemId = required(properties, "aiSystemId", "resource.properties.aiSystemId");
+        }
+        case "tool" -> {
+          // An MCP tool call: governed as the pipeline `tool:<name>` of the AI system the tool
+          // acts for. Never guess the system: an unmapped tool is refused.
+          pipeline = "tool:" + resourceId;
+          Object sent = properties.get("aiSystemId");
+          aiSystemId =
+              sent != null && !String.valueOf(sent).isBlank()
+                  ? String.valueOf(sent)
+                  : toolSystems.get(resourceId);
+          if (aiSystemId == null || aiSystemId.isBlank()) {
+            throw new IllegalArgumentException(
+                "tool \""
+                    + resourceId
+                    + "\" is not mapped to an AI system: send resource.properties.aiSystemId or"
+                    + " set prudence.authzen.tool-systems");
+          }
+        }
+        default ->
+            throw new IllegalArgumentException(
+                "resource.type must be \"pipeline\" or \"tool\" (was \"" + resourceType + "\")");
       }
-      String pipeline = required(resource, "id", "resource.id");
-      String aiSystemId =
-          required(
-              asMapOrEmpty(resource.get("properties")),
-              "aiSystemId",
-              "resource.properties.aiSystemId");
       String actionName = required(action, "name", "action.name");
       return new Evaluation(subjectId, pipeline, aiSystemId, actionName);
     }

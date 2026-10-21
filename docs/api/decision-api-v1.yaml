@@ -150,6 +150,13 @@ paths:
         action. `subject` is required by AuthZEN but, as in Decision API v1, the authenticated
         workload identity is used instead.
 
+        **MCP tool calls.** An MCP gateway can ask about a tool call with
+        `resource: {type: "tool", id: <tool name>}`. Prudence checks it as the pipeline
+        `tool:<name>` of the AI system the tool acts for: `resource.properties.aiSystemId` when the
+        gateway sends it, otherwise the `prudence.authzen.tool-systems` mapping. A tool mapped to
+        no AI system is refused with `400`, never guessed. Grant the gateway's identity the
+        pipeline `tool:<name>` in the policy data.
+
         Always `200` for a decision. `decision` is `true` only for Prudence's ALLOW, so a
         generic AuthZEN client fails closed on APPROVAL_REQUIRED; `context` carries
         `prudenceDecision`, `reason`, `approvalRequired`, `approver`, `decisionId` and
@@ -163,10 +170,17 @@ paths:
         required: true
         content:
           application/json:
-            example:
-              subject: { type: workload, id: aos }
-              resource: { type: pipeline, id: credit_prescreening, properties: { aiSystemId: 68bf42c1-7b02-46b7-a7d9-68d696620b8a } }
-              action: { name: run }
+            examples:
+              pipeline:
+                value:
+                  subject: { type: workload, id: aos }
+                  resource: { type: pipeline, id: credit_prescreening, properties: { aiSystemId: 68bf42c1-7b02-46b7-a7d9-68d696620b8a } }
+                  action: { name: run }
+              mcpTool:
+                value:
+                  subject: { type: agent, id: claims-assistant }
+                  resource: { type: tool, id: send_customer_letter }
+                  action: { name: run }
       responses:
         '200':
           description: The decision.
@@ -182,7 +196,7 @@ paths:
                   approver: risk-officer
                   reason: high-risk system awaiting governance approval
         '400':
-          description: 'A required attribute is missing, or `resource.type` is not `pipeline`. Body `{error: {status, message}}`.'
+          description: 'A required attribute is missing, `resource.type` is neither `pipeline` nor `tool`, or a tool is mapped to no AI system. Body `{error: {status, message}}`.'
         '401':
           description: No token, or an invalid one.
         '403':

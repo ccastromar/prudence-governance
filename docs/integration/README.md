@@ -105,6 +105,38 @@ by the time you receive it.
 The full contract is in [`docs/api/decision-api-v1.yaml`](../api/decision-api-v1.yaml)
 (OpenAPI 3.1).
 
+### Governing MCP tool calls through a gateway
+
+If your agents call tools over MCP through a gateway that speaks AuthZEN (for example
+Traefik Hub's MCP gateway), the gateway can ask Prudence before each tool call. It sends the
+tool as the resource:
+
+```json
+{ "subject":  { "type": "agent", "id": "claims-assistant" },
+  "resource": { "type": "tool", "id": "send_customer_letter" },
+  "action":   { "name": "run" } }
+```
+
+Prudence checks it as the pipeline `tool:send_customer_letter` of the AI system the tool acts
+for. Tell Prudence which system that is, either in the request
+(`resource.properties.aiSystemId`) or once, in its configuration:
+
+```yaml
+prudence:
+  authzen:
+    tool-systems:
+      "[send_customer_letter]": 68bf42c1-…
+```
+
+A tool mapped to no AI system is refused, never guessed. Register the gateway like any other
+runtime and grant it the tools it may call:
+
+```bash
+scripts/provision-runtime.py --name mcp-gateway --pipeline tool:send_customer_letter
+```
+
+Configure the gateway's action name as `run`; that is what the grant allows.
+
 ## Step 4: report the execution
 
 When a governed run actually starts, tell Prudence, citing the decision:
@@ -157,6 +189,7 @@ external store; not independently verifiable"), and never claims a seal it does 
 | LangGraph | [`integrations/langgraph`](../../integrations/langgraph) | a governed node and a routing gate |
 | Pydantic AI | [`integrations/pydantic-ai`](../../integrations/pydantic-ai) | a `@governed` decorator for a tool |
 | Go | AOS `internal/governance` | the reference implementation |
+| MCP gateway (AuthZEN) | none needed | `resource.type: tool`, see step 3 |
 
 Each adapter does the same two things at its framework's natural hook point: ask before the
 step, report after it starts. For anything else, steps 3 and 4 are two HTTP calls.
