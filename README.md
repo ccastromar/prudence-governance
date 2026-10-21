@@ -31,12 +31,16 @@ for the founding architecture.
 | `src/`, `ui/` | Spring Boot backend and React console |
 | `policy/opa/` | OPA/Rego policy bundle (the authorization half of the PDP) |
 | `integrations/` | Python adapters for agent runtimes (LangGraph, Pydantic AI) |
+| `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
+| `docs/api/` | Published contracts: Decision API v1 (OpenAPI) and evidence events v1 (AsyncAPI) |
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
 | `docs/adr/` | Architecture decisions |
 | `ui/vendor/` | `@chestertown/design`, the shared design system (tokens and React components), as a pinned tarball released from the `chestertown-design` repository |
 | `docs/operations/` | Deployment and load-test results |
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
+
+**Connect your own orchestrator:** see [docs/integration/README.md](docs/integration/README.md).
 
 Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md) (step by step) or
 [scripts/README.md](scripts/README.md).

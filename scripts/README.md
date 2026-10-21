@@ -109,3 +109,16 @@ completed run safely.
 create the standard `basic` / `profile` / `email` scopes. Each client therefore maps `sub`,
 `email` and `preferred_username` explicitly. Without them a token names no one — and Prudence
 rejects such tokens (401) rather than recording an anonymous reviewer.
+
+## Register a runtime
+
+`provision-runtime.py` gives an orchestrator its own Keycloak machine identity (`pdp.decide`,
+`execution.report`, the `preferred_username` mapper) and grants it pipelines in
+`policy/opa/data.json`. Against the local dev Keycloak:
+
+```bash
+KEYCLOAK_ADMIN_PASSWORD=admin scripts/provision-runtime.py --realm chestertown \
+  --name my-runtime --pipeline my_pipeline
+```
+
+The full walk-through is [docs/integration/README.md](../docs/integration/README.md).

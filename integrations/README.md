@@ -14,6 +14,10 @@ langgraph/            prudence_langgraph — governed_node + gate_route for a La
 demo-runner/          internal HTTP runner used by Prudence's visible framework demos
 ```
 
+Start with [`docs/integration/README.md`](../docs/integration/README.md): it covers registering a
+runtime (`scripts/provision-runtime.py`), the rules every adapter follows, and the HTTP calls
+underneath.
+
 Every adapter does the same two things at its framework's natural hook point: consult the
 PDP before a step runs (allow / deny / approval-required), and seal the execution in Ernest
 afterwards. The decision is sealed by Prudence itself (the PDP records every decision it

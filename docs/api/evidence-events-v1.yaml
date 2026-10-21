@@ -1,0 +1,282 @@
+asyncapi: 3.0.0
+info:
+  title: Prudence Evidence Events
+  version: 1.0.0
+  description: |
+    What Prudence sends to a company's own audit store when it runs with the generic evidence
+    sink (`prudence.evidence.sink=cloudevents`) instead of Ernest. Use it to point a SIEM, an
+    object-locked bucket or an in-house ledger at Prudence.
+
+    **Envelope.** Every event is a CloudEvents 1.0 event in structured mode
+    (`application/cloudevents+json`). `type` names the kind and its version
+    (`chestertown.prudence.<kind>.v1`); `subject` is what the event is about (an AI system,
+    a register, an attestation).
+
+    **Delivery.** At least once. An event counts as delivered only when the store acknowledged
+    it (a Kafka write acknowledged by the brokers, or a 2xx from the webhook); until then
+    Prudence retries from its outbox. `id` is stable across retries: **deduplicate on `id`**.
+
+    **Custody only.** This sink gives custody (capability level C1 in ADR-001): durable
+    acknowledgement and deduplication. It gives no inclusion proof, no external anchor and no
+    read-back. Prudence says so in Posture, attestations and snapshots, and never claims a seal
+    it does not have. Ernest is the sink that adds proofs, anchoring and read-back.
+
+    **What never travels.** Prompts, inputs, outputs and tool payloads. People appear only as
+    SHA-256 hashes (`subjectHash`, `reviewerHash`).
+
+    **Compatibility.** v1 only grows by adding optional fields. Consumers must ignore fields
+    they do not know. A breaking change gets a new type (`….v2`), sent alongside v1 for a
+    transition period.
+  license:
+    name: Proprietary (CCMLab)
+defaultContentType: application/cloudevents+json
+
+servers:
+  kafka:
+    host: '{bootstrapServers}'
+    protocol: kafka
+    description: |
+      `prudence.evidence.cloudevents.transport=kafka` (the default). One topic
+      (`prudence.evidence.cloudevents.topic`, default `prudence.evidence`). The record key is
+      the event's `subject`, so one AI system's events stay in order within a partition. The
+      record carries the header `content-type: application/cloudevents+json; charset=UTF-8`.
+    variables:
+      bootstrapServers:
+        description: The brokers, from `prudence.evidence.cloudevents.kafka-bootstrap-servers`.
+  webhook:
+    host: '{host}'
+    pathname: '{path}'
+    protocol: https
+    description: |
+      `prudence.evidence.cloudevents.transport=webhook`. One `POST` per event to
+      `prudence.evidence.cloudevents.webhook-url` (HTTPS outside development). When
+      `webhook-token` is set, Prudence sends `Authorization: Bearer <token>`. A 2xx answer is
+      the acknowledgement. 408, 429 and 5xx are retried; 401 and 403 are reported as a
+      configuration problem; any other 4xx sends the event to the dead-letter list in Posture.
+    variables:
+      host:
+        description: The store's intake host.
+      path:
+        description: The intake path.
+    security:
+      - $ref: '#/components/securitySchemes/webhookToken'
+
+channels:
+  evidence:
+    address: prudence.evidence
+    description: The evidence stream. On the webhook transport it is the configured URL.
+    servers:
+      - $ref: '#/servers/kafka'
+      - $ref: '#/servers/webhook'
+    messages:
+      policyDecision:
+        $ref: '#/components/messages/policyDecision'
+      review:
+        $ref: '#/components/messages/review'
+      record:
+        $ref: '#/components/messages/record'
+      attestation:
+        $ref: '#/components/messages/attestation'
+
+operations:
+  sendEvidence:
+    action: send
+    channel:
+      $ref: '#/channels/evidence'
+    summary: Prudence sends each piece of governance evidence once it is recorded.
+
+components:
+  securitySchemes:
+    webhookToken:
+      type: httpBearerToken
+      description: Optional. Set `prudence.evidence.cloudevents.webhook-token`.
+
+  messages:
+    policyDecision:
+      name: chestertown.prudence.policy.decision.v1
+      title: Policy decision
+      summary: |
+        A PDP decision (ALLOW, DENY or APPROVAL_REQUIRED) for an AI system, recorded in the
+        same transaction that produced it. `id` equals `data.decision.decisionId`, the value the
+        Decision API returned to the runtime. `subject` is the AI system's id.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - type: object
+            properties:
+              type: { const: chestertown.prudence.policy.decision.v1 }
+              data: { $ref: '#/components/schemas/PolicyDecisionData' }
+      examples:
+        - name: approvalRequired
+          payload:
+            specversion: '1.0'
+            id: 3f6c1d7e-1b2a-4c55-9e7a-0d4a1b2c3d4e
+            source: prudence
+            type: chestertown.prudence.policy.decision.v1
+            subject: 0b1e7a52-4c2d-4f0e-9a51-7f3c2d1e0a9b
+            time: '2026-10-21T09:14:03.512Z'
+            datacontenttype: application/json
+            data:
+              aiSystem:
+                id: 0b1e7a52-4c2d-4f0e-9a51-7f3c2d1e0a9b
+                name: Consumer credit pre-screening
+                riskTier: HIGH
+                systemOfRecord: prudence
+              decision:
+                decisionId: 3f6c1d7e-1b2a-4c55-9e7a-0d4a1b2c3d4e
+                outcome: APPROVAL_REQUIRED
+                reason: high-risk system awaiting its second independent approval
+                approver: risk-officer
+                pipeline: pipeline_aos_credit_pre_screening
+                action: run
+                policyVersion: '2026.10.19'
+                policyHash: 9b2f…
+                systemVersion: '2026.10'
+                modelHash: e3b0…
+              subjectHash: 5e88…
+
+    review:
+      name: chestertown.prudence.review.v1
+      title: Review event
+      summary: |
+        A governance review of an AI system: an approval or a renewal (first or final
+        sign-off) or a rejection, with the status change it caused. `subject` is the AI system's id.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - type: object
+            properties:
+              type: { const: chestertown.prudence.review.v1 }
+              data: { $ref: '#/components/schemas/ReviewData' }
+
+    record:
+      name: chestertown.prudence.record.v1
+      title: Governance record
+      summary: |
+        An entry in one of Prudence's registers (for example an incident event), as the hash of
+        its canonical content plus its metadata. `subject` is the register's id.
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - type: object
+            properties:
+              type: { const: chestertown.prudence.record.v1 }
+              data: { $ref: '#/components/schemas/RecordData' }
+
+    attestation:
+      name: chestertown.prudence.attestation.v1
+      title: Attestation
+      summary: |
+        A point-in-time attestation of the estate: its content hash and summary. `subject` is
+        the attestation's id. With this sink the attestation states custody only (it cannot be
+        verified independently of the store).
+      payload:
+        allOf:
+          - $ref: '#/components/schemas/Envelope'
+          - type: object
+            properties:
+              type: { const: chestertown.prudence.attestation.v1 }
+              data: { $ref: '#/components/schemas/AttestationData' }
+
+  schemas:
+    Envelope:
+      type: object
+      description: CloudEvents 1.0, structured mode.
+      required: [specversion, id, source, type, subject, time, datacontenttype, data]
+      properties:
+        specversion: { const: '1.0' }
+        id:
+          type: string
+          description: Stable across retries. Deduplicate on it.
+        source:
+          type: string
+          description: '`prudence.evidence.cloudevents.source`, default `prudence`.'
+        type:
+          type: string
+          pattern: '^chestertown\.prudence\.[a-z.]+\.v[0-9]+$'
+        subject: { type: string }
+        time:
+          type: string
+          format: date-time
+          description: When Prudence emitted the event (UTC).
+        datacontenttype: { const: application/json }
+        data: { type: object }
+
+    AiSystemRef:
+      type: object
+      required: [id, systemOfRecord]
+      properties:
+        id: { type: string, description: The AI system's id in Prudence's registry. }
+        name: { type: string }
+        riskTier:
+          type: string
+          enum: [PROHIBITED, HIGH, LIMITED, MINIMAL]
+        systemOfRecord:
+          const: prudence
+          description: Prudence owns this system's lifecycle; other stores treat it as read-only.
+
+    PolicyDecisionData:
+      type: object
+      required: [aiSystem, decision, subjectHash]
+      properties:
+        aiSystem: { $ref: '#/components/schemas/AiSystemRef' }
+        decision:
+          type: object
+          required: [decisionId, outcome, pipeline, action]
+          properties:
+            decisionId: { type: string }
+            outcome:
+              type: string
+              enum: [ALLOW, DENY, APPROVAL_REQUIRED]
+            reason: { type: [string, 'null'], description: Present for DENY and APPROVAL_REQUIRED. }
+            approver: { type: [string, 'null'], description: The role that must approve (APPROVAL_REQUIRED). }
+            pipeline: { type: string }
+            action: { type: string }
+            policyVersion: { type: [string, 'null'] }
+            policyHash: { type: [string, 'null'] }
+            systemVersion: { type: [string, 'null'] }
+            modelHash: { type: [string, 'null'] }
+        subjectHash:
+          type: string
+          description: SHA-256 (hex) of the workload identity that asked.
+        correlationId: { type: string, description: Ties the events of one governed flow together. }
+        causationId: { type: string, description: The event that caused this one. }
+
+    ReviewData:
+      type: object
+      required: [reviewId, aiSystem, action, reviewerHash, at, previousStatus, newStatus]
+      properties:
+        reviewId: { type: string }
+        aiSystem: { $ref: '#/components/schemas/AiSystemRef' }
+        action:
+          type: string
+          description: APPROVE or FIRST_APPROVAL (final or first of two sign-offs), RENEW or FIRST_RENEWAL_APPROVAL (periodic renewal), REJECT. New values may appear.
+        reviewerHash: { type: string, description: SHA-256 (hex) of the reviewer's identity. }
+        reason: { type: string }
+        at: { type: string, format: date-time }
+        previousStatus: { type: string }
+        newStatus: { type: string }
+
+    RecordData:
+      type: object
+      required: [register, recordId, contentHash, metadata]
+      properties:
+        register:
+          type: object
+          required: [id, name]
+          properties:
+            id: { type: string, description: 'For example prudence-incidents.' }
+            name: { type: string }
+        recordId: { type: string }
+        contentHash:
+          type: string
+          description: SHA-256 (hex) of the record's canonical JSON (JCS). The content itself does not travel.
+        metadata: { type: object }
+
+    AttestationData:
+      type: object
+      required: [attestationId, contentHash, summary]
+      properties:
+        attestationId: { type: string }
+        contentHash: { type: string, description: SHA-256 (hex) of the attestation document. }
+        summary: { type: object }
