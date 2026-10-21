@@ -1,6 +1,6 @@
 """An OpenAI Agents SDK agent with one governed tool, as a company using the SDK would write it.
 
-Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID and PIPELINE; prints one JSON line:
+Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL; prints one JSON line:
 {"toolRan": bool, "answer": str}.
 """
 import asyncio
@@ -10,6 +10,7 @@ import os
 from agents import Agent, OpenAIChatCompletionsModel, Runner, function_tool, set_tracing_disabled
 from openai import AsyncOpenAI
 
+from prudence_governance import ErnestEvidence
 from prudence_openai_agents import PrudenceGate, prudence_guardrail
 
 set_tracing_disabled(True)  # no traces to OpenAI from a test
@@ -19,6 +20,7 @@ governance = prudence_guardrail(
     os.environ["AI_SYSTEM_ID"],
     gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
     pipelines={"send_customer_letter": os.environ.get("PIPELINE", "send_customer_letter")},
+    evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
 )
 
 

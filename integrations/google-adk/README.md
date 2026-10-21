@@ -19,6 +19,9 @@ runner = InMemoryRunner(
   denied, so a new tool cannot slip through ungoverned.
 - **AI system:** one id for the whole agent, or a mapping per tool name.
 - **`ungoverned`:** tool names that need no decision (read-only helpers).
+- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+  execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
+  with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,
   `PRUDENCE_PDP_CLIENT_SECRET` (from `scripts/provision-runtime.py`), or pass a `PrudenceGate`.
 

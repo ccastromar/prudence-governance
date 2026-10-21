@@ -153,8 +153,11 @@ curl -s -X POST https://prudence.example.com/api/executions \
   rejected.
 - Prudence records every report, whatever decision it cites. An execution after a `DENY`, or
   with no decision at all, is exactly what the **drift** check must see.
-- With Ernest, drift also compares your reports against the execution evidence there. Without
-  Ernest, your reports are drift's only source, so do not skip this step.
+- With Ernest, drift also compares your reports against the execution evidence there, so seal
+  each execution in Ernest as well: the adapters do it when given `evidence=ErnestEvidence(…)`
+  (`stage: execution` under the AI system's id). A run reported to Prudence with no evidence in
+  Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`. Without Ernest, your reports are
+  drift's only source, so do not skip this step.
 
 ## Step 5 (optional): keep the evidence in your own store
 

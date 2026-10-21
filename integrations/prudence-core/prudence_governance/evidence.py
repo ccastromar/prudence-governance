@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import time
 import uuid
 
 import httpx
@@ -111,6 +112,29 @@ class ErnestEvidence:
             return r.status_code, _safe_json(r)
         except Exception as e:  # noqa: BLE001
             return None, {"error": str(e)}
+
+    def log_execution(self, ai_system_id: str, *, pipeline: str, runtime: str,
+                      decision_id: str | None, inputs=None):
+        """Seal that a governed execution started, under the AI system's id: the execution
+        evidence Ernest counts per system (`stage: execution`), which Prudence compares with
+        the runtime's own report. Only a hash of `inputs` travels. Best effort: never raises.
+
+        Prudence registers the system in Ernest when it delivers the system's first decision,
+        which can land a moment after the run started. Ernest then answers 404 or 409 ("not yet
+        committed"); the seal is retried for a few seconds, so call this off the hot path."""
+        metadata = {"stage": "execution", "aiSystemId": ai_system_id, "pipeline": pipeline,
+                    "runtime": runtime, "decisionId": decision_id}
+        result = (None, {"error": "not attempted"})
+        for delay in (0.5, 1, 2, 2, 3, 0):
+            try:
+                result = self.log_step(ai_system_id, inputs=inputs or {}, output={"decisionId": decision_id},
+                                       metadata=metadata)
+            except Exception as e:  # noqa: BLE001 — evidence must never break the governed run
+                result = (None, {"error": str(e)})
+            if result[0] not in (None, 404, 409) or not delay:
+                return result
+            time.sleep(delay)
+        return result
 
     def _enqueue(self, body: dict):
         """Queue a step record on the event-ingestor. The inference id doubles as the

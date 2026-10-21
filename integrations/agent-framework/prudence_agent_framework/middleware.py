@@ -19,7 +19,7 @@ from typing import Awaitable, Callable, Mapping
 
 from agent_framework import FunctionInvocationContext, FunctionMiddleware, MiddlewareTermination
 
-from prudence_governance import PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate
 
 
 class PrudenceMiddleware(FunctionMiddleware):
@@ -31,15 +31,18 @@ class PrudenceMiddleware(FunctionMiddleware):
         pipelines: Mapping[str, str] | None = None,
         ungoverned: set[str] | frozenset[str] = frozenset(),
         stop_on_deny: bool = False,
+        evidence: ErnestEvidence | None = None,
         runtime: str = "agent-framework",
     ):
         """`ai_system_id`: the registry id the agent acts as, or one per tool name.
-        `ungoverned`: tool names that need no decision (read-only helpers, for example)."""
+        `ungoverned`: tool names that need no decision (read-only helpers, for example).
+        `evidence`: with Ernest in the suite, also seal each allowed execution there."""
         self.gate = gate or PrudenceGate()
         self.ai_system_id = ai_system_id
         self.pipelines = dict(pipelines or {})
         self.ungoverned = frozenset(ungoverned)
         self.stop_on_deny = stop_on_deny
+        self.evidence = evidence
         self.runtime = runtime
 
     async def process(
@@ -62,11 +65,15 @@ class PrudenceMiddleware(FunctionMiddleware):
             return
 
         # Best effort, never blocks or fails the tool.
-        asyncio.get_running_loop().run_in_executor(
-            None,
-            lambda: self.gate.report_execution(decision, system, pipeline, runtime=self.runtime,
-                                               execution_id=str(uuid.uuid4())),
-        )
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, lambda: self.gate.report_execution(
+            decision, system, pipeline, runtime=self.runtime, execution_id=str(uuid.uuid4())))
+        if self.evidence is not None:
+            arguments = context.arguments
+            inputs = arguments.model_dump() if hasattr(arguments, "model_dump") else dict(arguments or {})
+            loop.run_in_executor(None, lambda: self.evidence.log_execution(
+                system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
+                inputs=inputs))
         await call_next()
 
     def _refuse(self, context: FunctionInvocationContext, message: str) -> None:

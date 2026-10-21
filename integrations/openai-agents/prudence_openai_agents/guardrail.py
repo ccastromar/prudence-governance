@@ -14,7 +14,7 @@ from typing import Literal, Mapping
 
 from agents import FunctionTool, ToolGuardrailFunctionOutput, ToolInputGuardrail, ToolInputGuardrailData
 
-from prudence_governance import PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate
 
 
 def prudence_guardrail(
@@ -23,9 +23,11 @@ def prudence_guardrail(
     gate: PrudenceGate | None = None,
     pipelines: Mapping[str, str] | None = None,
     on_deny: Literal["reject", "raise"] = "reject",
+    evidence: ErnestEvidence | None = None,
     runtime: str = "openai-agents",
 ) -> ToolInputGuardrail:
-    """`ai_system_id`: the registry id the agent acts as, or one per tool name."""
+    """`ai_system_id`: the registry id the agent acts as, or one per tool name.
+    `evidence`: with Ernest in the suite, also seal each allowed execution there."""
     gate = gate or PrudenceGate()
     pipelines = dict(pipelines or {})
 
@@ -44,11 +46,13 @@ def prudence_guardrail(
                     "approver": decision.approver, "decisionId": decision.decision_id}
             if decision.allowed:
                 # Best effort, never blocks or fails the tool.
-                asyncio.get_running_loop().run_in_executor(
-                    None,
-                    lambda: gate.report_execution(decision, system, pipeline, runtime=runtime,
-                                                  execution_id=ctx.tool_call_id or None),
-                )
+                loop = asyncio.get_running_loop()
+                loop.run_in_executor(None, lambda: gate.report_execution(
+                    decision, system, pipeline, runtime=runtime, execution_id=ctx.tool_call_id or None))
+                if evidence is not None:
+                    loop.run_in_executor(None, lambda: evidence.log_execution(
+                        system, pipeline=pipeline, runtime=runtime, decision_id=decision.decision_id,
+                        inputs=ctx.tool_arguments))
                 return ToolGuardrailFunctionOutput.allow(output_info=info)
             message = decision.refusal()
         if on_deny == "raise":

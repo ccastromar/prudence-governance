@@ -1,6 +1,6 @@
 """A Google ADK agent with one governed tool, as a company using ADK would write it.
 
-Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID and PIPELINE; prints one JSON line:
+Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL; prints one JSON line:
 {"toolRan": bool, "answer": str}.
 """
 import asyncio
@@ -13,6 +13,7 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from prudence_adk import PrudenceGate, PrudencePlugin
+from prudence_governance import ErnestEvidence
 
 ran: list[str] = []
 
@@ -34,6 +35,7 @@ async def main() -> None:
         os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
         pipelines={"send_customer_letter": os.environ.get("PIPELINE", "send_customer_letter")},
+        evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
     )
     runner = InMemoryRunner(agent=agent, app_name="conformance", plugins=[governance])
     session = await runner.session_service.create_session(app_name="conformance", user_id="tester")

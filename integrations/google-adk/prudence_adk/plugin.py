@@ -17,7 +17,7 @@ from google.adk.plugins.base_plugin import BasePlugin
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.tool_context import ToolContext
 
-from prudence_governance import PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate
 
 
 class PrudencePlugin(BasePlugin):
@@ -28,16 +28,20 @@ class PrudencePlugin(BasePlugin):
         gate: PrudenceGate | None = None,
         pipelines: Mapping[str, str] | None = None,
         ungoverned: set[str] | frozenset[str] = frozenset(),
+        evidence: ErnestEvidence | None = None,
         runtime: str = "google-adk",
         name: str = "prudence",
     ):
         """`ai_system_id`: the registry id the agent acts as, or one per tool name.
-        `ungoverned`: tool names that need no decision (read-only helpers, for example)."""
+        `ungoverned`: tool names that need no decision (read-only helpers, for example).
+        `evidence`: with Ernest in the suite, also seal each allowed execution there, so Ernest
+        and the runtime's report to Prudence tell the same story."""
         super().__init__(name=name)
         self.gate = gate or PrudenceGate()
         self.ai_system_id = ai_system_id
         self.pipelines = dict(pipelines or {})
         self.ungoverned = frozenset(ungoverned)
+        self.evidence = evidence
         self.runtime = runtime
 
     def _system_for(self, tool: str) -> str | None:
@@ -65,10 +69,12 @@ class PrudencePlugin(BasePlugin):
                     "message": decision.refusal()}
 
         # Best effort, never blocks or fails the tool.
-        asyncio.get_running_loop().run_in_executor(
-            None,
-            lambda: self.gate.report_execution(
-                decision, system, pipeline, runtime=self.runtime,
-                execution_id=f"{tool_context.invocation_id}:{tool_context.function_call_id}"),
-        )
+        execution_id = f"{tool_context.invocation_id}:{tool_context.function_call_id}"
+        loop = asyncio.get_running_loop()
+        loop.run_in_executor(None, lambda: self.gate.report_execution(
+            decision, system, pipeline, runtime=self.runtime, execution_id=execution_id))
+        if self.evidence is not None:
+            loop.run_in_executor(None, lambda: self.evidence.log_execution(
+                system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
+                inputs=tool_args))
         return None
