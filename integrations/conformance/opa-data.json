@@ -1,0 +1,14 @@
+{
+  "prudence": {
+    "roles_of": {
+      "google-adk": ["conformance-runtime"],
+      "openai-agents": ["conformance-runtime"],
+      "agent-framework": ["conformance-runtime"]
+    },
+    "role_permissions": {
+      "conformance-runtime": [
+        { "pipeline": "send_customer_letter", "actions": ["run"] }
+      ]
+    }
+  }
+}

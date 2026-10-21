@@ -1,0 +1,4 @@
+agent-framework-core>=1.22
+agent-framework-openai
+-e ../prudence-core
+-e ../agent-framework

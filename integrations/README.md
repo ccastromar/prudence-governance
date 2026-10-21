@@ -14,6 +14,8 @@ langgraph/            prudence_langgraph — governed_node + gate_route for a La
 google-adk/           prudence_adk — a runner plugin that gates every tool call (Google ADK)
 openai-agents/        prudence_openai_agents — a tool input guardrail (OpenAI Agents SDK)
 agent-framework/      prudence_agent_framework — function middleware (Microsoft Agent Framework)
+conformance/          real agents of ADK, the Agents SDK and Agent Framework, run against a real
+                        Prudence: do the adapters enforce ALLOW / APPROVAL_REQUIRED / DENY / down?
 demo-runner/          internal HTTP runner used by Prudence's visible framework demos
 ```
 

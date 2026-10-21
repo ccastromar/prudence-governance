@@ -195,7 +195,8 @@ external store; not independently verifiable"), and never claims a seal it does 
 | MCP gateway (AuthZEN) | none needed | `resource.type: tool`, see step 3 |
 
 Each adapter does the same two things at its framework's natural hook point: ask before the
-step, report after it starts. For anything else, steps 3 and 4 are two HTTP calls.
+step, report after it starts. [`integrations/conformance`](../../integrations/conformance)
+checks that they do, with real agents of each framework against a real Prudence. For anything else, steps 3 and 4 are two HTTP calls.
 
 ## When it says no
 

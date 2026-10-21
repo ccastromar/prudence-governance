@@ -1,0 +1,5 @@
+google-adk>=2.12
+litellm
+mcp
+-e ../prudence-core
+-e ../google-adk
