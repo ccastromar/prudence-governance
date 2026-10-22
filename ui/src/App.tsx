@@ -25,6 +25,7 @@ import { APPS } from "./chestertown";
 import {
   ssoEnabled,
   getToken,
+  getAuthenticatedIdentity,
   login,
   completeLoginIfPresent,
   clearToken,
@@ -91,11 +92,15 @@ export default function App() {
   const [tab, setTab] = useState<Tab>(link.tab ?? "registry");
   const [ready, setReady] = useState(false);
   const [authed, setAuthed] = useState(!ssoEnabled || !!getToken());
+  const [identity, setIdentity] = useState(getAuthenticatedIdentity);
   const [authError, setAuthError] = useState("");
 
   useEffect(() => {
     (async () => {
-      if (await completeLoginIfPresent()) setAuthed(true);
+      if (await completeLoginIfPresent()) {
+        setIdentity(getAuthenticatedIdentity());
+        setAuthed(true);
+      }
       setReady(true);
     })();
   }, []);
@@ -114,6 +119,7 @@ export default function App() {
   useEffect(() => {
     const signOutExpiredSession = () => {
       clearToken();
+      setIdentity("");
       setAuthed(false);
     };
     window.addEventListener("prudence:unauthorized", signOutExpiredSession);
@@ -134,15 +140,21 @@ export default function App() {
       <>
         <ThemeToggle storageKey="prudence.theme" />
         {ssoEnabled && authed && (
-          <Button
-            size="sm"
-            onClick={() => {
-              clearToken();
-              setAuthed(false);
-            }}
-          >
-            Sign out
-          </Button>
+          <>
+            <span aria-label="Authenticated identity">
+              Signed in as {identity || "authenticated user"}
+            </span>
+            <Button
+              size="sm"
+              onClick={() => {
+                clearToken();
+                setIdentity("");
+                setAuthed(false);
+              }}
+            >
+              Sign out
+            </Button>
+          </>
         )}
       </>
     ),

@@ -27,6 +27,29 @@ export function clearToken() {
   }
 }
 
+export function getAuthenticatedIdentity(): string {
+  const token = getToken();
+  try {
+    const encoded = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    const binary = atob(encoded);
+    const bytes = Uint8Array.from(binary, (character) =>
+      character.charCodeAt(0),
+    );
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as Record<
+      string,
+      unknown
+    >;
+    for (const claim of ["name", "preferred_username", "email", "sub"]) {
+      if (typeof payload[claim] === "string" && payload[claim]) {
+        return payload[claim];
+      }
+    }
+  } catch {
+    /* no usable identity claim */
+  }
+  return "";
+}
+
 /** UI affordance only; the API remains the authoritative read-write role enforcement. */
 export function hasRealmRole(role: string): boolean {
   if (!ssoEnabled) return true;
