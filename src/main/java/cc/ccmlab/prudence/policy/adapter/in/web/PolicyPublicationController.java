@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
+import cc.ccmlab.prudence.policy.adapter.out.opa.OpaPolicyAdapter;
 import cc.ccmlab.prudence.policy.application.bundle.PolicyPublicationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -17,7 +18,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,19 +26,25 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(name = "prudence.managed.enabled", havingValue = "true")
 public class PolicyPublicationController {
   private final PolicyPublicationService publications;
+  private final OpaPolicyAdapter opa;
   private final byte[] bundleKey;
   private final boolean requireTls;
+  private final String actorMode;
 
   public PolicyPublicationController(
       PolicyPublicationService publications,
+      OpaPolicyAdapter opa,
       @Value("${prudence.managed.bundle-key:}") String key,
-      @Value("${prudence.identity.principal-mode:legacy}") String principalMode,
+      @Value("${prudence.identity.policy-actor-mode:${prudence.identity.principal-mode:legacy}}")
+          String principalMode,
       Environment environment) {
     if (key.length() < 32)
       throw new IllegalStateException("managed bundle key must contain at least 32 characters");
     if (!"issuer-subject".equals(principalMode))
       throw new IllegalStateException("managed policies require issuer-subject identity mode");
+    this.actorMode = principalMode;
     this.publications = publications;
+    this.opa = opa;
     this.bundleKey = key.getBytes(StandardCharsets.UTF_8);
     this.requireTls = !environment.acceptsProfiles(Profiles.of("dev", "test"));
   }
@@ -77,6 +83,12 @@ public class PolicyPublicationController {
     return publications.history();
   }
 
+  @PostMapping("/api/policy-admin/publications/probe")
+  public OpaPolicyAdapter.Probe probe(Authentication auth) {
+    actor(auth);
+    return opa.probe();
+  }
+
   @GetMapping("/api/policy-admin/publications/observations")
   public List<PolicyPublicationService.Observation> observations(Authentication auth) {
     actor(auth);
@@ -100,14 +112,7 @@ public class PolicyPublicationController {
         .body(bundle.bundle());
   }
 
-  private static String actor(Authentication auth) {
-    if (auth == null
-        || !auth.isAuthenticated()
-        || auth instanceof AnonymousAuthenticationToken
-        || auth.getName() == null
-        || auth.getName().isBlank()
-        || auth.getName().length() > 512)
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-    return auth.getName();
+  private String actor(Authentication auth) {
+    return PolicyActors.of(auth, actorMode);
   }
 }

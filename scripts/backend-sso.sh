@@ -38,6 +38,8 @@ fi
 
 export SPRING_PROFILES_ACTIVE=""
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="$ISSUER"
+# Access tokens of the test realm carry this audience (prudence-spa and pdp-client mappers).
+export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES="${PRUDENCE_OIDC_AUDIENCE:-prudence-api}"
 export PRUDENCE_DB_URL="jdbc:postgresql://$PG_HOST:$PG_PORT/$DB"
 export PRUDENCE_DB_USER="$DB" PRUDENCE_DB_PASSWORD="$DB_PASSWORD"
 # Ernest's local dev run has open access; the start check only needs a non-blank key.

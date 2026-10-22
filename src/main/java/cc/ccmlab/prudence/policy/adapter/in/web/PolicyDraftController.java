@@ -17,7 +17,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -43,14 +42,15 @@ public class PolicyDraftController {
       ObjectMapper json,
       PolicyBundleBuilder bundleBuilder,
       PolicyAudit audit,
-      @Value("${prudence.identity.principal-mode:legacy}") String principalMode) {
+      @Value("${prudence.identity.policy-actor-mode:${prudence.identity.principal-mode:legacy}}")
+          String principalMode) {
     this.definitions = definitions;
     this.revisions = revisions;
     this.events = events;
     this.json = json;
     this.bundleBuilder = bundleBuilder;
     this.audit = audit;
-    this.principalMode = principalMode;
+    this.principalMode = PolicyActors.validatedMode(principalMode);
   }
 
   // Deliberately bounded: this is only a stored draft, not yet an executable policy schema.
@@ -295,6 +295,11 @@ public class PolicyDraftController {
     if (events.existsByRevisionIdAndActor(revisionId, actor))
       throw new ResponseStatusException(
           HttpStatus.FORBIDDEN, "policy contributor cannot approve this revision");
+    if (events.findByRevisionIdOrderByOccurredAtAsc(revisionId).stream()
+        .anyMatch(e -> !PolicyActors.isStable(e.getActor())))
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT,
+          "revision has contributors recorded before stable identities; create a new revision");
     OffsetDateTime now = OffsetDateTime.now();
     try {
       revision.approve(request.version(), actor, now);
@@ -385,15 +390,8 @@ public class PolicyDraftController {
         revision.getApprovedAt());
   }
 
-  private static String actor(Authentication auth) {
-    if (auth == null
-        || !auth.isAuthenticated()
-        || auth instanceof AnonymousAuthenticationToken
-        || auth.getName() == null
-        || auth.getName().isBlank()
-        || auth.getName().length() > 512)
-      throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-    return auth.getName();
+  private String actor(Authentication auth) {
+    return PolicyActors.of(auth, principalMode);
   }
 
   private void saveEvent(PolicyDraftEventEntity event) {

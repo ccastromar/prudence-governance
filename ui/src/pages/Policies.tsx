@@ -22,6 +22,15 @@ type Observation = {
   publicationId: string;
   observedAt: string;
 };
+type Status = {
+  managed: boolean;
+  actorMode: string;
+  approvalAvailable: boolean;
+  roles: string[];
+  requiredPublicationId: string | null;
+  requiredDigest: string | null;
+};
+type Probe = { state: string; publicationId: string | null; detail: string };
 type Draft = {
   revisionId: string;
   revision: number;
@@ -32,6 +41,37 @@ type Draft = {
   createdBy: string;
   approvedBy: string | null;
 };
+
+class RequestError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+const REQUIRED_ROLE: Record<string, string> = {
+  approve: "policy-reviewer",
+};
+
+/** A readable explanation for an HTTP failure; never exposes raw tokens or stack traces. */
+function explain(error: unknown, action = ""): string {
+  if (!(error instanceof RequestError)) return (error as Error).message;
+  if (error.status === 401)
+    return "Your session has expired. Sign in again to continue.";
+  if (error.status === 403) {
+    const role = REQUIRED_ROLE[action] ?? "policy-admin";
+    return `Your account is not allowed to do this. It needs the "${role}" role in the identity provider${
+      action === "approve"
+        ? ", and it cannot be the account that authored or edited the revision"
+        : ""
+    }.`;
+  }
+  if (error.status === 404 && action === "publish")
+    return "Managed policy publication is not enabled on this deployment.";
+  return error.message;
+}
 
 async function request<T>(
   url: string,
@@ -47,8 +87,30 @@ async function request<T>(
     },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  if (!response.ok) {
+    const detail = await response
+      .json()
+      .then((b: { detail?: string; message?: string }) => b.detail ?? b.message)
+      .catch(() => undefined);
+    throw new RequestError(
+      response.status,
+      detail
+        ? `${detail} (${response.status})`
+        : `Request failed (${response.status})`,
+    );
+  }
   return response.json() as Promise<T>;
+}
+
+function activation(status: Status, observations: Observation[]): string {
+  const seen = observations.filter(
+    (o) => o.publicationId === status.requiredPublicationId,
+  );
+  return seen.length
+    ? `Required publication ${status.requiredPublicationId} was observed active on ${seen
+        .map((o) => o.instanceId)
+        .join(", ")}.`
+    : `Required publication ${status.requiredPublicationId} is requested but not yet observed on any OPA instance; decisions are denied until it is (use "Check OPA now").`;
 }
 
 export default function Policies() {
@@ -63,6 +125,8 @@ export default function Policies() {
   const [preview, setPreview] = useState("");
   const [editing, setEditing] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
+  const [status, setStatus] = useState<Status | null>(null);
+  const [probe, setProbe] = useState<Probe | null>(null);
   const [publications, setPublications] = useState<Publication[] | null>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
   const [history, setHistory] = useState<{
@@ -70,6 +134,14 @@ export default function Policies() {
     events: PolicyEvent[];
   } | null>(null);
   const load = async () => {
+    const current = await request<Status>("/api/policy-admin/status");
+    setStatus(current);
+    if (current.managed)
+      setObservations(
+        await request<Observation[]>(
+          "/api/policy-admin/publications/observations",
+        ),
+      );
     const items = await request<Definition[]>("/api/policy-admin/definitions");
     setDefinitions(items);
     const revisions = await Promise.all(
@@ -82,16 +154,16 @@ export default function Policies() {
     setDrafts(revisions.flat());
   };
   useEffect(() => {
-    void load().catch((e: Error) => setError(e.message));
+    void load().catch((e: unknown) => setError(explain(e)));
   }, []);
-  const run = async (work: () => Promise<void>) => {
+  const run = async (work: () => Promise<void>, action = "") => {
     setBusy(true);
     setError("");
     try {
       await work();
       await load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(explain(e, action));
     } finally {
       setBusy(false);
     }
@@ -111,7 +183,7 @@ export default function Policies() {
         "POST",
         { version: draft.version },
       );
-    });
+    }, operation);
   const simulate = (draft: Draft) =>
     run(async () => {
       const result = await request<{ decision: string; reason: string }>(
@@ -155,14 +227,21 @@ export default function Policies() {
         version: draft.version,
       });
       await showPublications();
-    });
+    }, "publish");
   const rollback = (publication: Publication) =>
     run(async () => {
       await request("/api/policy-admin/publications/rollback", "POST", {
         publicationId: publication.id,
       });
       await showPublications();
-    });
+    }, "publish");
+  const checkOpa = () =>
+    run(async () => {
+      setProbe(
+        await request<Probe>("/api/policy-admin/publications/probe", "POST"),
+      );
+      await showPublications();
+    }, "publish");
   return (
     <Page>
       <h1>Policy drafts</h1>
@@ -171,16 +250,56 @@ export default function Policies() {
         only observed after an OPA instance evaluates it.
       </p>
       {error && <Alert tone="danger">{error}</Alert>}
+      {status && (
+        <Card>
+          <h2>Status</h2>
+          <ul>
+            <li>
+              Your policy roles:{" "}
+              {status.roles.length ? status.roles.join(", ") : "none"}
+            </li>
+            <li>
+              Publication:{" "}
+              {status.managed
+                ? "managed (Prudence delivers bundles to OPA)"
+                : "not enabled; drafts stay inert and OPA keeps its static policy"}
+            </li>
+            <li>
+              Approval:{" "}
+              {status.approvalAvailable
+                ? "requires a different reviewer, identified by issuer and subject"
+                : "unavailable until issuer-subject identities are enabled"}
+            </li>
+            {status.managed && (
+              <li>
+                {status.requiredPublicationId
+                  ? activation(status, observations)
+                  : "Nothing is published: managed decisions are denied until an approved policy is published."}
+              </li>
+            )}
+          </ul>
+        </Card>
+      )}
       <Card>
         <h2>Publications</h2>
         <p>
-          Managed publication must be enabled by the operator. Observations show
-          the last verified decision per OPA instance, not the health of the
-          whole deployment.
+          Observations show the last verified decision per OPA instance, not the
+          health of the whole deployment. A publication is requested, not
+          active, until OPA is observed serving it.
         </p>
         <Button disabled={busy} onClick={() => void run(showPublications)}>
           Load publications
-        </Button>
+        </Button>{" "}
+        {status?.managed && (
+          <Button disabled={busy} onClick={() => void checkOpa()}>
+            Check OPA now
+          </Button>
+        )}
+        {probe && (
+          <p role="status">
+            {probe.state}: {probe.detail}
+          </p>
+        )}
         {publications?.map((publication) => (
           <div key={publication.id}>
             <p>
@@ -189,7 +308,10 @@ export default function Policies() {
               {publication.rollbackOf &&
                 ` · rollback of ${publication.rollbackOf}`}
             </p>
-            <Button disabled={busy} onClick={() => void rollback(publication)}>
+            <Button
+              disabled={busy || !status?.managed}
+              onClick={() => void rollback(publication)}
+            >
               Publish this snapshot as rollback
             </Button>
           </div>
@@ -366,7 +488,11 @@ export default function Policies() {
           {draft.status === "VALIDATED" && (
             <>
               <Button
-                disabled={busy}
+                disabled={
+                  busy ||
+                  !status?.approvalAvailable ||
+                  !status.roles.includes("policy-reviewer")
+                }
                 onClick={() => void transition(draft, "approve")}
               >
                 Approve
@@ -391,7 +517,10 @@ export default function Policies() {
           )}
           {draft.approvedBy && <p>Approved by {draft.approvedBy}</p>}
           {draft.status === "APPROVED" && (
-            <Button disabled={busy} onClick={() => void publish(draft)}>
+            <Button
+              disabled={busy || !status?.managed}
+              onClick={() => void publish(draft)}
+            >
               Publish approved revision
             </Button>
           )}{" "}
