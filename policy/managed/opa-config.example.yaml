@@ -1,0 +1,15 @@
+# TEMPLATE ONLY. Render secrets from a secret manager into an access-controlled file.
+# HTTPS, certificate verification and authorization of OPA's decision API are mandatory
+# outside dev/test. Each Prudence instance must address a distinct OPA endpoint.
+services:
+  prudence:
+    url: https://prudence.example.eu
+    headers:
+      X-OPA-Bundle-Key: REPLACE_WITH_A_SECRET_OF_AT_LEAST_32_CHARACTERS
+bundles:
+  prudence-managed:
+    service: prudence
+    resource: internal/policy-bundles/current
+    polling:
+      min_delay_seconds: 5
+      max_delay_seconds: 10

@@ -5,4 +5,9 @@ package cc.ccmlab.prudence.policy.adapter.in.web.dto;
 /// (cite it when reporting the execution it allowed); `policyVersion` is the policy bundle
 /// that produced it.
 public record DecisionResponse(
-    String decision, String reason, String approver, String decisionId, String policyVersion) {}
+    String decision,
+    String reason,
+    String approver,
+    String decisionId,
+    String policyVersion,
+    String policyDigest) {}

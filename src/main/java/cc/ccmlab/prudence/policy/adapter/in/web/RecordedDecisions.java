@@ -11,7 +11,8 @@ import java.util.UUID;
 /// is always the id of the evidence, never one that was not stored.
 final class RecordedDecisions {
 
-  record Recorded(String decisionId, String policyVersion, PolicyDecision decision) {}
+  record Recorded(
+      String decisionId, String policyVersion, String policyDigest, PolicyDecision decision) {}
 
   private RecordedDecisions() {}
 
@@ -24,8 +25,8 @@ final class RecordedDecisions {
       String action) {
     String decisionId = UUID.randomUUID().toString();
     String policyVersion = properties.opa().policyVersion();
-    PolicyDecision decision =
-        pdp.decide(
+    var result =
+        pdp.decideWithDetails(
             new DecisionContext(
                 subject,
                 pipeline,
@@ -41,6 +42,7 @@ final class RecordedDecisions {
                 null,
                 null,
                 decisionId));
-    return new Recorded(decisionId, policyVersion, decision);
+    return new Recorded(
+        decisionId, result.policyVersion(), result.policyDigest(), result.decision());
   }
 }

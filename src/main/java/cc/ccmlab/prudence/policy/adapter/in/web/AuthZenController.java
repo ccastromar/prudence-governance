@@ -139,6 +139,7 @@ public class AuthZenController {
     Map<String, Object> context = new LinkedHashMap<>();
     context.put("decisionId", recorded.decisionId());
     context.put("policyVersion", recorded.policyVersion());
+    context.put("policyDigest", recorded.policyDigest());
     boolean allowed;
     switch (recorded.decision()) {
       case PolicyDecision.Allow ignored -> {
@@ -156,6 +157,11 @@ public class AuthZenController {
         allowed = false;
         context.put("prudenceDecision", "DENY");
         context.put("reason", d.reason());
+      }
+      case PolicyDecision.Error failure -> {
+        allowed = false;
+        context.put("prudenceDecision", "ERROR");
+        context.put("reason", failure.reason());
       }
     }
     Map<String, Object> result = new LinkedHashMap<>();

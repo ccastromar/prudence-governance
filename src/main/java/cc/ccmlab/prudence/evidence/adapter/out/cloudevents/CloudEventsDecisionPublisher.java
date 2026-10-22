@@ -61,6 +61,10 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
         outcome.put("outcome", "DENY");
         outcome.put("reason", d.reason());
       }
+      case PolicyDecision.Error e -> {
+        outcome.put("outcome", "ERROR");
+        outcome.put("reason", e.reason());
+      }
       case PolicyDecision.ApprovalRequired a -> {
         outcome.put("outcome", "APPROVAL_REQUIRED");
         outcome.put("reason", a.reason());

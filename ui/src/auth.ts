@@ -1,7 +1,5 @@
-// SSO for the Prudence UI — Authorization Code + PKCE against the Chestertown IdP (Keycloak,
-// client prudence-spa). Opt-in: enabled only when VITE_OIDC_ISSUER is set. The resulting
-// access token (carrying the realm `roles` claim) is sent as a bearer to the backend,
-// which validates it as an OAuth2 resource server.
+// SSO uses Authorization Code + PKCE with endpoints discovered from the configured OIDC issuer.
+// The backend validates access tokens and remains authoritative for authorization.
 const env = import.meta.env as Record<string, string | undefined>;
 const ISSUER = env.VITE_OIDC_ISSUER?.replace(/\/$/, "");
 const CLIENT_ID = env.VITE_OIDC_CLIENT_ID ?? "prudence-spa";
@@ -12,6 +10,44 @@ const TOKEN_KEY = "prudence_token";
 const VERIFIER_KEY = "prudence_pkce_verifier";
 const STATE_KEY = "prudence_pkce_state";
 
+type Discovery = {
+  issuer: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+};
+let discoveryRequest: Promise<Discovery> | undefined;
+async function discovery(): Promise<Discovery> {
+  if (!ISSUER) throw new Error("OIDC issuer is not configured");
+  if (!discoveryRequest) {
+    discoveryRequest = (async () => {
+      const response = await fetch(
+        `${ISSUER}/.well-known/openid-configuration`,
+      );
+      if (!response.ok) throw new Error("Unable to discover the OIDC provider");
+      const metadata = (await response.json()) as Partial<Discovery>;
+      if (
+        metadata.issuer !== ISSUER ||
+        !metadata.authorization_endpoint ||
+        !metadata.token_endpoint
+      )
+        throw new Error("OIDC discovery returned invalid provider metadata");
+      for (const endpoint of [
+        metadata.authorization_endpoint,
+        metadata.token_endpoint,
+      ]) {
+        const parsed = new URL(endpoint);
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:")
+          throw new Error("OIDC discovery returned an invalid endpoint");
+      }
+      return metadata as Discovery;
+    })().catch((error) => {
+      discoveryRequest = undefined;
+      throw error;
+    });
+  }
+  return discoveryRequest;
+}
+
 export function getToken(): string {
   try {
     return sessionStorage.getItem(TOKEN_KEY) ?? "";
@@ -19,6 +55,30 @@ export function getToken(): string {
     return "";
   }
 }
+
+export function getUserName(): string | null {
+  const token = getToken();
+  const encodedPayload = token.split(".")[1];
+  if (!encodedPayload) return null;
+  try {
+    const base64 = encodedPayload.replace(/-/g, "+").replace(/_/g, "/");
+    const binaryPayload = atob(base64 + "===".slice((base64.length + 3) % 4));
+    const bytes = Uint8Array.from(binaryPayload, (character) =>
+      character.charCodeAt(0),
+    );
+    const payload = JSON.parse(
+      new TextDecoder().decode(bytes),
+    ) as Record<string, unknown>;
+    for (const claim of ["preferred_username", "email", "name", "sub"]) {
+      const value = payload[claim];
+      if (typeof value === "string" && value) return value;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
@@ -171,6 +231,7 @@ const redirectUri = () => `${window.location.origin}/`;
 
 export async function login() {
   if (!ssoEnabled) return;
+  const provider = await discovery();
   const verifier = rand(48);
   const state = rand();
   sessionStorage.setItem(VERIFIER_KEY, verifier);
@@ -184,7 +245,9 @@ export async function login() {
     code_challenge: await challenge(verifier),
     code_challenge_method: "S256",
   });
-  window.location.assign(`${ISSUER}/protocol/openid-connect/auth?${p}`);
+  const authorizationUrl = new URL(provider.authorization_endpoint);
+  for (const [key, value] of p) authorizationUrl.searchParams.set(key, value);
+  window.location.assign(authorizationUrl.toString());
 }
 
 /** If the URL carries ?code, exchange it for a token. Returns true if a login completed. */
@@ -208,7 +271,8 @@ export async function completeLoginIfPresent(): Promise<boolean> {
     client_id: CLIENT_ID,
     code_verifier: verifier,
   });
-  const res = await fetch(`${ISSUER}/protocol/openid-connect/token`, {
+  const provider = await discovery();
+  const res = await fetch(provider.token_endpoint, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,

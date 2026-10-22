@@ -305,6 +305,7 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
       case PolicyDecision.Allow ignored -> "ALLOW";
       case PolicyDecision.ApprovalRequired ignored -> "APPROVAL_REQUIRED";
       case PolicyDecision.Deny ignored -> "DENY";
+      case PolicyDecision.Error ignored -> "ERROR";
     };
   }
 
@@ -312,6 +313,7 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
     return switch (decision) {
       case PolicyDecision.ApprovalRequired ar -> ar.reason();
       case PolicyDecision.Deny d -> d.reason();
+      case PolicyDecision.Error e -> e.reason();
       case PolicyDecision.Allow ignored -> null;
     };
   }

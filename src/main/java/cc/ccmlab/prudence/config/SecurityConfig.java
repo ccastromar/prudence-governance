@@ -2,8 +2,11 @@ package cc.ccmlab.prudence.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -42,14 +45,26 @@ public class SecurityConfig {
   @ConditionalOnProperty("spring.security.oauth2.resourceserver.jwt.issuer-uri")
   @Profile("!dev & !test")
   SecurityFilterChain secured(
-      HttpSecurity http, @Qualifier("corsConfigurationSource") CorsConfigurationSource cors)
+      HttpSecurity http,
+      @Qualifier("corsConfigurationSource") CorsConfigurationSource cors,
+      @Value("${prudence.identity.roles-claim:roles}") String rolesClaim,
+      @Value("${prudence.identity.principal-mode:legacy}") String principalMode,
+      @Value("${prudence.identity.role-mapping:}") String roleMapping)
       throws Exception {
     http.cors(c -> c.configurationSource(cors))
         .csrf(csrf -> csrf.disable())
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/actuator/health")
+                auth.requestMatchers(HttpMethod.GET, "/api/policy-admin/**")
+                    .hasAnyRole("policy-admin", "policy-reviewer")
+                    .requestMatchers(HttpMethod.GET, "/internal/policy-bundles/current")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/policy-admin/drafts/*/approve")
+                    .hasRole("policy-reviewer")
+                    .requestMatchers("/api/policy-admin/**")
+                    .hasRole("policy-admin")
+                    .requestMatchers("/actuator/health")
                     .permitAll()
                     // The PDP is a machine-to-machine endpoint: an AOS gate or a runtime adapter
                     // calls it with a client-credentials token. Require the `pdp.decide` scope
@@ -111,7 +126,11 @@ public class SecurityConfig {
                     .anyRequest()
                     .authenticated())
         .oauth2ResourceServer(
-            oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(rolesConverter())));
+            oauth ->
+                oauth.jwt(
+                    jwt ->
+                        jwt.jwtAuthenticationConverter(
+                            rolesConverter(rolesClaim, principalMode, roleMapping))));
     return http.build();
   }
 
@@ -204,6 +223,23 @@ public class SecurityConfig {
           }
         }
       }
+      // Require an API audience; Spring validates it on the configured JWT decoder.
+      requireNonBlank(environment, "spring.security.oauth2.resourceserver.jwt.audiences");
+      if (environment.getProperty("prudence.managed.enabled", Boolean.class, false)) {
+        if (!"ernest".equals(environment.getProperty("prudence.evidence.sink", "ernest"))) {
+          throw new IllegalStateException(
+              "Managed policy audit currently requires the Ernest evidence sink");
+        }
+        requireNonBlank(environment, "prudence.managed.bundle-key");
+        requireNonBlank(environment, "prudence.managed.opa-token");
+        requireNonBlank(environment, "prudence.managed.bundle-url");
+        requireNonBlank(environment, "prudence.managed.opa-instance-id");
+        if (!environment.getProperty("prudence.managed.bundle-url", "").startsWith("https://")
+            || !environment.getProperty("prudence.opa.base-url", "").startsWith("https://")) {
+          throw new IllegalStateException(
+              "Managed OPA requires HTTPS for bundle delivery and decisions");
+        }
+      }
       // Alerts are how humans learn about expiries, drift and lost evidence: no silent channel.
       requireNonBlank(environment, "spring.mail.host");
       requireNonBlank(environment, "prudence.alerts.governance-recipients");
@@ -212,6 +248,21 @@ public class SecurityConfig {
       if (origins == null || origins.isBlank()) {
         throw new IllegalStateException(
             "Refusing to start outside dev/test without PRUDENCE_CORS_ORIGINS");
+      }
+    };
+  }
+
+  @Bean
+  org.springframework.boot.ApplicationRunner requireManagedPostgres(Environment environment) {
+    return ignored -> {
+      if (environment.getProperty("prudence.managed.enabled", Boolean.class, false)
+          && !environment.getProperty("spring.datasource.url", "").startsWith("jdbc:postgresql:")) {
+        throw new IllegalStateException(
+            "Managed policy publication requires PostgreSQL and Flyway migrations");
+      }
+      if (environment.getProperty("prudence.managed.enabled", Boolean.class, false)
+          && !environment.getProperty("spring.flyway.enabled", Boolean.class, true)) {
+        throw new IllegalStateException("Managed policy publication requires Flyway migrations");
       }
     };
   }
@@ -238,29 +289,68 @@ public class SecurityConfig {
   }
 
   /**
-   * Map Keycloak realm roles (the `roles` claim) to ROLE_* authorities, and resolve the principal
-   * name to the identity OPA and the registry know: the `email` for humans, `preferred_username`
-   * for service accounts (e.g. `service-account-pdp-client`), and only then the opaque `sub`.
-   * Keycloak's `sub` is a UUID, which matches nothing in policy data.
+   * Map the configured role claim to ROLE_* authorities. Legacy principal selection preserves
+   * existing OPA grants and review identities; issuer-subject is opt-in until those are migrated.
    */
-  private Converter<Jwt, AbstractAuthenticationToken> rolesConverter() {
+  static Converter<Jwt, AbstractAuthenticationToken> rolesConverter(
+      String rolesClaim, String principalMode, String roleMapping) {
+    if (rolesClaim == null || rolesClaim.isBlank()) {
+      throw new IllegalArgumentException("identity roles claim must not be blank");
+    }
+    if (!List.of("legacy", "issuer-subject").contains(principalMode)) {
+      throw new IllegalArgumentException("unsupported identity principal mode: " + principalMode);
+    }
+    Map<String, String> mapping = parseRoleMapping(roleMapping);
     JwtGrantedAuthoritiesConverter scopes = new JwtGrantedAuthoritiesConverter();
     return jwt -> {
       Collection<GrantedAuthority> source = scopes.convert(jwt);
       Collection<GrantedAuthority> authorities =
           new ArrayList<>(source == null ? List.of() : source);
-      Object roles = jwt.getClaim("roles");
+      Object roles = jwt.getClaim(rolesClaim);
       if (roles instanceof Collection<?> list) {
-        for (Object r : list) authorities.add(new SimpleGrantedAuthority("ROLE_" + r));
+        for (Object r : list) {
+          if (!(r instanceof String role) || role.isBlank()) continue;
+          String mapped = mapping.isEmpty() ? role : mapping.get(role);
+          if (mapped != null) authorities.add(new SimpleGrantedAuthority("ROLE_" + mapped));
+        }
       }
-      return new JwtAuthenticationToken(jwt, authorities, principalOf(jwt));
+      return new JwtAuthenticationToken(jwt, authorities, principalOf(jwt, principalMode));
     };
+  }
+
+  // External roles are trusted only from the configured issuer. When a mapping is configured,
+  // unlisted roles never become authorities; a blank mapping preserves the legacy deployment.
+  static Map<String, String> parseRoleMapping(String configured) {
+    Map<String, String> mapping = new LinkedHashMap<>();
+    if (configured == null || configured.isBlank()) return Map.of();
+    for (String entry : configured.split(",", -1)) {
+      String[] pair = entry.strip().split("=", -1);
+      if (pair.length != 2 || pair[0].isBlank() || pair[1].isBlank()) {
+        throw new IllegalArgumentException("invalid identity role mapping");
+      }
+      if (mapping.putIfAbsent(pair[0].strip(), pair[1].strip()) != null) {
+        throw new IllegalArgumentException("duplicate identity role mapping");
+      }
+    }
+    return Map.copyOf(mapping);
   }
 
   /// Fail-closed: a token that names no one is rejected (401) rather than accepted as an
   /// anonymous actor — otherwise reviews would be signed by "" and the four-eyes and
   /// self-approval checks would compare empty names.
-  private static String principalOf(Jwt jwt) {
+  private static String principalOf(Jwt jwt, String principalMode) {
+    if ("issuer-subject".equals(principalMode)) {
+      String issuer = jwt.getClaimAsString("iss");
+      String subject = jwt.getSubject();
+      if (issuer == null || issuer.isBlank() || subject == null || subject.isBlank()) {
+        throw new InvalidBearerTokenException("token must carry issuer and subject");
+      }
+      // Length prefix keeps the pair unambiguous without assuming a separator cannot occur.
+      String identity = issuer.length() + ":" + issuer + subject;
+      if (identity.length() > 512)
+        throw new InvalidBearerTokenException("issuer and subject exceed identity limit");
+      return identity;
+    }
     for (String claim : List.of("email", "preferred_username", "sub")) {
       String value = jwt.getClaimAsString(claim);
       if (value != null && !value.isBlank()) return value;

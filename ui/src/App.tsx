@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Registry from "./pages/Registry";
 import Decisions from "./pages/Decisions";
+import Policies from "./pages/Policies";
 import Approvals from "./pages/Approvals";
 import Posture from "./pages/Posture";
 import Attestations from "./pages/Attestations";
@@ -16,6 +17,7 @@ import {
   AppShell,
   Button,
   Card,
+  Identity,
   Page,
   Tabs,
   ThemeToggle,
@@ -32,6 +34,7 @@ import {
 } from "./auth";
 
 type Tab =
+  | "policies"
   | "registry"
   | "approvals"
   | "decisions"
@@ -47,6 +50,7 @@ type Tab =
 
 const TAB_ITEMS: TabItem<Tab>[] = [
   { id: "registry", label: "AI system registry" },
+  { id: "policies", label: "Policy drafts" },
   { id: "approvals", label: "Approvals" },
   { id: "decisions", label: "Policy decisions" },
   { id: "posture", label: "Posture" },
@@ -138,12 +142,13 @@ export default function App() {
     apps: APPS,
     actions: (
       <>
+        <Identity
+          name={identity || null}
+          detail={authed && ssoEnabled ? "Signed in" : "Not signed in"}
+        />
         <ThemeToggle storageKey="prudence.theme" />
         {ssoEnabled && authed && (
           <>
-            <span aria-label="Authenticated identity">
-              Signed in as {identity || "authenticated user"}
-            </span>
             <Button
               size="sm"
               onClick={() => {
@@ -207,6 +212,7 @@ export default function App() {
       }
     >
       <>
+        {tab === "policies" && <Policies />}
         {tab === "registry" && <Registry focusSystem={link.system} />}
         {tab === "approvals" && <Approvals />}
         {tab === "decisions" && <Decisions />}

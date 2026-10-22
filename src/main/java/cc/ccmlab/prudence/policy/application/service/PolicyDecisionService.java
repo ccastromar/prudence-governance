@@ -29,6 +29,12 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
   @Override
   @Transactional
   public PolicyDecision decide(DecisionContext context) {
+    return decideWithDetails(context).decision();
+  }
+
+  @Override
+  @Transactional
+  public Result decideWithDetails(DecisionContext context) {
     var view = registry.find(context.aiSystemId());
     // Evidence carries the registered system version/model hash, so the decision can be
     // reproduced against the exact build it governed (not the caller's "unknown"), and the
@@ -52,12 +58,25 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
                         system.riskTier().name(),
                         context.decisionId()))
             .orElse(context);
-    PolicyDecision decision = evaluate(effective, view);
+    PolicyDecision decision = evaluateRegistry(effective, view);
+    if (decision == null) {
+      var evaluation = engine.evaluate(effective);
+      effective = effective.withPolicy(evaluation.version(), evaluation.digest());
+      decision =
+          switch (evaluation.outcome()) {
+            case ALLOW -> PolicyDecision.allow();
+            case DENY -> PolicyDecision.deny("denied by policy engine");
+            case ERROR ->
+                PolicyDecision.error("policy engine unavailable or publication is not active");
+          };
+    } else {
+      effective = effective.withPolicy(null, null);
+    }
     evidence.recordDecision(effective, decision); // durable outbox, delivered to Ernest
-    return decision;
+    return new Result(decision, effective.policyVersion(), effective.policyHash());
   }
 
-  private PolicyDecision evaluate(
+  private PolicyDecision evaluateRegistry(
       DecisionContext context, Optional<RegisteredSystemLookup.SystemRiskView> view) {
     if (view.isEmpty()) {
       return PolicyDecision.deny("unknown AI system: " + context.aiSystemId());
@@ -81,8 +100,6 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
         default -> PolicyDecision.deny("AI system not approved");
       };
     }
-    return engine.isAllowed(context)
-        ? PolicyDecision.allow()
-        : PolicyDecision.deny("denied by policy engine");
+    return null;
   }
 }

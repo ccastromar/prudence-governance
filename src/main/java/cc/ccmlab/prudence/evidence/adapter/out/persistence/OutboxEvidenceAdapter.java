@@ -23,12 +23,14 @@ public class OutboxEvidenceAdapter implements EvidencePort {
         switch (decision) {
           case PolicyDecision.Allow ignored -> "ALLOW";
           case PolicyDecision.Deny ignored -> "DENY";
+          case PolicyDecision.Error ignored -> "ERROR";
           case PolicyDecision.ApprovalRequired ignored -> "APPROVAL_REQUIRED";
         };
     String reason =
         switch (decision) {
           case PolicyDecision.Allow ignored -> null;
           case PolicyDecision.Deny d -> d.reason();
+          case PolicyDecision.Error e -> e.reason();
           case PolicyDecision.ApprovalRequired a -> a.reason();
         };
     var record =

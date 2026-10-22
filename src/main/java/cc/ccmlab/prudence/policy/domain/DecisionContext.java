@@ -18,6 +18,24 @@ public record DecisionContext(
     String riskTier,
     String decisionId) {
 
+  public DecisionContext withPolicy(String version, String digest) {
+    return new DecisionContext(
+        subject,
+        pipeline,
+        aiSystemId,
+        action,
+        version,
+        digest,
+        systemVersion,
+        modelHash,
+        causationId,
+        correlationId,
+        systemSequence,
+        aiSystemName,
+        riskTier,
+        decisionId);
+  }
+
   /// Without a decision id: the outbox then assigns one.
   public DecisionContext(
       String subject,

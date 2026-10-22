@@ -127,6 +127,7 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
     return switch (e.getVerdict()) {
       case "ALLOW" -> PolicyDecision.allow();
       case "APPROVAL_REQUIRED" -> PolicyDecision.approval("risk-officer", e.getReason());
+      case "ERROR" -> PolicyDecision.error(e.getReason());
       default -> PolicyDecision.deny(e.getReason());
     };
   }

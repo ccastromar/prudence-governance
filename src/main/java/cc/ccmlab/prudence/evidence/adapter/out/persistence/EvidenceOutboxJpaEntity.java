@@ -14,7 +14,10 @@ import java.time.Instant;
 @Table(name = "evidence_outbox")
 public class EvidenceOutboxJpaEntity {
   @Id private String id;
+
+  @Column(length = 512)
   private String subject;
+
   private String pipeline;
   private String aiSystemId;
   private String action;

@@ -38,19 +38,33 @@ public class PolicyController {
             pdp, properties, subject, request.pipeline(), request.aiSystemId(), request.action());
     String decisionId = recorded.decisionId();
     String policyVersion = recorded.policyVersion();
+    String policyDigest = recorded.policyDigest();
     PolicyDecision decision = recorded.decision();
 
     return switch (decision) {
       case PolicyDecision.Allow ignored ->
-          ResponseEntity.ok(new DecisionResponse("ALLOW", null, null, decisionId, policyVersion));
+          ResponseEntity.ok(
+              new DecisionResponse("ALLOW", null, null, decisionId, policyVersion, policyDigest));
       case PolicyDecision.ApprovalRequired ar ->
           ResponseEntity.status(HttpStatus.ACCEPTED)
               .body(
                   new DecisionResponse(
-                      "APPROVAL_REQUIRED", ar.reason(), ar.approver(), decisionId, policyVersion));
+                      "APPROVAL_REQUIRED",
+                      ar.reason(),
+                      ar.approver(),
+                      decisionId,
+                      policyVersion,
+                      policyDigest));
       case PolicyDecision.Deny d ->
           ResponseEntity.status(HttpStatus.FORBIDDEN)
-              .body(new DecisionResponse("DENY", d.reason(), null, decisionId, policyVersion));
+              .body(
+                  new DecisionResponse(
+                      "DENY", d.reason(), null, decisionId, policyVersion, policyDigest));
+      case PolicyDecision.Error e ->
+          ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+              .body(
+                  new DecisionResponse(
+                      "ERROR", e.reason(), null, decisionId, policyVersion, policyDigest));
     };
   }
 }
