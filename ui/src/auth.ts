@@ -9,12 +9,14 @@ export const ssoEnabled = Boolean(ISSUER && CLIENT_ID);
 const TOKEN_KEY = "prudence_token";
 const VERIFIER_KEY = "prudence_pkce_verifier";
 const STATE_KEY = "prudence_pkce_state";
+const ID_TOKEN_KEY = "prudence_id_token";
 const FORCE_LOGIN_KEY = "prudence_force_login";
 
 type Discovery = {
   issuer: string;
   authorization_endpoint: string;
   token_endpoint: string;
+  end_session_endpoint?: string;
 };
 let discoveryRequest: Promise<Discovery> | undefined;
 async function discovery(): Promise<Discovery> {
@@ -89,13 +91,31 @@ export function clearToken() {
   }
 }
 
-/** Explicit sign-out: the next sign-in must ask for credentials instead of reusing the IdP session. */
-export function signOut() {
-  clearToken();
+/**
+ * Explicit sign-out: ends the IdP session too (RP-initiated logout), so the whole suite signs
+ * out. Falls back to forcing credentials on the next sign-in if the IdP cannot be reached.
+ */
+export async function signOut() {
+  let idToken = "";
   try {
+    idToken = sessionStorage.getItem(ID_TOKEN_KEY) ?? "";
+    sessionStorage.removeItem(ID_TOKEN_KEY);
     sessionStorage.setItem(FORCE_LOGIN_KEY, "true");
   } catch {
     /* ignore */
+  }
+  clearToken();
+  if (!ssoEnabled) return;
+  try {
+    const { end_session_endpoint } = await discovery();
+    if (!end_session_endpoint) return;
+    const url = new URL(end_session_endpoint);
+    url.searchParams.set("client_id", CLIENT_ID);
+    url.searchParams.set("post_logout_redirect_uri", redirectUri());
+    if (idToken) url.searchParams.set("id_token_hint", idToken);
+    window.location.assign(url.toString());
+  } catch {
+    /* local sign-out already done */
   }
 }
 
@@ -284,6 +304,7 @@ export async function completeLoginIfPresent(): Promise<boolean> {
   const tok = await res.json();
   if (tok.access_token) {
     sessionStorage.setItem(TOKEN_KEY, tok.access_token);
+    if (tok.id_token) sessionStorage.setItem(ID_TOKEN_KEY, tok.id_token);
     return true;
   }
   return false;

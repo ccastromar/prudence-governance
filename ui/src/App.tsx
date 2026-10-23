@@ -167,7 +167,7 @@ export default function App() {
             <Button
               size="sm"
               onClick={() => {
-                signOut();
+                void signOut();
                 setIdentity("");
                 setAuthed(false);
               }}
