@@ -33,6 +33,7 @@ import {
   completeLoginIfPresent,
   clearToken,
   signOut,
+  watchPrudenceSession,
 } from "./auth";
 
 type Tab =
@@ -133,6 +134,15 @@ export default function App() {
         /* best-effort */
       }
     }
+  }, [authed]);
+
+  useEffect(() => {
+    if (!ssoEnabled || !authed) return;
+    return watchPrudenceSession(() => {
+      clearToken();
+      setIdentity("");
+      setAuthed(false);
+    });
   }, [authed]);
 
   useEffect(() => {

@@ -3,9 +3,11 @@ import { createRoot } from "react-dom/client";
 import "@chestertown/design/styles.css";
 import "./styles.css";
 import App from "./App";
+import { reportIdpSessionIfFramed } from "./auth";
 
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+if (!reportIdpSessionIfFramed())
+  createRoot(document.getElementById("root")!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
