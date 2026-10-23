@@ -82,15 +82,66 @@ final class ComplianceProfileCatalog {
               "INCIDENT_ESCALATION",
               "Incident escalation",
               "Incident/provider/authority escalation procedure tested for this system."));
+  private static final List<Definition> IMPORTER_HIGH =
+      List.of(
+          control(
+              "IMPORTER_CONFORMITY_CHECK",
+              "Pre-market conformity verification",
+              "Art. 23(1): verify CE marking, EU declaration of conformity, instructions for use, "
+                  + "that the provider completed the applicable conformity assessment and drew "
+                  + "up the technical documentation, and that an authorised representative has "
+                  + "been appointed where required."),
+          control(
+              "IMPORTER_IDENTIFICATION",
+              "Importer identification",
+              "Art. 23(3): ensure the importer's name and contact address appear on the system, "
+                  + "packaging or accompanying documentation, as applicable."),
+          control(
+              "IMPORTER_STORAGE_HANDLING",
+              "Storage and transport safeguards",
+              "Art. 23(4): document that storage and transport under the importer's "
+                  + "responsibility do not jeopardise compliance."),
+          control(
+              "IMPORTER_DOCUMENT_RETENTION",
+              "Importer document retention",
+              "Arts. 23(5)-23(6): retain the EU declaration of conformity, instructions for use "
+                  + "and (where applicable) the notified-body certificate for ten years; make "
+                  + "technical documentation available to authorities on reasoned request."),
+          control(
+              "IMPORTER_RISK_RESPONSE",
+              "Importer risk and corrective-action procedure",
+              "Arts. 23(2), 23(7): do not place non-compliant or falsified systems on the market; "
+                  + "notify the provider, authorised representative and authorities when a risk "
+                  + "is identified, and cooperate with competent authorities."));
+  private static final List<Definition> DISTRIBUTOR_HIGH =
+      List.of(
+          control(
+              "DISTRIBUTOR_CONFORMITY_CHECK",
+              "Pre-market distributor verification",
+              "Art. 24(1): verify CE marking, required documentation and instructions, and that "
+                  + "the provider and importer have met their applicable obligations before "
+                  + "making the system available."),
+          control(
+              "DISTRIBUTOR_STORAGE_HANDLING",
+              "Storage and transport safeguards",
+              "Art. 24(2): document that storage and transport conditions preserve the system's "
+                  + "compliance with the applicable requirements."),
+          control(
+              "DISTRIBUTOR_RISK_RESPONSE",
+              "Distributor risk and corrective-action procedure",
+              "Arts. 24(2), 24(4)-24(6): withhold a non-compliant system; notify the provider or "
+                  + "importer when a risk is identified; where already made available, take or "
+                  + "ensure corrective action, withdrawal or recall and notify authorities; "
+                  + "provide requested information and cooperate with authorities."));
 
   List<Profile> applicableTo(AiSystem system) {
     if (system.riskTier() != RiskTier.HIGH) return List.of();
     return switch (system.classification().regulatoryRole()) {
       case PROVIDER -> List.of(new Profile("EU_AI_ACT_PROVIDER_HIGH_RISK_V1", PROVIDER_HIGH));
       case DEPLOYER -> List.of(new Profile("EU_AI_ACT_DEPLOYER_HIGH_RISK_V1", DEPLOYER_HIGH));
-      // Importers and distributors have distinct obligations; they need a dedicated
-      // profile rather than silently inheriting provider controls.
-      case IMPORTER, DISTRIBUTOR -> List.of();
+      case IMPORTER -> List.of(new Profile("EU_AI_ACT_IMPORTER_HIGH_RISK_V1", IMPORTER_HIGH));
+      case DISTRIBUTOR ->
+          List.of(new Profile("EU_AI_ACT_DISTRIBUTOR_HIGH_RISK_V1", DISTRIBUTOR_HIGH));
     };
   }
 

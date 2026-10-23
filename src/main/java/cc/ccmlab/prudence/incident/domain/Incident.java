@@ -315,7 +315,10 @@ public final class Incident {
     require(report.recipient(), "report recipient");
     require(report.reference(), "report reference");
     require(report.submittedAt(), "report submission time");
-    Instant.parse(report.submittedAt()); // must be an ISO-8601 instant
+    Instant submittedAt = Instant.parse(report.submittedAt()); // must be an ISO-8601 instant
+    if (submittedAt.isAfter(Instant.now())) {
+      throw new IllegalArgumentException("report submission time cannot be in the future");
+    }
   }
 
   private static void require(String value, String name) {

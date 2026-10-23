@@ -182,8 +182,11 @@ public class ComplianceControlService implements ComplianceControls {
   }
 
   private static String effectiveExpiry(String requested, Integer days) {
-    if (!blank(requested)) return requested;
-    return days == null ? null : Instant.now().plusSeconds(days * 86400L).toString();
+    if (days == null) return blank(requested) ? null : requested;
+    Instant maximumExpiry = Instant.now().plusSeconds(days * 86400L);
+    if (blank(requested)) return maximumExpiry.toString();
+    Instant requestedExpiry = Instant.parse(requested);
+    return (requestedExpiry.isAfter(maximumExpiry) ? maximumExpiry : requestedExpiry).toString();
   }
 
   private static void validateEvidence(Evidence evidence) {

@@ -102,6 +102,11 @@ by the time you receive it.
 `ALLOW`, so a generic AuthZEN client fails closed; `context` carries the full verdict and the
 `decisionId`. Discovery is at `/.well-known/authzen-configuration`.
 
+These endpoints are independent of AOS and work with an orchestrator running outside the
+Prudence deployment. Server-to-server integrations use the deployment's OIDC issuer and a
+client-credentials token; browser-based integrations additionally need their exact web origin
+listed in `PRUDENCE_CORS_ORIGINS`. Do not expose workload credentials to a browser.
+
 The full contract is in [`docs/api/decision-api-v1.yaml`](../api/decision-api-v1.yaml)
 (OpenAPI 3.1).
 

@@ -1,6 +1,7 @@
 package cc.ccmlab.prudence.config;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -277,10 +278,19 @@ public class SecurityConfig {
   @Bean
   CorsConfigurationSource corsConfigurationSource() {
     CorsConfiguration cfg = new CorsConfiguration();
-    String origins =
-        System.getenv()
-            .getOrDefault("PRUDENCE_CORS_ORIGINS", "http://localhost:5200,http://127.0.0.1:5200");
-    cfg.setAllowedOrigins(List.of(origins.split(",")));
+    String origins = System.getenv("PRUDENCE_CORS_ORIGINS");
+    if (origins == null || origins.isBlank()) {
+      origins = "http://localhost:5200,http://127.0.0.1:5200";
+    }
+    List<String> allowedOrigins =
+        Arrays.stream(origins.split(","))
+            .map(String::strip)
+            .filter(origin -> !origin.isEmpty())
+            .toList();
+    if (allowedOrigins.isEmpty()) {
+      throw new IllegalStateException("PRUDENCE_CORS_ORIGINS must contain at least one origin");
+    }
+    cfg.setAllowedOrigins(allowedOrigins);
     cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
     cfg.setAllowedHeaders(List.of("*"));
     UrlBasedCorsConfigurationSource src = new UrlBasedCorsConfigurationSource();

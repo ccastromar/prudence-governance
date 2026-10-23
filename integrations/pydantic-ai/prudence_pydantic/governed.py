@@ -58,7 +58,7 @@ def governed(pipeline: str, action: str = "run", *, raise_on_deny: bool = False)
                     inputs={"args": args, "kwargs": kwargs},
                     output={"result": result},
                     metadata={"stage": "execution", "pipeline": pipeline, "action": action,
-                              "subject": deps.subject, "aiSystemId": deps.ai_system_id, "decision": "ALLOW"},
+                              "aiSystemId": deps.ai_system_id, "decision": "ALLOW"},
                 )
             return result
 

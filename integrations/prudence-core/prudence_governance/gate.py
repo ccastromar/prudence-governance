@@ -25,7 +25,7 @@ import httpx
 
 @dataclass(frozen=True)
 class Decision:
-    decision: str                 # ALLOW | DENY | APPROVAL_REQUIRED
+    decision: str                 # ALLOW | DENY | APPROVAL_REQUIRED | ERROR
     reason: str | None = None
     approver: str | None = None
     decision_id: str | None = None   # the id Prudence recorded it under (Decision API v1)
@@ -94,7 +94,33 @@ class PrudenceGate:
             body = r.json()
         except Exception as e:  # noqa: BLE001 — fail closed on any error
             return Decision("DENY", f"PDP unreachable: {e}")
-        return Decision(body.get("decision", "DENY"), body.get("reason"), body.get("approver"), body.get("decisionId"))
+        if not isinstance(body, dict):
+            return Decision("DENY", f"Invalid PDP response (HTTP {r.status_code})")
+
+        expected_decision = {
+            200: "ALLOW",
+            202: "APPROVAL_REQUIRED",
+            403: "DENY",
+            503: "ERROR",
+        }.get(r.status_code)
+        decision = body.get("decision")
+        decision_id = body.get("decisionId")
+        if (
+            expected_decision is None
+            or decision != expected_decision
+            or not isinstance(decision_id, str)
+            or not decision_id.strip()
+        ):
+            return Decision("DENY", f"Unexpected PDP response (HTTP {r.status_code})")
+
+        reason = body.get("reason")
+        approver = body.get("approver")
+        return Decision(
+            decision,
+            reason if isinstance(reason, str) else None,
+            approver if isinstance(approver, str) else None,
+            decision_id,
+        )
 
     def report_execution(self, decision: Decision, ai_system_id: str, pipeline: str, *,
                          runtime: str = "python", execution_id: str | None = None) -> bool:

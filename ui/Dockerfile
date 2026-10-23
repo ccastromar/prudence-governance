@@ -21,7 +21,7 @@ RUN npm ci
 COPY ui/ ./
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 COPY --chown=nginx:nginx --chmod=644 ui/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /workspace/ui/dist /usr/share/nginx/html
 EXPOSE 8080
