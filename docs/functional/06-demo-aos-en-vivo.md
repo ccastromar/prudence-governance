@@ -33,7 +33,7 @@ no depende de una GPU ni de internet, y nadie puede decir que "el modelo tuvo su
 1. Prudence, OPA y la UI de Prudence como en [00-arrancar.md](00-arrancar.md), y después el seed:
    - **Sin login:** `SEED_AUTHOR_TOKEN=dev SEED_REVIEWER_ONE_TOKEN=dev SEED_REVIEWER_TWO_TOKEN=dev ./scripts/seed-mvp.sh`
      (en modo de pruebas los tokens no se comprueban).
-   - **Con login:** el seed necesita **tres** usuarios `read-write` distintos (ver `scripts/README.md`).
+   - **Con login:** el seed necesita **tres** usuarios distintos (un autor y dos aprobadores de sistemas) (ver `scripts/README.md`).
 2. Saca los ids de las 4 IAs para AOS (solo lee, no cambia nada):
    ```bash
    ./scripts/aos-demo-env.sh > /tmp/aos-demo.env

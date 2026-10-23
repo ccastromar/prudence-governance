@@ -583,8 +583,7 @@ async function ok<T>(res: Response): Promise<T> {
     } catch {
       /* ignore */
     }
-    if (res.status === 403)
-      msg = "You need the read-write role for this action.";
+    if (res.status === 403) msg = "Your account is not allowed to do this.";
     throw new Error(msg);
   }
   return res.json() as Promise<T>;
@@ -598,6 +597,10 @@ const post = <T>(url: string, body: unknown) =>
   }).then(ok<T>);
 
 export const api = {
+  me: () =>
+    fetch("/api/me", { headers: withAuth() }).then(
+      ok<{ name: string; roles: string[] }>,
+    ),
   assessChange: (body: {
     aiSystemId: string;
     proposedVersion: string;

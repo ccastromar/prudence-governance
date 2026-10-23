@@ -36,7 +36,7 @@ The optional `demo-runner` executes the deterministic examples exposed in Pruden
 decisions → Governed runs** panel, one per framework adapter: a Pydantic AI bug-triage tool, a
 LangGraph response-drafting node, a Google ADK claims-letter tool, an OpenAI Agents SDK refund
 tool and a Microsoft Agent Framework CRM tool (`agent_demos.py`). The last three seal each
-allowed execution in Ernest under the AI system's id. It is internal-only: the browser calls Prudence with a `read-write`
+allowed execution in Ernest under the AI system's id. It is internal-only: the browser calls Prudence with an `author`
 session, Prudence relays to the runner using a private token, and the runner uses its own
 least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never receives a PDP
 or Ernest credential. `chestertown-infra/scripts/provision-framework-demo-runner-client.sh`

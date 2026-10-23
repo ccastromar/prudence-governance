@@ -66,9 +66,10 @@ export function getUserName(): string | null {
     const bytes = Uint8Array.from(binaryPayload, (character) =>
       character.charCodeAt(0),
     );
-    const payload = JSON.parse(
-      new TextDecoder().decode(bytes),
-    ) as Record<string, unknown>;
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as Record<
+      string,
+      unknown
+    >;
     for (const claim of ["preferred_username", "email", "name", "sub"]) {
       const value = payload[claim];
       if (typeof value === "string" && value) return value;
@@ -108,19 +109,6 @@ export function getAuthenticatedIdentity(): string {
     /* no usable identity claim */
   }
   return "";
-}
-
-/** UI affordance only; the API remains the authoritative read-write role enforcement. */
-export function hasRealmRole(role: string): boolean {
-  if (!ssoEnabled) return true;
-  const token = getToken();
-  try {
-    const encoded = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(atob(encoded));
-    return Array.isArray(payload.roles) && payload.roles.includes(role);
-  } catch {
-    return false;
-  }
 }
 
 function b64url(bytes: Uint8Array): string {

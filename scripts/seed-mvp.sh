@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Idempotent public-MVP seed. It uses the API, normal validation and normal audit trail.
-# SSO mode requires three different read-write user tokens:
+# SSO mode requires three different user tokens (an author and two system approvers):
 #   SEED_AUTHOR_TOKEN, SEED_REVIEWER_ONE_TOKEN, SEED_REVIEWER_TWO_TOKEN
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

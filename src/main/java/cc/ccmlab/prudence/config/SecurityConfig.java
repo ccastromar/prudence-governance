@@ -58,13 +58,16 @@ public class SecurityConfig {
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(HttpMethod.GET, "/api/policy-admin/**")
-                    .hasAnyRole("policy-admin", "policy-reviewer")
+                    .hasAnyRole(
+                        PrudenceRoles.AUTHOR, PrudenceRoles.POLICY_REVIEWER, PrudenceRoles.ADMIN)
                     .requestMatchers(HttpMethod.GET, "/internal/policy-bundles/current")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/policy-admin/drafts/*/approve")
-                    .hasRole("policy-reviewer")
+                    .hasRole(PrudenceRoles.POLICY_REVIEWER)
+                    .requestMatchers("/api/policy-admin/publications/**")
+                    .hasRole(PrudenceRoles.ADMIN)
                     .requestMatchers("/api/policy-admin/**")
-                    .hasRole("policy-admin")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     .requestMatchers("/actuator/health")
                     .permitAll()
                     // The PDP is a machine-to-machine endpoint: an AOS gate or a runtime adapter
@@ -91,15 +94,15 @@ public class SecurityConfig {
                         "/api/registry/systems",
                         "/api/registry/systems/*/submit",
                         "/api/registry/systems/*/compliance-controls/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     // Registering an incident and recording its reports change the register (and
                     // may
                     // suspend a system); reading it only needs authentication.
                     .requestMatchers(HttpMethod.POST, "/api/incidents", "/api/incidents/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     .requestMatchers(
                         HttpMethod.POST, "/api/governance/cases", "/api/governance/cases/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/governance/change-assessments",
@@ -107,14 +110,14 @@ public class SecurityConfig {
                         "/api/oversight/**",
                         "/api/impact/**",
                         "/api/compliance-snapshots/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     // Re-driving dead-lettered evidence is an operator act.
                     .requestMatchers(HttpMethod.POST, "/api/evidence/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     // A human can request a demonstrator run, but the browser never calls the
                     // PDP or Ernest directly: the private runner presents its workload token.
                     .requestMatchers(HttpMethod.POST, "/api/demos/**")
-                    .hasRole("read-write")
+                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
                     // Approving/rejecting/renewing a system and issuing an attestation are reviewer
                     // acts.
                     .requestMatchers(
@@ -123,9 +126,9 @@ public class SecurityConfig {
                         "/api/registry/systems/*/reject",
                         "/api/registry/systems/*/renew",
                         "/api/attestations")
-                    .hasRole("read-write")
+                    .hasRole(PrudenceRoles.SYSTEM_APPROVER)
                     .anyRequest()
-                    .authenticated())
+                    .hasAnyRole(PrudenceRoles.ALL))
         .oauth2ResourceServer(
             oauth ->
                 oauth.jwt(

@@ -1,9 +1,17 @@
 {
   "realm": "chestertown",
   "enabled": true,
-  "roles": { "realm": [ { "name": "read-write" }, { "name": "read-only" },
-    { "name": "policy-admin", "description": "May draft, validate and publish Prudence policies." },
-    { "name": "policy-reviewer", "description": "May approve a policy revision; never its author." },
+  "roles": { "realm": [
+    { "name": "prudence-reader" },
+    { "name": "prudence-author" },
+    { "name": "prudence-system-approver" },
+    { "name": "prudence-policy-reviewer" },
+    { "name": "prudence-admin" },
+    { "name": "ernest-reader" },
+    { "name": "ernest-editor" },
+    { "name": "aos-admin" },
+    { "name": "aos-operator" },
+    { "name": "aos-auditor" },
     { "name": "model-operator", "description": "Machine role: may run the pipelines a managed policy grants it." } ] },
   "clientScopes": [
     { "name": "basic", "protocol": "openid-connect" },
@@ -68,14 +76,16 @@
   "users": [
     { "username": "service-account-pdp-client", "enabled": true, "serviceAccountClientId": "pdp-client", "realmRoles": ["model-operator"] },
     { "username": "policy-author", "enabled": true, "emailVerified": true, "email": "policy-author@bank.eu", "firstName": "Pat", "lastName": "Author",
-      "credentials": [ { "type": "password", "value": "policy-author", "temporary": false } ], "realmRoles": ["read-write", "policy-admin"] },
+      "credentials": [ { "type": "password", "value": "policy-author", "temporary": false } ], "realmRoles": ["prudence-admin", "ernest-reader"] },
     { "username": "policy-reviewer", "enabled": true, "emailVerified": true, "email": "policy-reviewer@bank.eu", "firstName": "Rae", "lastName": "Reviewer",
-      "credentials": [ { "type": "password", "value": "policy-reviewer", "temporary": false } ], "realmRoles": ["read-only", "policy-reviewer"] },
+      "credentials": [ { "type": "password", "value": "policy-reviewer", "temporary": false } ], "realmRoles": ["prudence-policy-reviewer", "ernest-reader"] },
     { "username": "alice", "enabled": true, "emailVerified": true, "email": "alice@bank.eu", "firstName": "Alice", "lastName": "Operator",
-      "credentials": [ { "type": "password", "value": "alice", "temporary": false } ], "realmRoles": ["read-write"] },
+      "credentials": [ { "type": "password", "value": "alice", "temporary": false } ], "realmRoles": ["prudence-author", "prudence-system-approver", "ernest-editor", "aos-operator"] },
     { "username": "bob", "enabled": true, "emailVerified": true, "email": "bob@bank.eu", "firstName": "Bob", "lastName": "RiskOfficer",
-      "credentials": [ { "type": "password", "value": "bob", "temporary": false } ], "realmRoles": ["read-write"] },
+      "credentials": [ { "type": "password", "value": "bob", "temporary": false } ], "realmRoles": ["prudence-system-approver", "ernest-reader"] },
+    { "username": "carol", "enabled": true, "emailVerified": true, "email": "carol@bank.eu", "firstName": "Carol", "lastName": "Approver",
+      "credentials": [ { "type": "password", "value": "carol", "temporary": false } ], "realmRoles": ["prudence-system-approver", "ernest-reader"] },
     { "username": "auditor", "enabled": true, "emailVerified": true, "email": "auditor@bank.eu", "firstName": "Aud", "lastName": "Itor",
-      "credentials": [ { "type": "password", "value": "auditor", "temporary": false } ], "realmRoles": ["read-only"] }
+      "credentials": [ { "type": "password", "value": "auditor", "temporary": false } ], "realmRoles": ["prudence-reader", "ernest-reader", "aos-auditor"] }
   ]
 }

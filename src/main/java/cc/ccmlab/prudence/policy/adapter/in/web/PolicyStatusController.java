@@ -41,7 +41,7 @@ public class PolicyStatusController {
     var roles =
         auth.getAuthorities().stream()
             .map(a -> a.getAuthority())
-            .filter(a -> a.equals("ROLE_policy-admin") || a.equals("ROLE_policy-reviewer"))
+            .filter(a -> a.startsWith("ROLE_"))
             .map(a -> a.substring(5))
             .sorted()
             .toList();

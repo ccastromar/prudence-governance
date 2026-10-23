@@ -6,7 +6,7 @@ import {
   type GovernedDemo,
   type GovernedDemoRun,
 } from "../api";
-import { hasRealmRole } from "../auth";
+import { ssoEnabled } from "../auth";
 import { DecisionBadge } from "../components";
 import {
   Alert,
@@ -70,10 +70,23 @@ function DemoCard({
   const [result, setResult] = useState<GovernedDemoRun | null>(latest ?? null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const writeAllowed = hasRealmRole("read-write");
+  const [writeAllowed, setWriteAllowed] = useState(false);
   const meta = demos[demo];
 
   useEffect(() => setResult(latest ?? null), [latest]);
+
+  useEffect(() => {
+    if (!ssoEnabled) {
+      setWriteAllowed(true);
+      return;
+    }
+    api
+      .me()
+      .then((me) =>
+        setWriteAllowed(me.roles.some((r) => r === "author" || r === "admin")),
+      )
+      .catch(() => setWriteAllowed(false));
+  }, []);
 
   const run = async () => {
     if (!systemId) return;
@@ -129,7 +142,7 @@ function DemoCard({
       </div>
       {!writeAllowed && (
         <p className="ct-muted">
-          Read-only visitors can inspect outcomes but cannot start runs.
+          Only authors and administrators can start runs.
         </p>
       )}
       {error && <Alert tone="danger">{error}</Alert>}

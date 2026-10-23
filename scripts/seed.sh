@@ -4,9 +4,9 @@
 # console, no SQL behind its back. Idempotent: a system whose name already exists is skipped.
 #
 #   ./scripts/seed.sh                  # dev profile (H2, no login) or ./scripts/backend-sso.sh
-#   SEED_USER=bob ./scripts/seed.sh    # secured mode: register as another read-write user
+#   SEED_USER=bob ./scripts/seed.sh    # secured mode: register as another author
 #
-# In secured mode it signs in to the local Keycloak as alice (read-write) to get a token.
+# In secured mode it signs in to the local Keycloak as alice (Prudence author) to get a token.
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 API="${PRUDENCE_URL:-http://127.0.0.1:8099}/api/registry/systems"

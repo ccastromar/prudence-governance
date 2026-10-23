@@ -245,7 +245,7 @@ store and each level held or missing; `GET /api/posture/evidence-sink`):
 reviews, attestations, incident events and alert emails — with its last error. Once the cause is
 fixed (Ernest reachable, credentials or payload corrected),
 `POST /api/evidence/dead-letters/{target}/{id}/retry` requeues it with a fresh attempt budget and
-delivers it immediately (`read-write` role; the operator is logged). The same list, with a Retry
+delivers it immediately (`author` or `admin` role; the operator is logged). The same list, with a Retry
 button, is at the bottom of the *Posture* tab. Retrying a record that is not dead-lettered
 returns 409. There is deliberately no "discard": giving up on a piece of evidence should be a
 recorded decision, which is not built yet.

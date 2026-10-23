@@ -8,7 +8,7 @@
 #   the high-risk credit system is then resubmitted, so it waits for two sign-offs again.
 #
 # Every reset therefore leaves a closed incident and review events behind, on purpose.
-# It needs one read-write identity (no reviewer): dev profile, local SSO (signs in as alice)
+# It needs one author identity (no reviewer): dev profile, local SSO (signs in as alice)
 # or PRUDENCE_TOKEN. Ids, AOS and its .env are untouched.
 #
 #   ./scripts/aos-demo-rearm.sh

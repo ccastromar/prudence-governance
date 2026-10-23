@@ -35,7 +35,10 @@ Clients (public, PKCE): `ernest-spa`, `prudence-spa`, `aos-spa`.
 Machine-to-machine (confidential, client_credentials): `pdp-client` (secret `pdp-dev-secret`),
 carrying the `pdp.decide` client scope — the credential a PDP caller (AOS gate, runtime
 adapter) presents to Prudence's `/api/policy/decisions`.
-Users: `alice`/`alice` (read-write), `bob`/`bob` (read-write), `auditor`/`auditor` (read-only).
+Users (password = username): `alice` (Prudence author and system approver, Ernest editor, AOS operator), `bob` and
+`carol` (Prudence system approvers), `policy-author` (Prudence admin), `policy-reviewer`,
+`auditor` (read-only everywhere). Each app translates the realm roles (`prudence-*`, `ernest-*`,
+`aos-*`) to its own names with its role-mapping setting, listed below.
 
 ### Calling the secured PDP (client_credentials)
 
@@ -58,10 +61,10 @@ different principal. A token without the
 ## Point the apps at it (dev)
 
 - Ernest frontend: `PUBLIC_OIDC_ISSUER=http://localhost:8081/realms/chestertown PUBLIC_OIDC_CLIENT_ID=ernest-spa`
-- Ernest backend: `OIDC_ISSUER=…/realms/chestertown OIDC_AUDIENCE=ernest-spa OIDC_ROLE_CLAIM=roles OIDC_ROLE_MAP=read-write=read-write,read-only=read-only`
-- Prudence backend: `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=…/realms/chestertown`
+- Ernest backend: `OIDC_ISSUER=…/realms/chestertown OIDC_AUDIENCE=ernest-spa OIDC_ROLE_CLAIM=roles OIDC_ROLE_MAP=ernest-editor=read-write,ernest-reader=read-only`
+- Prudence backend: `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=…/realms/chestertown PRUDENCE_IDENTITY_ROLE_MAPPING=prudence-reader=reader,prudence-author=author,prudence-system-approver=system-approver,prudence-policy-reviewer=policy-reviewer,prudence-admin=admin`
 - Prudence UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=prudence-spa`
-- AOS backend: `AOS_JWT_ISSUER=…/realms/chestertown AOS_JWK_URL=…/realms/chestertown/protocol/openid-connect/certs`
+- AOS backend: `AOS_JWT_ISSUER=…/realms/chestertown AOS_JWK_URL=…/realms/chestertown/protocol/openid-connect/certs AOS_ROLE_MAP=aos-admin=admin,aos-operator=operator,aos-auditor=guest`
 - AOS UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=aos-spa`
 
 ## Production
@@ -87,7 +90,7 @@ arrive in the `roles` claim the apps already read.
 `scripts/seed-mvp.sh` creates an idempotent dataset through the API: one system under
 assessment, one pending review, one pending a second high-risk approval, one approved, one
 rejected, one suspended by an incident and one prohibited/blocked. It requires three different
-users with the `read-write` realm role, because Prudence enforces an independent second signer
+users (one `prudence-author` and two distinct `prudence-system-approver`), because Prudence enforces an independent second signer
 for high-risk systems.
 
 ```bash
