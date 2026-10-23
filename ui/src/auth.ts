@@ -10,6 +10,7 @@ const TOKEN_KEY = "prudence_token";
 const VERIFIER_KEY = "prudence_pkce_verifier";
 const STATE_KEY = "prudence_pkce_state";
 const ID_TOKEN_KEY = "prudence_id_token";
+const SILENT_TRIED_KEY = "prudence_silent_tried";
 const FORCE_LOGIN_KEY = "prudence_force_login";
 
 type Discovery = {
@@ -248,7 +249,7 @@ function sha256(input: Uint8Array): Uint8Array {
 }
 const redirectUri = () => `${window.location.origin}/`;
 
-export async function login() {
+export async function login(silent = false) {
   if (!ssoEnabled) return;
   const provider = await discovery();
   const verifier = rand(48);
@@ -264,7 +265,8 @@ export async function login() {
     code_challenge: await challenge(verifier),
     code_challenge_method: "S256",
   });
-  if (sessionStorage.getItem(FORCE_LOGIN_KEY)) {
+  if (silent) p.set("prompt", "none");
+  else if (sessionStorage.getItem(FORCE_LOGIN_KEY)) {
     p.set("prompt", "login");
     sessionStorage.removeItem(FORCE_LOGIN_KEY);
   }
@@ -273,12 +275,46 @@ export async function login() {
   window.location.assign(authorizationUrl.toString());
 }
 
+/**
+ * Joins an existing IdP session (opened by another app of the suite) without showing a login.
+ * Once per tab, and never right after an explicit sign-out. Returns true when it redirects.
+ */
+export async function trySilentLogin(): Promise<boolean> {
+  if (!ssoEnabled || getToken()) return false;
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("code") || params.has("error")) return false;
+  try {
+    if (
+      sessionStorage.getItem(SILENT_TRIED_KEY) ||
+      sessionStorage.getItem(FORCE_LOGIN_KEY)
+    )
+      return false;
+    sessionStorage.setItem(SILENT_TRIED_KEY, "true");
+  } catch {
+    return false;
+  }
+  try {
+    await login(true);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** If the URL carries ?code, exchange it for a token. Returns true if a login completed. */
 export async function completeLoginIfPresent(): Promise<boolean> {
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
-  if (!code) return false;
+  if (!code) {
+    // prompt=none came back without an IdP session: just show the sign-in card.
+    if (url.searchParams.has("error")) {
+      sessionStorage.removeItem(VERIFIER_KEY);
+      sessionStorage.removeItem(STATE_KEY);
+      window.history.replaceState({}, "", url.origin + url.pathname);
+    }
+    return false;
+  }
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
   const expected = sessionStorage.getItem(STATE_KEY);
   sessionStorage.removeItem(VERIFIER_KEY);

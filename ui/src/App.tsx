@@ -31,6 +31,7 @@ import {
   getAuthenticatedIdentity,
   login,
   completeLoginIfPresent,
+  trySilentLogin,
   clearToken,
   signOut,
   watchPrudenceSession,
@@ -108,6 +109,8 @@ export default function App() {
       if (await completeLoginIfPresent()) {
         setIdentity(getAuthenticatedIdentity());
         setAuthed(true);
+      } else if (await trySilentLogin()) {
+        return;
       }
       setReady(true);
     })();
