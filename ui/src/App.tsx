@@ -32,6 +32,7 @@ import {
   login,
   completeLoginIfPresent,
   clearToken,
+  signOut,
 } from "./auth";
 
 type Tab =
@@ -166,7 +167,7 @@ export default function App() {
             <Button
               size="sm"
               onClick={() => {
-                clearToken();
+                signOut();
                 setIdentity("");
                 setAuthed(false);
               }}

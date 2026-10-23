@@ -9,6 +9,7 @@ export const ssoEnabled = Boolean(ISSUER && CLIENT_ID);
 const TOKEN_KEY = "prudence_token";
 const VERIFIER_KEY = "prudence_pkce_verifier";
 const STATE_KEY = "prudence_pkce_state";
+const FORCE_LOGIN_KEY = "prudence_force_login";
 
 type Discovery = {
   issuer: string;
@@ -83,6 +84,16 @@ export function getUserName(): string | null {
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Explicit sign-out: the next sign-in must ask for credentials instead of reusing the IdP session. */
+export function signOut() {
+  clearToken();
+  try {
+    sessionStorage.setItem(FORCE_LOGIN_KEY, "true");
   } catch {
     /* ignore */
   }
@@ -233,6 +244,10 @@ export async function login() {
     code_challenge: await challenge(verifier),
     code_challenge_method: "S256",
   });
+  if (sessionStorage.getItem(FORCE_LOGIN_KEY)) {
+    p.set("prompt", "login");
+    sessionStorage.removeItem(FORCE_LOGIN_KEY);
+  }
   const authorizationUrl = new URL(provider.authorization_endpoint);
   for (const [key, value] of p) authorizationUrl.searchParams.set(key, value);
   window.location.assign(authorizationUrl.toString());
