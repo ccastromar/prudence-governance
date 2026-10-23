@@ -99,7 +99,7 @@ export function getAuthenticatedIdentity(): string {
       string,
       unknown
     >;
-    for (const claim of ["name", "preferred_username", "email", "sub"]) {
+    for (const claim of ["preferred_username", "name", "sub"]) {
       if (typeof payload[claim] === "string" && payload[claim]) {
         return payload[claim];
       }
