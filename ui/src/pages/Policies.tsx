@@ -61,6 +61,8 @@ function explain(error: unknown, action = ""): string {
   if (error.status === 401)
     return "Your session has expired. Sign in again to continue.";
   if (error.status === 403) {
+    if (action === "read")
+      return 'Your account cannot view policies. Ask an administrator for the "policy-admin" or "policy-reviewer" role.';
     const role = REQUIRED_ROLE[action] ?? "policy-admin";
     return `Your account is not allowed to do this. It needs the "${role}" role in the identity provider${
       action === "approve"
@@ -88,6 +90,8 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!response.ok) {
+    if (response.status === 401)
+      window.dispatchEvent(new Event("prudence:unauthorized"));
     const detail = await response
       .json()
       .then((b: { detail?: string; message?: string }) => b.detail ?? b.message)
@@ -154,7 +158,7 @@ export default function Policies() {
     setDrafts(revisions.flat());
   };
   useEffect(() => {
-    void load().catch((e: unknown) => setError(explain(e)));
+    void load().catch((e: unknown) => setError(explain(e, "read")));
   }, []);
   const run = async (work: () => Promise<void>, action = "") => {
     setBusy(true);
@@ -287,11 +291,17 @@ export default function Policies() {
           health of the whole deployment. A publication is requested, not
           active, until OPA is observed serving it.
         </p>
-        <Button disabled={busy} onClick={() => void run(showPublications)}>
+        <Button
+          disabled={busy || !status?.managed}
+          onClick={() => void run(showPublications)}
+        >
           Load publications
         </Button>{" "}
         {status?.managed && (
-          <Button disabled={busy} onClick={() => void checkOpa()}>
+          <Button
+            disabled={busy || !status.roles.includes("policy-admin")}
+            onClick={() => void checkOpa()}
+          >
             Check OPA now
           </Button>
         )}
@@ -309,7 +319,11 @@ export default function Policies() {
                 ` · rollback of ${publication.rollbackOf}`}
             </p>
             <Button
-              disabled={busy || !status?.managed}
+              disabled={
+                busy ||
+                !status?.managed ||
+                !status.roles.includes("policy-admin")
+              }
               onClick={() => void rollback(publication)}
             >
               Publish this snapshot as rollback
@@ -347,7 +361,13 @@ export default function Policies() {
           </select>
         </label>{" "}
         <Button
-          disabled={busy || !name.trim() || !role.trim() || !pipeline.trim()}
+          disabled={
+            busy ||
+            !status?.roles.includes("policy-admin") ||
+            !name.trim() ||
+            !role.trim() ||
+            !pipeline.trim()
+          }
           onClick={() => void create()}
         >
           Create draft
@@ -462,7 +482,7 @@ export default function Policies() {
                 </>
               ) : (
                 <Button
-                  disabled={busy}
+                  disabled={busy || !status?.roles.includes("policy-admin")}
                   onClick={() => {
                     setEditing(draft.revisionId);
                     setRules(draft.rules.map((r) => ({ ...r })));
@@ -472,13 +492,22 @@ export default function Policies() {
                 </Button>
               )}{" "}
               <Button
-                disabled={busy || editing === draft.revisionId}
+                disabled={
+                  busy ||
+                  !status?.roles.includes("policy-admin") ||
+                  editing === draft.revisionId
+                }
                 onClick={() => void transition(draft, "validate")}
               >
                 Validate
               </Button>{" "}
               <Button
-                disabled={busy || !role.trim() || !pipeline.trim()}
+                disabled={
+                  busy ||
+                  !status?.roles.includes("policy-admin") ||
+                  !role.trim() ||
+                  !pipeline.trim()
+                }
                 onClick={() => void simulate(draft)}
               >
                 Simulate using role and pipeline above
@@ -498,7 +527,7 @@ export default function Policies() {
                 Approve
               </Button>{" "}
               <Button
-                disabled={busy}
+                disabled={busy || !status?.roles.includes("policy-admin")}
                 onClick={() => void transition(draft, "reopen")}
               >
                 Return to draft
@@ -509,7 +538,7 @@ export default function Policies() {
             draft.status,
           ) && (
             <Button
-              disabled={busy}
+              disabled={busy || !status?.roles.includes("policy-admin")}
               onClick={() => void transition(draft, "fork")}
             >
               Create new revision
@@ -518,7 +547,11 @@ export default function Policies() {
           {draft.approvedBy && <p>Approved by {draft.approvedBy}</p>}
           {draft.status === "APPROVED" && (
             <Button
-              disabled={busy || !status?.managed}
+              disabled={
+                busy ||
+                !status?.managed ||
+                !status.roles.includes("policy-admin")
+              }
               onClick={() => void publish(draft)}
             >
               Publish approved revision
