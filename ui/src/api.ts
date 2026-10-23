@@ -557,6 +557,8 @@ export interface DeadLetter {
   lastError: string | null;
 }
 
+export const NOT_ALLOWED = "Your account is not allowed to do this.";
+
 async function json<T>(res: Response): Promise<T> {
   if (res.status === 401) {
     unauthorized();
@@ -583,7 +585,7 @@ async function ok<T>(res: Response): Promise<T> {
     } catch {
       /* ignore */
     }
-    if (res.status === 403) msg = "Your account is not allowed to do this.";
+    if (res.status === 403) msg = NOT_ALLOWED;
     throw new Error(msg);
   }
   return res.json() as Promise<T>;

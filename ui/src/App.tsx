@@ -24,6 +24,7 @@ import {
   type TabItem,
 } from "@chestertown/design";
 import { APPS } from "./chestertown";
+import { api, NOT_ALLOWED } from "./api";
 import {
   ssoEnabled,
   getToken,
@@ -98,6 +99,7 @@ export default function App() {
   const [authed, setAuthed] = useState(!ssoEnabled || !!getToken());
   const [identity, setIdentity] = useState(getAuthenticatedIdentity);
   const [authError, setAuthError] = useState("");
+  const [noAccess, setNoAccess] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -108,6 +110,18 @@ export default function App() {
       setReady(true);
     })();
   }, []);
+
+  // A signed-in user without any Prudence role gets 403 everywhere: say so once, up front.
+  useEffect(() => {
+    if (!ssoEnabled || !authed) {
+      setNoAccess(false);
+      return;
+    }
+    api
+      .me()
+      .then((me) => setNoAccess(me.roles.length === 0))
+      .catch((e: Error) => setNoAccess(e.message === NOT_ALLOWED));
+  }, [authed]);
 
   // Once signed in, the deep link has served: forget it, so a later visit opens normally.
   useEffect(() => {
@@ -193,6 +207,28 @@ export default function App() {
               Sign in with SSO
             </Button>
             {authError && <Alert tone="danger">{authError}</Alert>}
+          </Card>
+        </Page>
+      </AppShell>
+    );
+  }
+
+  if (noAccess) {
+    return (
+      <AppShell {...shell}>
+        <Page>
+          <Card
+            style={{
+              maxWidth: 480,
+              margin: "var(--sp-12) auto",
+              textAlign: "center",
+            }}
+          >
+            <h1 className="ct-title">No access to Prudence</h1>
+            <p className="sub">
+              {identity || "Your account"} is signed in but has no Prudence
+              role. Ask an administrator to assign one, then sign in again.
+            </p>
           </Card>
         </Page>
       </AppShell>
