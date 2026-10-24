@@ -44,3 +44,7 @@ for the founding architecture.
 
 Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md) (step by step) or
 [scripts/README.md](scripts/README.md).
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
