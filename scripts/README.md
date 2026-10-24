@@ -60,6 +60,25 @@ the subject from the token; the JSON `subject` is ignored, so a caller cannot im
 different principal. A token without the
 `pdp.decide` scope (e.g. a human SSO token) gets 403; no token gets 401.
 
+## Whole suite, end to end
+
+`./scripts/e2e-suite.sh` runs AOS, Prudence (secured) and Ernest together against the local
+Keycloak and checks the loop and its failure modes, in about three minutes:
+
+- identity: the token carries the `prudence-api` audience and suite roles; no token → 401; the
+  auditor cannot register a system (403)
+- governance: the four MVP systems give AOS DENY / APPROVAL_REQUIRED / DENY / DENY; once
+  approved in Prudence, the support lookup runs
+- evidence: the run reaches Ernest over Kafka and Prudence shows the system GREEN
+- failure modes: with Kafka down AOS still runs and the evidence arrives once Kafka is back; with
+  Ernest down Prudence reports it unhealthy, then healthy again; with Prudence down AOS fails
+  closed
+
+It uses its own ports, a throw-away Kafka and its own databases (`prudence_e2e`, `ernest_e2e`,
+dropped at the end), starts Keycloak if it is not running, and refuses to start if one of its
+ports is busy. `KEEP_LOGS=1` keeps the logs. The consoles (browser sign-in and suite-wide
+sign-out) are not covered.
+
 ## Point the apps at it (dev)
 
 - Ernest frontend: `PUBLIC_OIDC_ISSUER=http://localhost:8081/realms/chestertown PUBLIC_OIDC_CLIENT_ID=ernest-spa`
