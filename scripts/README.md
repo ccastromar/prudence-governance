@@ -24,6 +24,8 @@ and unpack it next to this repo. Then, each in its own terminal:
 Decisions over Kafka (Ernest ADR-005): start `./scripts/kafka.sh`, then `./scripts/ernest.sh --kafka`
 (Ernest's backend plus its `event-ingestor kafka` consumer), and start Prudence with
 `PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092`.
+This local Kafka is PLAINTEXT, so use it with `./scripts/backend.sh` (dev profile): the secured
+`backend-sso.sh` refuses `decision-transport=kafka` without SSL or SASL_SSL, as production does.
 
 `backend-sso.sh` runs the production security configuration with local values: a
 `prudence_sso` database in your local PostgreSQL (created on first run), a dummy SMTP host
