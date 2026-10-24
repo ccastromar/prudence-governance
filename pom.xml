@@ -13,7 +13,7 @@
 
     <groupId>cc.ccmlab</groupId>
     <artifactId>prudence</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>prudence</name>
     <description>Prudence — the governance vertex (AOS orchestrates, Ernest proves, Prudence governs)</description>
 
