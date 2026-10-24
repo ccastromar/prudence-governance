@@ -72,6 +72,10 @@ opa run --server --watch --addr 127.0.0.1:18181 "$STATE/policy" >"$STATE/opa.log
 
 export SPRING_PROFILES_ACTIVE=""
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="$ISSUER"
+# The audience the production start check requires; provision-runtime.py adds it to each runtime.
+export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES="${PRUDENCE_OIDC_AUDIENCE:-prudence-api}"
+# The realm's suite-wide role names (prudence-author, …) mapped to Prudence's own.
+export PRUDENCE_IDENTITY_ROLE_MAPPING="${PRUDENCE_IDENTITY_ROLE_MAPPING:-prudence-reader=reader,prudence-author=author,prudence-system-approver=system-approver,prudence-policy-reviewer=policy-reviewer,prudence-admin=admin}"
 export PRUDENCE_DB_URL="jdbc:postgresql://127.0.0.1:5432/$DB" PRUDENCE_DB_USER=$DB PRUDENCE_DB_PASSWORD=$DB_PASSWORD
 # Ernest runs with open access; Prudence's start check only needs a non-blank key.
 export PRUDENCE_ERNEST_BASE_URL="$ERNEST_URL" PRUDENCE_ERNEST_API_KEY=conformance
