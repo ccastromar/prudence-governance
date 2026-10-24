@@ -5,9 +5,11 @@ A runtime governed by Prudence needs two things, and getting either wrong means 
 decision is DENY:
 
 1. A machine identity in Keycloak: a confidential client with a service account, the
-   `pdp.decide` and `execution.report` scopes, and a `preferred_username` mapper. Without
-   the mapper the token carries only an opaque `sub`, Prudence uses it as the subject, and
-   OPA, which knows subjects by name, denies everything.
+   `pdp.decide` and `execution.report` scopes, a `preferred_username` mapper and an audience
+   mapper. Without the username mapper the token carries only an opaque `sub`, Prudence uses
+   it as the subject, and OPA, which knows subjects by name, denies everything. Without the
+   audience (`prudence-api` unless Prudence is configured otherwise) a secured Prudence
+   rejects the token outright with 401.
 2. A grant in OPA's data (`policy/opa/data.json`): the service account's username gets a
    role, and the role may `run` the runtime's pipelines.
 
@@ -80,7 +82,7 @@ class Keycloak:
         return next((x for x in self.call("GET", path) or [] if x.get(field) == value), None)
 
 
-def provision_keycloak(kc: Keycloak, client_id: str, display: str) -> tuple[str, str]:
+def provision_keycloak(kc: Keycloak, client_id: str, display: str, audience: str) -> tuple[str, str]:
     """Create or tighten the client; return (service-account username, secret)."""
     scope_ids = {}
     for name in SCOPES:
@@ -122,6 +124,11 @@ def provision_keycloak(kc: Keycloak, client_id: str, display: str) -> tuple[str,
             "protocolMapper": "oidc-usermodel-property-mapper",
             "config": {"user.attribute": "username", "claim.name": "preferred_username", "jsonType.label": "String",
                        "access.token.claim": "true", "id.token.claim": "false", "userinfo.token.claim": "false"}})
+    if not any(m.get("name") == "prudence-audience" for m in mappers):
+        kc.call("POST", f"/clients/{cid}/protocol-mappers/models", {
+            "name": "prudence-audience", "protocol": "openid-connect",
+            "protocolMapper": "oidc-audience-mapper",
+            "config": {"included.custom.audience": audience, "access.token.claim": "true", "id.token.claim": "false"}})
 
     user = kc.call("GET", f"/clients/{cid}/service-account-user")
     secret = kc.call("GET", f"/clients/{cid}/client-secret")["value"]
@@ -155,6 +162,8 @@ def main() -> None:
     ap.add_argument("--client-id", help="Keycloak client id (default: <name>-pdp)")
     ap.add_argument("--keycloak-url", default=os.getenv("KEYCLOAK_URL", "http://localhost:8081"))
     ap.add_argument("--realm", default=os.getenv("KEYCLOAK_REALM", "prudence"))
+    ap.add_argument("--audience", default=os.getenv("PRUDENCE_OIDC_AUDIENCE", "prudence-api"),
+                    help="audience Prudence requires in tokens (default: prudence-api)")
     ap.add_argument("--opa-data", default=str(REPO / "policy/opa/data.json"))
     ap.add_argument("--secret-file", help="where to write the client secret (default: ./<client-id>.secret)")
     ap.add_argument("--dry-run", action="store_true", help="show the plan; change nothing")
@@ -171,7 +180,7 @@ def main() -> None:
     opa_path = Path(args.opa_data)
 
     print(f"Runtime {args.name}")
-    print(f"  Keycloak  {args.keycloak_url} realm {args.realm}: client {client_id}, scopes {', '.join(SCOPES)}")
+    print(f"  Keycloak  {args.keycloak_url} realm {args.realm}: client {client_id}, scopes {', '.join(SCOPES)}, audience {args.audience}")
     print(f"  Subject   {subject} (the PDP takes it from the token, never from the request)")
     print(f"  OPA       role {role} may run: {', '.join(args.pipeline)}  ({opa_path})")
     if args.dry_run:
@@ -180,7 +189,7 @@ def main() -> None:
 
     password = os.getenv("KEYCLOAK_ADMIN_PASSWORD") or die("set KEYCLOAK_ADMIN_PASSWORD")
     kc = Keycloak(args.keycloak_url, args.realm, os.getenv("KEYCLOAK_ADMIN_USER", "admin"), password)
-    username, secret = provision_keycloak(kc, client_id, f"{args.name} → Prudence PDP")
+    username, secret = provision_keycloak(kc, client_id, f"{args.name} → Prudence PDP", args.audience)
     if username != subject:
         die(f"service account is {username}, expected {subject}; grant it by hand or pass --client-id")
 
