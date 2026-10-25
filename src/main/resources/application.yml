@@ -23,6 +23,24 @@ server:
   port: 8099
 
 management:
+  # Telemetry is pushed over OTLP to the collector; nothing is scraped, so no extra actuator
+  # endpoint is exposed. Off unless PRUDENCE_OTEL_ENABLED=true (metrics and traces together).
+  otlp:
+    metrics:
+      export:
+        enabled: ${PRUDENCE_OTEL_ENABLED:false}
+        url: ${PRUDENCE_OTEL_ENDPOINT:http://localhost:4318}/v1/metrics
+        step: 30s
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${PRUDENCE_OTEL_ENDPOINT:http://localhost:4318}/v1/traces
+  tracing:
+    export:
+      enabled: ${PRUDENCE_OTEL_ENABLED:false}
+    sampling:
+      probability: ${PRUDENCE_TRACING_SAMPLING:0.1}
   endpoints:
     web:
       exposure:

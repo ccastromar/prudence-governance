@@ -47,6 +47,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- Telemetry out over OTLP (metrics push, traces); both stay off until an endpoint is
+             configured, so nothing is scraped and no actuator endpoint is added. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
         <!-- Alerts are emailed (SMTP via spring.mail.*). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
