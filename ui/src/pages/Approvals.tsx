@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ReviewEvent } from "../api";
 import { EvidenceState, RiskBadge, StatusBadge } from "../components";
+import { ssoEnabled } from "../auth";
 import {
   Alert,
   Button,
@@ -48,6 +49,23 @@ export default function Approvals() {
   useEffect(() => {
     load();
   }, []);
+
+  // Submitting a system is system.declare; approving, rejecting and renewing are
+  // system.approve. The backend refuses the rest; the buttons say so up front.
+  const [functions, setFunctions] = useState<string[] | null>(
+    ssoEnabled ? [] : null,
+  );
+  useEffect(() => {
+    if (!ssoEnabled) return;
+    api
+      .me()
+      .then((me) => setFunctions(me.functions))
+      .catch(() => setFunctions([]));
+  }, []);
+  const can = (fn: string) => functions === null || functions.includes(fn);
+  const canDeclare = can("system.declare");
+  const canReview = can("system.approve");
+  const needs = (fn: string) => `Needs the ${fn} function`;
 
   const openTrail = async (s: AiSystem) => {
     setTrailFor(s);
@@ -190,7 +208,8 @@ export default function Approvals() {
                 <td className="ct-num">
                   <Button
                     variant="primary"
-                    disabled={busyId === s.id}
+                    disabled={!canDeclare || busyId === s.id}
+                    title={canDeclare ? undefined : needs("system.declare")}
                     onClick={() => submit(s)}
                   >
                     {busyId === s.id ? "…" : "Submit for review"}
@@ -242,14 +261,16 @@ export default function Approvals() {
                 <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Button
                     variant="primary"
-                    disabled={busyId === s.id}
+                    disabled={!canReview || busyId === s.id}
+                    title={canReview ? undefined : needs("system.approve")}
                     onClick={() => approve(s)}
                     style={{ marginRight: "var(--sp-2)" }}
                   >
                     {busyId === s.id ? "…" : "Approve"}
                   </Button>
                   <Button
-                    disabled={busyId === s.id}
+                    disabled={!canReview || busyId === s.id}
+                    title={canReview ? undefined : needs("system.approve")}
                     onClick={() => {
                       setRejecting(s);
                       setReason("");
@@ -307,7 +328,8 @@ export default function Approvals() {
                 <td className="ct-num">
                   <Button
                     variant="primary"
-                    disabled={busyId === s.id}
+                    disabled={!canReview || busyId === s.id}
+                    title={canReview ? undefined : needs("system.approve")}
                     onClick={() => renew(s)}
                   >
                     {busyId === s.id ? "…" : "Renew"}
