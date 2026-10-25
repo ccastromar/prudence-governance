@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.config;
 
+import cc.ccmlab.prudence.governance.Fn;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,8 @@ class MeController {
 
   @GetMapping("/api/me")
   Me me(Authentication auth) {
-    if (auth == null) return new Me("", List.of(), List.of());
+    // No authentication means the open development chain, which allows every request.
+    if (auth == null) return new Me("", List.of(), Fn.personFunctions());
     List<String> roles =
         auth.getAuthorities().stream()
             .map(a -> a.getAuthority())

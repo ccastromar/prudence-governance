@@ -32,4 +32,12 @@ public final class Fn {
     AUDIT,
     PLATFORM_ADMIN
   };
+
+  /**
+   * The person functions by name. Without security (local development) every request is allowed, so
+   * this is what the caller holds there.
+   */
+  public static java.util.List<String> personFunctions() {
+    return java.util.Arrays.stream(PERSON).map(f -> f.substring(PREFIX.length())).sorted().toList();
+  }
 }

@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
+import cc.ccmlab.prudence.governance.Fn;
 import cc.ccmlab.prudence.policy.application.bundle.PolicyPublicationService;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,18 @@ public class PolicyStatusController {
 
   @GetMapping("/api/policy-admin/status")
   public Status status(Authentication auth) {
+    var current = managed ? publications.current() : null;
+    if (auth == null) {
+      // The open development chain allows every request: say so instead of failing.
+      return new Status(
+          managed,
+          actorMode,
+          "issuer-subject".equals(actorMode),
+          List.of(),
+          Fn.personFunctions(),
+          current == null ? null : current.id(),
+          current == null ? null : current.digest());
+    }
     var roles =
         auth.getAuthorities().stream()
             .map(a -> a.getAuthority())
@@ -53,7 +66,6 @@ public class PolicyStatusController {
             .map(a -> a.substring(3))
             .sorted()
             .toList();
-    var current = managed ? publications.current() : null;
     return new Status(
         managed,
         actorMode,
