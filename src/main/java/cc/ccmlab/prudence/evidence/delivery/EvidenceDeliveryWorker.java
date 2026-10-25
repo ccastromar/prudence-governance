@@ -1,5 +1,7 @@
 package cc.ccmlab.prudence.evidence.delivery;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.time.Instant;
@@ -18,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -52,18 +55,37 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
   private final List<DeliveryListener> listeners;
   private final TransactionTemplate tx;
   private final int maxAttempts;
+  private final DeliveryMetrics metrics;
   /// Sends run on this pool: chunks (or single records) of one pass go out concurrently.
   private final ExecutorService senders;
   /// Targets whose configuration is currently failing, so the operator gets one ERROR (and
   /// one alert) when it starts and one INFO when it recovers, not one per record.
   private final Set<String> configurationFailing = ConcurrentHashMap.newKeySet();
 
+  EvidenceDeliveryWorker(
+      List<DeliveryTarget<?>> targets,
+      List<DeliveryListener> listeners,
+      PlatformTransactionManager transactionManager,
+      int maxAttempts,
+      int concurrency) {
+    this(
+        targets,
+        listeners,
+        transactionManager,
+        maxAttempts,
+        concurrency,
+        new SimpleMeterRegistry());
+  }
+
+  @Autowired
   public EvidenceDeliveryWorker(
       List<DeliveryTarget<?>> targets,
       List<DeliveryListener> listeners,
       PlatformTransactionManager transactionManager,
       @Value("${prudence.evidence.max-attempts:20}") int maxAttempts,
-      @Value("${prudence.evidence.delivery-concurrency:8}") int concurrency) {
+      @Value("${prudence.evidence.delivery-concurrency:8}") int concurrency,
+      MeterRegistry meters) {
+    this.metrics = new DeliveryMetrics(meters);
     this.targets = targets;
     this.listeners = listeners;
     this.tx = new TransactionTemplate(transactionManager);
@@ -120,6 +142,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
   private <E> boolean run(DeliveryTarget<E> target) {
     for (int pass = 0; pass < MAX_PASSES; pass++) {
       List<E> due = target.due(Delivery.stamp(Instant.now()), BATCH);
+      metrics.due(target.name(), due.size());
       if (due.isEmpty()) return false;
       List<E> claimed = claimAll(target, due);
       deliver(target, claimed);
@@ -157,9 +180,12 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
 
   private <E> void sendChunk(DeliveryTarget<E> target, List<E> chunk) {
     List<DeliveryTarget.Outcome<E>> outcomes;
+    long started = System.nanoTime();
     try {
       outcomes = target.sendBatch(chunk);
+      metrics.send(target.name(), true, System.nanoTime() - started);
     } catch (Exception e) {
+      metrics.send(target.name(), false, System.nanoTime() - started);
       chunk.forEach(record -> handleFailure(target, target.id(record), e));
       return;
     }
@@ -179,6 +205,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
     }
     if (delivered.isEmpty()) return;
     markDelivered(target, delivered);
+    metrics.records(target.name(), "delivered", delivered.size());
     if (configurationFailing.remove(target.name())) {
       log.info("{} delivery recovered", target.name());
     }
@@ -252,6 +279,12 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
             listeners.forEach(l -> l.deadLettered(target.name(), id, failure, e.getMessage()));
           }
         });
+    metrics.records(
+        target.name(),
+        failure == DeliveryFailure.CONFIGURATION
+            ? "configuration"
+            : outcome[0] == Delivery.Status.DEAD ? "dead" : "retry",
+        1);
     if (failure == DeliveryFailure.CONFIGURATION) {
       if (configurationFailing.add(target.name())) {
         log.error(
