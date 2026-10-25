@@ -2,6 +2,7 @@ package cc.ccmlab.prudence.config;
 
 import cc.ccmlab.prudence.governance.Fn;
 import cc.ccmlab.prudence.governance.GovernanceModel;
+import jakarta.servlet.DispatcherType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -75,6 +76,10 @@ public class SecurityConfig {
                     .requestMatchers("/api/policy-admin/**")
                     .hasAuthority(Fn.POLICY_AUTHOR)
                     .requestMatchers("/actuator/health")
+                    .permitAll()
+                    // The error page renders the status of a request already authorized here;
+                    // guarding it again would turn a workload's 400 or 500 into a 403.
+                    .dispatcherTypeMatchers(DispatcherType.ERROR)
                     .permitAll()
                     // The PDP is a machine-to-machine endpoint: an AOS gate or a runtime adapter
                     // calls it with its workload identity. runtime.decide is a machine function,
