@@ -84,9 +84,9 @@ sign-out) are not covered.
 - Ernest frontend: `PUBLIC_OIDC_ISSUER=http://localhost:8081/realms/chestertown PUBLIC_OIDC_CLIENT_ID=ernest-spa`
 - Ernest backend: `OIDC_ISSUER=…/realms/chestertown OIDC_AUDIENCE=ernest-spa OIDC_ROLE_CLAIM=roles OIDC_ROLE_MAP=ernest-editor=read-write,ernest-reader=read-only`
 - Prudence backend: `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=…/realms/chestertown PRUDENCE_IDENTITY_ROLE_MAPPING=prudence-reader=reader,prudence-author=author,prudence-system-approver=system-approver,prudence-policy-reviewer=policy-reviewer,prudence-admin=admin`
-- Prudence UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=prudence-spa`
+- Prudence UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=prudence-spa` (`VITE_OIDC_SCOPE` when the IdP needs more than `openid profile email`)
 - AOS backend: `AOS_JWT_ISSUER=…/realms/chestertown AOS_JWK_URL=…/realms/chestertown/protocol/openid-connect/certs AOS_ROLE_MAP=aos-admin=admin,aos-operator=operator,aos-auditor=guest`
-- AOS UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=aos-spa`
+- AOS UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=aos-spa` (`VITE_OIDC_SCOPE` likewise)
 
 ## Production
 

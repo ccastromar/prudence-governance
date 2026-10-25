@@ -3,6 +3,9 @@
 const env = import.meta.env as Record<string, string | undefined>;
 const ISSUER = env.VITE_OIDC_ISSUER?.replace(/\/$/, "");
 const CLIENT_ID = env.VITE_OIDC_CLIENT_ID ?? "prudence-spa";
+// Some IdPs need more than the default to put roles and the API audience in the token
+// (Dex: `groups audience:server:client_id:prudence-api`).
+const SCOPE = env.VITE_OIDC_SCOPE?.trim() || "openid profile email";
 
 export const ssoEnabled = Boolean(ISSUER && CLIENT_ID);
 
@@ -260,7 +263,7 @@ export async function login(silent = false) {
     response_type: "code",
     client_id: CLIENT_ID,
     redirect_uri: redirectUri(),
-    scope: "openid profile email",
+    scope: SCOPE,
     state,
     code_challenge: await challenge(verifier),
     code_challenge_method: "S256",
@@ -420,7 +423,7 @@ function idpCheck(
     url.search = new URLSearchParams({
       client_id: clientId,
       response_type: "code",
-      scope: "openid profile email",
+      scope: SCOPE,
       redirect_uri: redirectUri,
       prompt: "none",
       state,
