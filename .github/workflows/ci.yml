@@ -100,3 +100,5 @@ jobs:
           done
           python contract/governance/ct-model/ct_model.py keycloak contract/governance/templates/banking.yaml -o "$RUNNER_TEMP/realm.json"
           python contract/governance/ct-model/ct_model.py entra contract/governance/templates/banking.yaml -o "$RUNNER_TEMP/entra.json"
+          python contract/governance/ct-model/ct_model.py explain contract/governance/templates/banking.yaml \
+            '{"roles":["ai-internal-audit"]}' | grep -qx "prudence: audit"

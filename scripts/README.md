@@ -70,7 +70,8 @@ Keycloak and checks the loop and its failure modes, in about three minutes:
   same person to their own governance functions (contract v1)
 - functions: each app authorizes by function, not by role: the auditor reads policy status but
   cannot write evidence in Ernest (401) or run the support demo in AOS; alice cannot publish a
-  policy (`platform.admin`) or call the PDP (`runtime.decide`)
+  policy (`platform.admin`) or call the PDP (`runtime.decide`); a workload's bad request stays a
+  400 and an unregistered system is a DENY
 - governance: the four MVP systems give AOS DENY / APPROVAL_REQUIRED / DENY / DENY; once
   approved in Prudence, the support lookup runs
 - evidence: the run reaches Ernest over Kafka and Prudence shows the system GREEN
@@ -83,10 +84,18 @@ dropped at the end), starts Keycloak if it is not running, and refuses to start 
 ports is busy. `KEEP_LOGS=1` keeps the logs. The consoles (browser sign-in and suite-wide
 sign-out) are not covered.
 
+## Another identity provider
+
+`./scripts/idp-acceptance.sh` checks a running Prudence against any provider with five of its
+tokens (approver, auditor, declarer, decisions workload, executions workload): signature and
+audience, each person's functions, who may approve, register or call the PDP. It signs no one in;
+how to get the tokens from Dex or Entra ID, and the results so far, are in
+`docs/design/idp-interoperability.md`.
+
 ## Point the apps at it (dev)
 
 - Ernest frontend: `PUBLIC_OIDC_ISSUER=http://localhost:8081/realms/chestertown PUBLIC_OIDC_CLIENT_ID=ernest-spa`
-- Ernest backend: `OIDC_ISSUER=…/realms/chestertown OIDC_AUDIENCE=ernest-spa OIDC_ROLE_CLAIM=roles OIDC_ROLE_MAP=ernest-editor=read-write,ernest-reader=read-only`
+- Ernest backend: `OIDC_ISSUER=…/realms/chestertown OIDC_AUDIENCE=ernest-spa` (the governance model maps `ernest-editor` and `ernest-reader`)
 - Prudence backend: `SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=…/realms/chestertown PRUDENCE_IDENTITY_ROLE_MAPPING=prudence-reader=reader,prudence-author=author,prudence-system-approver=system-approver,prudence-policy-reviewer=policy-reviewer,prudence-admin=admin`
 - Prudence UI: `VITE_OIDC_ISSUER=…/realms/chestertown VITE_OIDC_CLIENT_ID=prudence-spa` (`VITE_OIDC_SCOPE` when the IdP needs more than `openid profile email`)
 - AOS backend: `AOS_JWT_ISSUER=…/realms/chestertown AOS_JWK_URL=…/realms/chestertown/protocol/openid-connect/certs AOS_ROLE_MAP=aos-admin=admin,aos-operator=operator,aos-auditor=guest`

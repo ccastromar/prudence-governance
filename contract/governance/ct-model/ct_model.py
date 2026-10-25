@@ -6,6 +6,7 @@
     ct_model.py keycloak MODEL [--realm NAME] [--base REALM.json] [-o OUT.json]
     ct_model.py entra MODEL [-o OUT.json]
     ct_model.py env MODEL [--path /etc/chestertown/governance-model.yaml]
+    ct_model.py explain MODEL TOKEN|-
 
 check     validates the model (contract README, section 4) and warns about what it leaves
           uncovered: a function nobody can exercise in an app, a role that holds both sides of an
@@ -17,12 +18,16 @@ keycloak  a development realm: one realm role per map key, one persona per perso
 entra     the appRoles of an Entra ID app registration: person roles for users and groups,
           machine roles for applications.
 env       the setting each app reads its governance model from.
+explain   the functions each app grants to a token (a JWT, or its claims as JSON; `-` reads stdin).
+          It decodes without checking the signature: use it to see what an identity provider
+          issues, never to authorize.
 
 Exit codes: 0 valid, 1 invalid model (or warnings with --strict), 2 usage.
 """
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import json
 import sys
@@ -33,7 +38,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "reference"))
-from governance_model import APPS, FUNCTIONS, ModelError, parse_grant, validate  # noqa: E402
+from governance_model import APPS, FUNCTIONS, ModelError, parse_grant, resolve, validate  # noqa: E402
 
 DEFAULT_BASE = HERE.parent.parent.parent / "scripts" / "chestertown-realm.json"
 
@@ -296,6 +301,36 @@ ERNEST_GOVERNANCE_MODEL={args.path}"""
     return 0
 
 
+# ── explain ─────────────────────────────────────────────────────────────────────────────────
+
+
+def claims_of(token: str) -> dict:
+    token = token.strip()
+    if token.startswith("{"):
+        return json.loads(token)
+    payload = token.split(".")[1]
+    return json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+
+
+def cmd_explain(args) -> int:
+    model = load(args.model)
+    try:
+        claims = claims_of(sys.stdin.read() if args.token == "-" else args.token)
+    except (ValueError, IndexError):
+        print("error: not a JWT or a JSON object of claims", file=sys.stderr)
+        return 2
+    identity = model["identity"]
+    for side in ("people", "machines"):
+        name = identity[side]["claim"]
+        print(f"{side} claim {name}: {claims.get(name, '(absent)')}")
+    for key in ("iss", "aud", "sub", "azp"):
+        if key in claims:
+            print(f"{key}: {claims[key]}")
+    for app in APPS:
+        print(f"{app}: {', '.join(resolve(model, claims, app)) or '(no functions)'}")
+    return 0
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="ct-model", description=__doc__.split("\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
@@ -321,6 +356,11 @@ def main(argv=None) -> int:
     p.add_argument("model")
     p.add_argument("--path", default="/etc/chestertown/governance-model.yaml")
     p.set_defaults(run=cmd_env)
+
+    p = sub.add_parser("explain", help="the functions each app grants to a token")
+    p.add_argument("model")
+    p.add_argument("token", help="a JWT or its claims as JSON; - reads stdin")
+    p.set_defaults(run=cmd_explain)
 
     args = parser.parse_args(argv)
     try:
