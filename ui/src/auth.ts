@@ -15,6 +15,8 @@ const STATE_KEY = "prudence_pkce_state";
 const ID_TOKEN_KEY = "prudence_id_token";
 const SILENT_TRIED_KEY = "prudence_silent_tried";
 const FORCE_LOGIN_KEY = "prudence_force_login";
+// The IdP session this sign-in belongs to (OIDC `session_state`; Keycloak and Entra send it).
+const SESSION_KEY = "prudence_idp_session";
 
 type Discovery = {
   issuer: string;
@@ -90,6 +92,7 @@ export function getUserName(): string | null {
 export function clearToken() {
   try {
     sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(SESSION_KEY);
   } catch {
     /* ignore */
   }
@@ -318,6 +321,7 @@ export async function completeLoginIfPresent(): Promise<boolean> {
     }
     return false;
   }
+  const session = url.searchParams.get("session_state");
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
   const expected = sessionStorage.getItem(STATE_KEY);
   sessionStorage.removeItem(VERIFIER_KEY);
@@ -344,6 +348,8 @@ export async function completeLoginIfPresent(): Promise<boolean> {
   if (tok.access_token) {
     sessionStorage.setItem(TOKEN_KEY, tok.access_token);
     if (tok.id_token) sessionStorage.setItem(ID_TOKEN_KEY, tok.id_token);
+    if (session) sessionStorage.setItem(SESSION_KEY, session);
+    else sessionStorage.removeItem(SESSION_KEY);
     return true;
   }
   return false;
@@ -377,13 +383,18 @@ export function reportIdpSessionIfFramed(): boolean {
       state,
       active: !params.has("error"),
       code: params.get("code"),
+      session: params.get("session_state"),
     },
     window.location.origin,
   );
   return true;
 }
 
-type CheckResult = { active: boolean; code: string | null };
+type CheckResult = {
+  active: boolean;
+  code: string | null;
+  session: string | null;
+};
 
 function idpCheck(
   authorizationEndpoint: string,
@@ -415,6 +426,7 @@ function idpCheck(
       finish({
         active: Boolean(event.data.active),
         code: event.data.code ?? null,
+        session: event.data.session ?? null,
       });
     };
     const timer = setTimeout(() => finish(null), 8000);
@@ -440,10 +452,16 @@ interface SessionWatch {
   clientId: string;
   redirectUri: string;
   hasSession: () => boolean;
+  /** The IdP session the current sign-in belongs to, when the IdP reported one. */
+  session: () => string | null;
   /** Current token's expiry in ms (0 = unknown). */
   expiresAt: () => number;
   pkce: () => Promise<{ verifier: string; challenge: string }>;
-  exchange: (code: string, verifier: string) => Promise<void>;
+  exchange: (
+    code: string,
+    verifier: string,
+    session: string | null,
+  ) => Promise<void>;
   onEnded: () => void;
 }
 
@@ -466,9 +484,14 @@ export function watchIdpSession(w: SessionWatch): () => void {
         challenge,
       );
       if (!result || !w.hasSession()) return;
-      if (!result.active) w.onEnded();
+      // No IdP session, or another one (someone else signed in after a sign-out elsewhere).
+      const known = w.session();
+      const switched = Boolean(
+        known && result.session && result.session !== known,
+      );
+      if (!result.active || switched) w.onEnded();
       else if (result.code && w.expiresAt() - Date.now() < RENEW_WINDOW_MS)
-        await w.exchange(result.code, verifier);
+        await w.exchange(result.code, verifier, result.session);
     } catch {
       /* transient: try again later */
     } finally {
@@ -485,7 +508,11 @@ export function watchIdpSession(w: SessionWatch): () => void {
   };
 }
 
-async function renewWithCode(code: string, verifier: string) {
+async function renewWithCode(
+  code: string,
+  verifier: string,
+  session: string | null,
+) {
   const provider = await discovery();
   const res = await fetch(provider.token_endpoint, {
     method: "POST",
@@ -502,6 +529,7 @@ async function renewWithCode(code: string, verifier: string) {
   const tok = await res.json();
   if (tok.access_token) sessionStorage.setItem(TOKEN_KEY, tok.access_token);
   if (tok.id_token) sessionStorage.setItem(ID_TOKEN_KEY, tok.id_token);
+  if (session) sessionStorage.setItem(SESSION_KEY, session);
 }
 
 export const watchPrudenceSession = (onEnded: () => void) =>
@@ -511,6 +539,13 @@ export const watchPrudenceSession = (onEnded: () => void) =>
     clientId: CLIENT_ID,
     redirectUri: redirectUri(),
     hasSession: () => Boolean(getToken()),
+    session: () => {
+      try {
+        return sessionStorage.getItem(SESSION_KEY);
+      } catch {
+        return null;
+      }
+    },
     expiresAt: () => jwtExpiryMs(getToken()),
     pkce: async () => {
       const verifier = rand(48);

@@ -82,9 +82,7 @@ function DemoCard({
     }
     api
       .me()
-      .then((me) =>
-        setWriteAllowed(me.functions.includes("system.declare")),
-      )
+      .then((me) => setWriteAllowed(me.functions.includes("system.declare")))
       .catch(() => setWriteAllowed(false));
   }, []);
 
