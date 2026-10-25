@@ -6,6 +6,7 @@ import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import cc.ccmlab.prudence.evidence.delivery.Delivery;
 import cc.ccmlab.prudence.evidence.delivery.DeliveryTarget;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +34,10 @@ public class PolicyAuditDeliveryTarget implements DeliveryTarget<PolicyAuditEnti
   private final ErnestSealer sealer;
   private volatile boolean ensured;
 
-  public PolicyAuditDeliveryTarget(PolicyAuditRepository repository, IntegrationProperties props) {
+  public PolicyAuditDeliveryTarget(
+      PolicyAuditRepository repository,
+      IntegrationProperties props,
+      ObservationRegistry observations) {
     this.repository = repository;
     this.client = ErnestHttp.writeClient(props, observations);
     String url = props.qtsp() == null ? null : props.qtsp().cscUrl();
