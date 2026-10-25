@@ -47,6 +47,8 @@ public class AiSystemJpaEntity {
   private String renewalFirstApprover;
   private String renewalFirstApprovedAt;
   private String reviewDueNotifiedAt;
+  private String declaredBy;
+  private String submittedBy;
 
   protected AiSystemJpaEntity() {}
 
@@ -74,7 +76,9 @@ public class AiSystemJpaEntity {
       String firstApprovedAt,
       String renewalFirstApprover,
       String renewalFirstApprovedAt,
-      String reviewDueNotifiedAt) {
+      String reviewDueNotifiedAt,
+      String declaredBy,
+      String submittedBy) {
     this.id = id;
     this.name = name;
     this.intendedPurpose = intendedPurpose;
@@ -99,6 +103,8 @@ public class AiSystemJpaEntity {
     this.renewalFirstApprover = renewalFirstApprover;
     this.renewalFirstApprovedAt = renewalFirstApprovedAt;
     this.reviewDueNotifiedAt = reviewDueNotifiedAt;
+    this.declaredBy = declaredBy;
+    this.submittedBy = submittedBy;
   }
 
   public String getId() {
@@ -195,5 +201,13 @@ public class AiSystemJpaEntity {
 
   public String getReviewDueNotifiedAt() {
     return reviewDueNotifiedAt;
+  }
+
+  public String getDeclaredBy() {
+    return declaredBy;
+  }
+
+  public String getSubmittedBy() {
+    return submittedBy;
   }
 }

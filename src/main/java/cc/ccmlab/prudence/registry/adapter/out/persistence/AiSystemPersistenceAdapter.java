@@ -68,7 +68,9 @@ public class AiSystemPersistenceAdapter implements AiSystemRepository {
         s.firstApprovedAt(),
         s.renewalFirstApprover(),
         s.renewalFirstApprovedAt(),
-        s.reviewDueNotifiedAt());
+        s.reviewDueNotifiedAt(),
+        s.declaredBy(),
+        s.submittedBy());
   }
 
   private AiSystem toDomain(AiSystemJpaEntity e) {
@@ -108,7 +110,9 @@ public class AiSystemPersistenceAdapter implements AiSystemRepository {
         e.getFirstApprovedAt(),
         e.getRenewalFirstApprover(),
         e.getRenewalFirstApprovedAt(),
-        e.getReviewDueNotifiedAt());
+        e.getReviewDueNotifiedAt(),
+        e.getDeclaredBy(),
+        e.getSubmittedBy());
   }
 
   private static ClassificationAssessment legacyClassification(AiSystemJpaEntity e) {

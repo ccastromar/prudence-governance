@@ -40,8 +40,8 @@ public class AiSystemController {
 
   @PostMapping
   public ResponseEntity<AiSystemResponse> create(
-      @Valid @RequestBody RegisterAiSystemRequest request) {
-    AiSystem created = register.register(request.toCommand());
+      @Valid @RequestBody RegisterAiSystemRequest request, Principal principal) {
+    AiSystem created = register.register(request.toCommand(), declarerOf(principal));
     return ResponseEntity.status(HttpStatus.CREATED).body(AiSystemResponse.from(created));
   }
 
@@ -67,8 +67,8 @@ public class AiSystemController {
   }
 
   @PostMapping("/{id}/submit")
-  public AiSystemResponse submitForReview(@PathVariable String id) {
-    return AiSystemResponse.from(review.submitForReview(new AiSystemId(id)));
+  public AiSystemResponse submitForReview(@PathVariable String id, Principal principal) {
+    return AiSystemResponse.from(review.submitForReview(new AiSystemId(id), declarerOf(principal)));
   }
 
   /// Periodic review: renew a still-valid approval (two independent sign-offs for high risk).
@@ -91,6 +91,11 @@ public class AiSystemController {
   @GetMapping("/{id}/reviews")
   public List<ReviewEvent> reviews(@PathVariable String id) {
     return reviews.reviewsForSystem(id);
+  }
+
+  /// Without security (local development) nobody is recorded, so no declarer is refused later.
+  private static String declarerOf(Principal principal) {
+    return principal != null ? principal.getName() : null;
   }
 
   private static String reviewerOf(Principal principal) {

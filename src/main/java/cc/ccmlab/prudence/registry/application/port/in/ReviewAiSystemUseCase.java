@@ -7,7 +7,8 @@ import cc.ccmlab.prudence.registry.domain.AiSystemId;
 /// This is the human side of the control loop — once a high-risk system is approved here,
 /// the PDP returns ALLOW and the AOS gate lets the pipeline run.
 public interface ReviewAiSystemUseCase {
-  AiSystem submitForReview(AiSystemId id);
+  /// `submitter` is who submits the system (system.declare); null when unknown.
+  AiSystem submitForReview(AiSystemId id, String submitter);
 
   AiSystem approve(AiSystemId id, String reviewer);
 

@@ -141,6 +141,41 @@ public final class GovernanceModel {
     return rules;
   }
 
+  /** How many approvals a risk tier needs, and whether they must come from distinct people. */
+  public record Approvals(int count, boolean distinct) {}
+
+  /** The approvals `tier` needs. A tier the model leaves out needs one approval. */
+  public Approvals approvals(String tier) {
+    if (rules.get("approvals") instanceof Map<?, ?> all
+        && all.get(tier) instanceof Map<?, ?> rule
+        && rule.get("count") instanceof Number count) {
+      return new Approvals(count.intValue(), Boolean.TRUE.equals(rule.get("distinct")));
+    }
+    return new Approvals(1, false);
+  }
+
+  /** Whether one identity may not exercise both functions on the same system, draft or task. */
+  public boolean incompatible(String first, String second) {
+    if (!(rules.get("incompatible") instanceof List<?> pairs)) return false;
+    for (Object pair : pairs) {
+      if (pair instanceof List<?> p
+          && p.size() == 2
+          && (p.equals(List.of(first, second)) || p.equals(List.of(second, first)))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** The accountabilities a system of `tier` needs before it is submitted. */
+  public List<String> accountable(String tier) {
+    if (rules.get("accountable") instanceof Map<?, ?> all
+        && all.get(tier) instanceof List<?> roles) {
+      return roles.stream().map(String::valueOf).toList();
+    }
+    return List.of();
+  }
+
   private void collect(Set<String> granted, List<String> values, Kind kind, String app) {
     for (String value : values) {
       for (Grant grant : map.getOrDefault(value, List.of())) {

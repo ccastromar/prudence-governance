@@ -64,7 +64,7 @@ class RegistryLifecycleIntegrationTest {
             "Annex III creditworthiness use case",
             List.of("Article 9 risk management", "Article 14 human oversight"));
 
-    var created = register.register(request.toCommand());
+    var created = register.register(request.toCommand(), null);
     assertNotNull(created);
     assertEquals("UNDER_ASSESSMENT", created.approvalStatus().name());
 
@@ -72,7 +72,7 @@ class RegistryLifecycleIntegrationTest {
     assertEquals(5, controls.size());
     assertTrue(
         controls.stream().allMatch(c -> c.getStatus() == ComplianceControlStatus.NOT_STARTED));
-    assertThrows(DomainException.class, () -> review.submitForReview(created.id()));
+    assertThrows(DomainException.class, () -> review.submitForReview(created.id(), null));
     controls.forEach(
         control -> compliance.satisfy(created.id().value(), control.getId(), evidence()));
     assignments.save(
@@ -86,7 +86,7 @@ class RegistryLifecycleIntegrationTest {
             "https://lms.example.eu/training",
             Instant.now().plusSeconds(86400).toString()));
 
-    var submitted = review.submitForReview(created.id());
+    var submitted = review.submitForReview(created.id(), null);
     assertEquals("PENDING_APPROVAL", submitted.approvalStatus().name());
 
     var firstApproval = review.approve(created.id(), "risk-reviewer");
@@ -99,7 +99,8 @@ class RegistryLifecycleIntegrationTest {
   @Test
   void providerHighRiskSystemGetsTheVersionedProviderProfile() {
     var created =
-        register.register(request("Fraud prevention model", RegulatoryRole.PROVIDER).toCommand());
+        register.register(
+            request("Fraud prevention model", RegulatoryRole.PROVIDER).toCommand(), null);
 
     var controls = compliance.forSystem(created.id().value());
     assertEquals(9, controls.size());
@@ -111,7 +112,8 @@ class RegistryLifecycleIntegrationTest {
   @Test
   void expiredEvidenceDoesNotUnlockReview() {
     var created =
-        register.register(request("Eligibility assessor", RegulatoryRole.DEPLOYER).toCommand());
+        register.register(
+            request("Eligibility assessor", RegulatoryRole.DEPLOYER).toCommand(), null);
     var controls = compliance.forSystem(created.id().value());
     for (int index = 0; index < controls.size(); index++) {
       var expiry = index == 0 ? Instant.now().minusSeconds(60).toString() : null;
@@ -119,13 +121,14 @@ class RegistryLifecycleIntegrationTest {
       compliance.satisfy(created.id().value(), control.getId(), evidence(expiry));
     }
 
-    assertThrows(DomainException.class, () -> review.submitForReview(created.id()));
+    assertThrows(DomainException.class, () -> review.submitForReview(created.id(), null));
   }
 
   @Test
   void dataGovernanceContractRequiresDatasetMetricsApproverAndSignedAttestation() {
     var created =
-        register.register(request("Data contract model", RegulatoryRole.PROVIDER).toCommand());
+        register.register(
+            request("Data contract model", RegulatoryRole.PROVIDER).toCommand(), null);
     var dataControl =
         compliance.forSystem(created.id().value()).stream()
             .filter(control -> control.getControlKey().equals("DATA_GOVERNANCE"))
@@ -151,7 +154,8 @@ class RegistryLifecycleIntegrationTest {
   @Test
   void governanceCaseKeepsReferencesAndAnAuditableDecisionWithoutStoringDocuments() {
     var system =
-        register.register(request("Model change dossier", RegulatoryRole.DEPLOYER).toCommand());
+        register.register(
+            request("Model change dossier", RegulatoryRole.DEPLOYER).toCommand(), null);
     var c =
         governanceCases.open(
             system.id().value(),

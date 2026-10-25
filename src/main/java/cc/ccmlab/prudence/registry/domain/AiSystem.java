@@ -37,6 +37,10 @@ public final class AiSystem {
   private String renewalFirstApprovedAt;
   /// When the periodic-review notice was issued for the current approval (null = not yet).
   private String reviewDueNotifiedAt;
+  /// Who registered the system and who last submitted it (system.declare); null on records
+  /// created before Prudence kept them.
+  private final String declaredBy;
+  private String submittedBy;
 
   private AiSystem(
       AiSystemId id,
@@ -52,7 +56,9 @@ public final class AiSystem {
       String firstApprovedAt,
       String renewalFirstApprover,
       String renewalFirstApprovedAt,
-      String reviewDueNotifiedAt) {
+      String reviewDueNotifiedAt,
+      String declaredBy,
+      String submittedBy) {
     this.id = id;
     this.name = name;
     this.intendedPurpose = intendedPurpose;
@@ -67,6 +73,8 @@ public final class AiSystem {
     this.renewalFirstApprover = renewalFirstApprover;
     this.renewalFirstApprovedAt = renewalFirstApprovedAt;
     this.reviewDueNotifiedAt = reviewDueNotifiedAt;
+    this.declaredBy = declaredBy;
+    this.submittedBy = submittedBy;
   }
 
   /// Registration creates an assessment dossier; it never implicitly authorises use.
@@ -77,6 +85,18 @@ public final class AiSystem {
       Owner owner,
       RiskTier riskTier,
       ClassificationAssessment classification) {
+    return register(id, name, purpose, owner, riskTier, classification, null);
+  }
+
+  /// As above, recording who declared the system.
+  public static AiSystem register(
+      AiSystemId id,
+      String name,
+      IntendedPurpose purpose,
+      Owner owner,
+      RiskTier riskTier,
+      ClassificationAssessment classification,
+      String declaredBy) {
     if (name == null || name.isBlank()) throw new IllegalArgumentException("name required");
     ApprovalStatus initial =
         switch (riskTier) {
@@ -97,6 +117,8 @@ public final class AiSystem {
         null,
         null,
         null,
+        null,
+        declaredBy,
         null);
   }
 
@@ -115,7 +137,9 @@ public final class AiSystem {
       String firstApprovedAt,
       String renewalFirstApprover,
       String renewalFirstApprovedAt,
-      String reviewDueNotifiedAt) {
+      String reviewDueNotifiedAt,
+      String declaredBy,
+      String submittedBy) {
     return new AiSystem(
         id,
         name,
@@ -130,7 +154,9 @@ public final class AiSystem {
         firstApprovedAt,
         renewalFirstApprover,
         renewalFirstApprovedAt,
-        reviewDueNotifiedAt);
+        reviewDueNotifiedAt,
+        declaredBy,
+        submittedBy);
   }
 
   /// Reclassify risk; prohibited systems become blocked, otherwise approval is reset.
@@ -144,6 +170,11 @@ public final class AiSystem {
   }
 
   public void submitForReview() {
+    submitForReview(null);
+  }
+
+  /// Submits the system for review; `submitter` is recorded as a declarer of this review.
+  public void submitForReview(String submitter) {
     if (riskTier == RiskTier.PROHIBITED)
       throw new DomainException("a prohibited AI system cannot be submitted");
     if (approvalStatus != ApprovalStatus.UNDER_ASSESSMENT
@@ -156,6 +187,7 @@ public final class AiSystem {
               + ")");
     }
     this.approvalStatus = ApprovalStatus.PENDING_APPROVAL;
+    this.submittedBy = submitter;
     // A fresh review: nothing from a previous approval period carries over (it stays in
     // the audit trail).
     this.approvedAt = null;
@@ -165,28 +197,34 @@ public final class AiSystem {
     this.reviewDueNotifiedAt = null;
   }
 
-  /// A governance reviewer clears the system to go live. Only a system awaiting a decision
-  /// can be approved; prohibited systems are blocked outright and never eligible. A high-risk
-  /// system needs two independent sign-offs: returns false after the first, true once the
-  /// approval is final (and starts its `validityDays` expiry clock).
+  /// A governance reviewer clears the system to go live, with the default rule for its tier.
   public boolean approve(String reviewer, int validityDays) {
+    return approve(reviewer, validityDays, ApprovalRule.defaultFor(riskTier));
+  }
+
+  /// A governance reviewer clears the system to go live. Only a system awaiting a decision
+  /// can be approved; prohibited systems are blocked outright and never eligible. When `rule`
+  /// asks for two sign-offs, returns false after the first and true once the approval is final
+  /// (which starts its `validityDays` expiry clock).
+  public boolean approve(String reviewer, int validityDays, ApprovalRule rule) {
     if (riskTier == RiskTier.PROHIBITED) {
       throw new DomainException("a prohibited AI system cannot be approved");
-    }
-    if (riskTier == RiskTier.HIGH && approvalStatus == ApprovalStatus.PENDING_APPROVAL) {
-      this.firstApprover = reviewer;
-      this.firstApprovedAt = java.time.Instant.now().toString();
-      this.approvalStatus = ApprovalStatus.PENDING_SECOND_APPROVAL;
-      return false;
     }
     if (approvalStatus != ApprovalStatus.PENDING_APPROVAL
         && approvalStatus != ApprovalStatus.PENDING_SECOND_APPROVAL) {
       throw new DomainException(
           "only a system awaiting approval can be approved (was " + approvalStatus + ")");
     }
+    if (approvalStatus == ApprovalStatus.PENDING_APPROVAL && rule.count() == 2) {
+      this.firstApprover = reviewer;
+      this.firstApprovedAt = java.time.Instant.now().toString();
+      this.approvalStatus = ApprovalStatus.PENDING_SECOND_APPROVAL;
+      return false;
+    }
     if (approvalStatus == ApprovalStatus.PENDING_SECOND_APPROVAL
+        && rule.distinct()
         && reviewer.equalsIgnoreCase(firstApprover)) {
-      throw new DomainException("the second high-risk approver must be independent");
+      throw new DomainException("the second " + tierLabel() + " approver must be independent");
     }
     this.approvalStatus = ApprovalStatus.APPROVED;
     this.approvedAt = java.time.Instant.now().toString();
@@ -202,6 +240,11 @@ public final class AiSystem {
   /// original approval: returns false after the first, true once the renewal is final.
   /// An approval that already expired cannot be renewed — it must be resubmitted.
   public boolean renew(String reviewer, int validityDays, Instant now) {
+    return renew(reviewer, validityDays, now, ApprovalRule.defaultFor(riskTier));
+  }
+
+  /// As above, with the organization's approval rule for the system's tier.
+  public boolean renew(String reviewer, int validityDays, Instant now, ApprovalRule rule) {
     if (!isApproved(now)) {
       throw new DomainException(
           "only a currently approved system can be renewed (was "
@@ -209,13 +252,16 @@ public final class AiSystem {
               + (approvalStatus == ApprovalStatus.APPROVED ? ", expired" : "")
               + "); resubmit it for review");
     }
-    if (riskTier == RiskTier.HIGH && renewalFirstApprover == null) {
+    if (rule.count() == 2 && renewalFirstApprover == null) {
       this.renewalFirstApprover = reviewer;
       this.renewalFirstApprovedAt = now.toString();
       return false;
     }
-    if (riskTier == RiskTier.HIGH && reviewer.equalsIgnoreCase(renewalFirstApprover)) {
-      throw new DomainException("the second high-risk renewal approver must be independent");
+    if (renewalFirstApprover != null
+        && rule.distinct()
+        && reviewer.equalsIgnoreCase(renewalFirstApprover)) {
+      throw new DomainException(
+          "the second " + tierLabel() + " renewal approver must be independent");
     }
     this.approvedAt = now.toString();
     this.approvalExpiresAt = now.plus(Duration.ofDays(validityDays)).toString();
@@ -280,6 +326,20 @@ public final class AiSystem {
     // A resubmission starts a fresh review: the earlier first sign-off no longer counts.
     this.firstApprover = null;
     this.firstApprovedAt = null;
+  }
+
+  private String tierLabel() {
+    return riskTier == RiskTier.HIGH ? "high-risk" : riskTier.name().toLowerCase();
+  }
+
+  /// Who registered the system (system.declare), or null on older records.
+  public String declaredBy() {
+    return declaredBy;
+  }
+
+  /// Who submitted the current review (system.declare), or null on older records.
+  public String submittedBy() {
+    return submittedBy;
   }
 
   public boolean isApproved() {

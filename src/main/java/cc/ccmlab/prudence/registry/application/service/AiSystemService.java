@@ -6,6 +6,7 @@ import cc.ccmlab.prudence.alerting.application.port.in.RaiseAlert.Audience;
 import cc.ccmlab.prudence.alerting.domain.AlertKind;
 import cc.ccmlab.prudence.compliance.application.port.in.ComplianceControls;
 import cc.ccmlab.prudence.evidence.delivery.DeliverEvidence;
+import cc.ccmlab.prudence.governance.GovernanceModel;
 import cc.ccmlab.prudence.registry.application.port.in.AiSystemQueries;
 import cc.ccmlab.prudence.registry.application.port.in.ApprovalLifecycleUseCase;
 import cc.ccmlab.prudence.registry.application.port.in.RegisterAiSystemUseCase;
@@ -16,6 +17,7 @@ import cc.ccmlab.prudence.registry.application.port.out.ReviewLog;
 import cc.ccmlab.prudence.registry.domain.AiSystem;
 import cc.ccmlab.prudence.registry.domain.AiSystemId;
 import cc.ccmlab.prudence.registry.domain.AiSystemNotFoundException;
+import cc.ccmlab.prudence.registry.domain.ApprovalRule;
 import cc.ccmlab.prudence.registry.domain.ApprovalStatus;
 import cc.ccmlab.prudence.registry.domain.ReviewEvent;
 import cc.ccmlab.prudence.registry.domain.RiskTier;
@@ -51,6 +53,7 @@ public class AiSystemService
   private final DeliverEvidence evidence;
   private final RaiseAlert alerts;
   private final ComplianceControls compliance;
+  private final GovernanceModel governance;
   private final int approvalValidityDays;
   private final int reviewWindowDays;
 
@@ -60,6 +63,7 @@ public class AiSystemService
       DeliverEvidence evidence,
       RaiseAlert alerts,
       ComplianceControls compliance,
+      GovernanceModel governance,
       @Value("${prudence.governance.approval-validity-days:365}") int approvalValidityDays,
       @Value("${prudence.governance.review-window-days:30}") int reviewWindowDays) {
     this.repository = repository;
@@ -67,13 +71,14 @@ public class AiSystemService
     this.evidence = evidence;
     this.alerts = alerts;
     this.compliance = compliance;
+    this.governance = governance;
     this.approvalValidityDays = approvalValidityDays;
     this.reviewWindowDays = reviewWindowDays;
   }
 
   @Override
   @Transactional
-  public AiSystem register(RegisterAiSystemCommand command) {
+  public AiSystem register(RegisterAiSystemCommand command, String declaredBy) {
     AiSystem system =
         AiSystem.register(
             AiSystemId.newId(),
@@ -81,7 +86,8 @@ public class AiSystemService
             new AiSystem.IntendedPurpose(command.intendedPurpose()),
             new AiSystem.Owner(command.ownerName(), command.ownerEmail()),
             command.riskTier(),
-            command.classification());
+            command.classification(),
+            declaredBy);
     AiSystem saved = repository.save(system);
     compliance.initialize(saved);
     return saved;
@@ -101,10 +107,10 @@ public class AiSystemService
 
   @Override
   @Transactional
-  public AiSystem submitForReview(AiSystemId id) {
+  public AiSystem submitForReview(AiSystemId id, String submitter) {
     AiSystem system = requireForUpdate(id);
     compliance.requireReadyForReview(system);
-    system.submitForReview();
+    system.submitForReview(submitter);
     return repository.save(system);
   }
 
@@ -113,8 +119,9 @@ public class AiSystemService
   public AiSystem approve(AiSystemId id, String reviewer) {
     AiSystem system = requireForUpdate(id);
     rejectSelfApproval(system, reviewer);
+    rejectDeclarer(system, reviewer);
     String previous = system.approvalStatus().name();
-    boolean finalApproval = system.approve(reviewer, approvalValidityDays);
+    boolean finalApproval = system.approve(reviewer, approvalValidityDays, ruleFor(system));
     AiSystem saved = repository.save(system);
     recordReview(
         id.value(),
@@ -136,6 +143,7 @@ public class AiSystemService
   public AiSystem reject(AiSystemId id, String reviewer, String reason) {
     AiSystem system = requireForUpdate(id);
     rejectSelfApproval(system, reviewer);
+    rejectDeclarer(system, reviewer);
     if (reason == null || reason.isBlank())
       throw new DomainException("a rejection reason is required");
     String previous = system.approvalStatus().name();
@@ -151,7 +159,9 @@ public class AiSystemService
   public AiSystem renew(AiSystemId id, String reviewer) {
     AiSystem system = requireForUpdate(id);
     rejectSelfApproval(system, reviewer);
-    boolean finalRenewal = system.renew(reviewer, approvalValidityDays, Instant.now());
+    rejectDeclarer(system, reviewer);
+    boolean finalRenewal =
+        system.renew(reviewer, approvalValidityDays, Instant.now(), ruleFor(system));
     AiSystem saved = repository.save(system);
     String action = finalRenewal ? "RENEW" : "FIRST_RENEWAL_APPROVAL";
     recordReview(id.value(), action, reviewer, null, "APPROVED", "APPROVED");
@@ -313,6 +323,24 @@ public class AiSystemService
 
   private static String ownerEmail(AiSystem system) {
     return system.owner().email() == null ? "" : system.owner().email();
+  }
+
+  /// The organization's approval rule for the system's tier (governance model, rules.approvals).
+  private ApprovalRule ruleFor(AiSystem system) {
+    GovernanceModel.Approvals approvals = governance.approvals(system.riskTier().name());
+    return new ApprovalRule(approvals.count(), approvals.distinct());
+  }
+
+  /// With system.declare and system.approve incompatible in the model, whoever registered the
+  /// system or submitted this review cannot also review it.
+  private void rejectDeclarer(AiSystem system, String reviewer) {
+    if (reviewer != null
+        && governance.incompatible("system.declare", "system.approve")
+        && (reviewer.equals(system.declaredBy()) || reviewer.equals(system.submittedBy()))) {
+      throw new DomainException(
+          "whoever declared a system cannot review it (system.declare and system.approve are"
+              + " incompatible in the governance model)");
+    }
   }
 
   private static void rejectSelfApproval(AiSystem system, String reviewer) {

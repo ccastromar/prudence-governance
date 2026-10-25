@@ -4,14 +4,17 @@ import cc.ccmlab.prudence.compliance.adapter.out.persistence.ComplianceControlJp
 import cc.ccmlab.prudence.compliance.adapter.out.persistence.ComplianceControlJpaRepository;
 import cc.ccmlab.prudence.compliance.application.port.in.ComplianceControls;
 import cc.ccmlab.prudence.compliance.domain.ComplianceControlStatus;
+import cc.ccmlab.prudence.governance.GovernanceModel;
 import cc.ccmlab.prudence.impact.FriaRepository;
 import cc.ccmlab.prudence.impact.ImpactRequirementRepository;
 import cc.ccmlab.prudence.impact.TransparencyNoticeRepository;
 import cc.ccmlab.prudence.oversight.HumanAssignmentRepository;
+import cc.ccmlab.prudence.oversight.OversightRole;
 import cc.ccmlab.prudence.registry.domain.AiSystem;
 import cc.ccmlab.prudence.registry.domain.RiskTier;
 import cc.ccmlab.prudence.shared.exception.DomainException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -26,6 +29,7 @@ public class ComplianceControlService implements ComplianceControls {
   private final ImpactRequirementRepository impactRequirements;
   private final FriaRepository frias;
   private final TransparencyNoticeRepository transparencyNotices;
+  private final GovernanceModel governance;
 
   public ComplianceControlService(
       ComplianceControlJpaRepository controls,
@@ -33,13 +37,48 @@ public class ComplianceControlService implements ComplianceControls {
       HumanAssignmentRepository assignments,
       ImpactRequirementRepository impactRequirements,
       FriaRepository frias,
-      TransparencyNoticeRepository transparencyNotices) {
+      TransparencyNoticeRepository transparencyNotices,
+      GovernanceModel governance) {
     this.controls = controls;
     this.catalog = catalog;
     this.assignments = assignments;
     this.impactRequirements = impactRequirements;
     this.frias = frias;
     this.transparencyNotices = transparencyNotices;
+    this.governance = governance;
+  }
+
+  /// The accountabilities the governance model asks of the system's tier (rules.accountable),
+  /// each held by a person whose training is current. A SUPERVISOR must also be able to
+  /// override or stop the system (AI Act art. 14); the legal floor always asks one of HIGH.
+  private void requireAccountable(AiSystem system) {
+    var assigned = assignments.findByAiSystemId(system.id().value());
+    Instant now = Instant.now();
+    List<String> missing = new ArrayList<>();
+    for (String role : governance.accountable(system.riskTier().name())) {
+      OversightRole required = OversightRole.valueOf(role);
+      boolean held =
+          assigned.stream()
+              .anyMatch(
+                  a ->
+                      a.getRole() == required
+                          && a.getTrainingExpiresAt() != null
+                          && Instant.parse(a.getTrainingExpiresAt()).isAfter(now)
+                          && (required != OversightRole.SUPERVISOR
+                              || a.isOverrideAuthority()
+                              || a.isStopAuthority()));
+      if (!held) missing.add(role);
+    }
+    if (missing.contains("SUPERVISOR") && system.riskTier() == RiskTier.HIGH) {
+      throw new DomainException(
+          "a high-risk system requires a current supervisor with override or stop authority before"
+              + " review");
+    }
+    if (!missing.isEmpty()) {
+      throw new DomainException(
+          "accountabilities required before review (governance model): "
+              + String.join(", ", missing));
+    }
   }
 
   @Override
@@ -91,17 +130,7 @@ public class ComplianceControlService implements ComplianceControls {
       throw new DomainException(
           "compliance controls required before review: " + String.join(", ", missing));
     }
-    if (system.riskTier() == RiskTier.HIGH
-        && assignments.findByAiSystemId(system.id().value()).stream()
-            .noneMatch(
-                a ->
-                    a.getRole() == cc.ccmlab.prudence.oversight.OversightRole.SUPERVISOR
-                        && (a.isOverrideAuthority() || a.isStopAuthority())
-                        && Instant.parse(a.getTrainingExpiresAt()).isAfter(Instant.now()))) {
-      throw new DomainException(
-          "a high-risk system requires a current supervisor with override or stop authority before"
-              + " review");
-    }
+    requireAccountable(system);
     var requirement = impactRequirements.findById(system.id().value()).orElse(null);
     if (requirement != null
         && requirement.isFriaRequired()

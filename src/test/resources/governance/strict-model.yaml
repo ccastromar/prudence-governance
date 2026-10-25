@@ -1,0 +1,19 @@
+# A stricter organization than the default: declarers never review their own systems, a limited-risk
+# system needs two people, and a high-risk one needs compliance as well as a supervisor.
+version: chestertown.governance/v1
+rules:
+  approvals:
+    HIGH: {count: 2, distinct: true}
+    LIMITED: {count: 2, distinct: true}
+    MINIMAL: {count: 1}
+  incompatible:
+    - [policy.author, policy.approve]
+    - [system.declare, system.approve]
+  accountable:
+    HIGH: [SUPERVISOR, COMPLIANCE]
+identity:
+  people: {claim: roles}
+  machines: {claim: scope}
+map:
+  prudence-author: [system.declare@prudence]
+  prudence-system-approver: [system.approve@prudence]
