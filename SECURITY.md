@@ -2,7 +2,7 @@
 
 Prudence is the governance control plane of Chestertown: AI system registry, policy decision
 point, approvals and oversight. It is a governance-readiness platform, not a legal declaration of
-EU AI Act conformity.
+EU AI Act conformity. What it guarantees, and what it does not: [docs/threat-model.md](docs/threat-model.md).
 
 ## Reporting a vulnerability
 
