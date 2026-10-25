@@ -73,3 +73,21 @@ jobs:
       # The adapters have no test suite yet: at least every module must compile.
       - name: Compile
         run: python -m compileall -q -x '/\.venv/' integrations
+
+  contract:
+    name: Governance contract (test vectors)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # The reference implementation must agree with every vector the apps will run.
+      - name: Check the vectors
+        run: |
+          python -m pip install pyyaml==6.0.2
+          python contract/governance/reference/check_vectors.py
