@@ -1,0 +1,32 @@
+# Template: a public body. A service owner declares each AI system, a governance board approves
+# systems and policies, supervisors oversee the decisions taken about citizens, and the DPO and
+# auditors read everything. Copy it, rename the roles to your identity provider's, and check it with
+# `ct-model check`.
+version: chestertown.governance/v1
+rules:
+  approvals:
+    HIGH: {count: 2, distinct: true}     # the legal floor
+    LIMITED: {count: 1}
+    MINIMAL: {count: 1}
+  incompatible:
+    - [system.declare, system.approve]
+    - [policy.author, policy.approve]
+    - [ai.use, oversight]
+  accountable:
+    HIGH: [OWNER, SUPERVISOR, DPO, COMPLIANCE]
+    LIMITED: [OWNER]
+identity:
+  people: {claim: roles}                 # Keycloak realm roles or Entra app roles
+  machines: {claim: roles}
+map:
+  ai-service-owner: [system.declare, incident.handle]
+  ai-governance-board: [system.approve, policy.approve]
+  ai-policy-officer: [policy.author]
+  ai-supervisor: [oversight, incident.handle]
+  ai-case-worker: ["ai.use:operator"]
+  ai-dpo: [audit]
+  ai-auditor: [audit]
+  ai-records-officer: [evidence.write]
+  ai-platform-admin: [platform.admin]
+  runtime-decide: [runtime.decide]       # workloads only: the AOS runtime calling the PDP
+  runtime-report: [runtime.report]       # workloads only: the AOS runtime reporting executions

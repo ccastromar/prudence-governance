@@ -1,0 +1,34 @@
+# Template: a bank, organized in three lines of defence. The first line declares and uses AI
+# systems, the second (model risk, compliance) approves them and their policies, the third (internal
+# audit) reads everything. No one approves what they declared, and no one decides the human step of
+# a task they started. Copy it, rename the roles to your identity provider's, and check it with
+# `ct-model check`.
+version: chestertown.governance/v1
+rules:
+  approvals:
+    HIGH: {count: 2, distinct: true}     # the legal floor
+    LIMITED: {count: 2, distinct: true}
+    MINIMAL: {count: 1}
+  incompatible:
+    - [system.declare, system.approve]
+    - [policy.author, policy.approve]
+    - [ai.use, oversight]
+  accountable:
+    HIGH: [OWNER, SUPERVISOR, COMPLIANCE, DPO, SECURITY]
+    LIMITED: [OWNER, COMPLIANCE]
+identity:
+  people: {claim: roles}                 # Keycloak realm roles or Entra app roles
+  machines: {claim: roles}
+map:
+  ai-use-case-owner: [system.declare, incident.handle]       # first line
+  ai-credit-analyst: ["ai.use:finance"]                      # first line
+  ai-support-agent: ["ai.use:support"]                       # first line
+  ai-human-overseer: [oversight, incident.handle]            # first line, independent of users
+  ai-model-risk-validator: [system.approve]                  # second line
+  ai-policy-owner: [policy.author]                           # second line
+  ai-compliance-officer: [policy.approve, audit]             # second line
+  ai-internal-audit: [audit]                                 # third line
+  ai-evidence-steward: [evidence.write]
+  ai-platform-admin: [platform.admin]
+  runtime-decide: [runtime.decide]       # workloads only: the AOS runtime calling the PDP
+  runtime-report: [runtime.report]       # workloads only: the AOS runtime reporting executions

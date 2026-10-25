@@ -1,0 +1,25 @@
+# Template: a small or medium organization. Few people, several hats each: a product owner declares
+# systems and writes policies, an approver signs them off and oversees runs. Copy it, rename the
+# roles to your identity provider's, and check it with `ct-model check`.
+version: chestertown.governance/v1
+rules:
+  approvals:
+    HIGH: {count: 2, distinct: true}     # the legal floor
+    LIMITED: {count: 1}
+    MINIMAL: {count: 1}
+  incompatible:
+    - [policy.author, policy.approve]
+    - [system.declare, system.approve]
+  accountable:
+    HIGH: [OWNER, SUPERVISOR]            # SUPERVISOR is the legal floor (AI Act art. 14)
+identity:
+  people: {claim: roles}                 # Keycloak realm roles or Entra app roles
+  machines: {claim: roles}
+map:
+  ai-product-owner: [system.declare, policy.author, incident.handle, "ai.use:operator"]
+  ai-approver: [system.approve, policy.approve, oversight]
+  ai-user: ["ai.use:operator"]
+  ai-auditor: [audit]
+  ai-admin: [platform.admin, evidence.write]
+  runtime-decide: [runtime.decide]       # workloads only: the AOS runtime calling the PDP
+  runtime-report: [runtime.report]       # workloads only: the AOS runtime reporting executions
