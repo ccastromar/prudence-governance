@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.config;
 
+import cc.ccmlab.prudence.governance.GovernanceModel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -50,7 +51,8 @@ public class SecurityConfig {
       @Qualifier("corsConfigurationSource") CorsConfigurationSource cors,
       @Value("${prudence.identity.roles-claim:roles}") String rolesClaim,
       @Value("${prudence.identity.principal-mode:legacy}") String principalMode,
-      @Value("${prudence.identity.role-mapping:}") String roleMapping)
+      @Value("${prudence.identity.role-mapping:}") String roleMapping,
+      GovernanceModel governance)
       throws Exception {
     http.cors(c -> c.configurationSource(cors))
         .csrf(csrf -> csrf.disable())
@@ -134,7 +136,7 @@ public class SecurityConfig {
                 oauth.jwt(
                     jwt ->
                         jwt.jwtAuthenticationConverter(
-                            rolesConverter(rolesClaim, principalMode, roleMapping))));
+                            rolesConverter(rolesClaim, principalMode, roleMapping, governance))));
     return http.build();
   }
 
@@ -307,6 +309,16 @@ public class SecurityConfig {
    */
   static Converter<Jwt, AbstractAuthenticationToken> rolesConverter(
       String rolesClaim, String principalMode, String roleMapping) {
+    return rolesConverter(rolesClaim, principalMode, roleMapping, null);
+  }
+
+  /**
+   * As above, plus the caller's governance functions in Prudence as FN_* authorities (contract v1).
+   * Nothing authorizes by them yet: they ride along with the roles until each route moves to its
+   * function (phase 3).
+   */
+  static Converter<Jwt, AbstractAuthenticationToken> rolesConverter(
+      String rolesClaim, String principalMode, String roleMapping, GovernanceModel governance) {
     if (rolesClaim == null || rolesClaim.isBlank()) {
       throw new IllegalArgumentException("identity roles claim must not be blank");
     }
@@ -325,6 +337,11 @@ public class SecurityConfig {
           if (!(r instanceof String role) || role.isBlank()) continue;
           String mapped = mapping.isEmpty() ? role : mapping.get(role);
           if (mapped != null) authorities.add(new SimpleGrantedAuthority("ROLE_" + mapped));
+        }
+      }
+      if (governance != null) {
+        for (String function : governance.resolve(jwt.getClaims(), "prudence")) {
+          authorities.add(new SimpleGrantedAuthority("FN_" + function));
         }
       }
       return new JwtAuthenticationToken(jwt, authorities, principalOf(jwt, principalMode));

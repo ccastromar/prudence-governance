@@ -83,6 +83,19 @@
     </dependencies>
 
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- The governance contract's default model, packaged from its single source. -->
+            <resource>
+                <directory>contract/governance</directory>
+                <targetPath>governance</targetPath>
+                <includes>
+                    <include>default-model.yaml</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
