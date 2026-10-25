@@ -269,6 +269,15 @@ code="$(curl -s -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$P_PORT
   -H "Authorization: Bearer $(token prudence-spa auditor)" -H 'Content-Type: application/json' -d '{}')"
 record identity "auditor (read-only) cannot register a system" "$([ "$code" = 403 ] && echo true || echo false)" "HTTP $code"
 
+# Governance functions (contract v1): each app resolves the same token to its own functions.
+fns="$(curl -s -H "Authorization: Bearer $(token prudence-spa alice)" "http://127.0.0.1:$P_PORT/api/me" | json '",".join(d.get("functions", []))')"
+record identity "alice's functions in Prudence (/api/me)" "$([ "$fns" = "incident.handle,oversight,policy.author,system.approve,system.declare" ] && echo true || echo false)" "$fns"
+# The Ernest console sends the ID token (its audience is ernest-spa), as Ernest expects.
+idt="$(curl -sf "$TOKEN_URL" -d grant_type=password -d client_id=ernest-spa -d username=alice -d password=alice \
+  -d scope=openid | json 'd["id_token"]')"
+fns="$(curl -s -H "Authorization: Bearer $idt" "http://127.0.0.1:$E_PORT/api/auth/whoami" | json '",".join(d.get("functions", []))')"
+record identity "alice's functions in Ernest (whoami)" "$([ "$fns" = "evidence.write,platform.admin" ] && echo true || echo false)" "$fns"
+
 # Governance verdicts for the four MVP systems, as AOS gets them.
 check_verdict() {  # check_verdict CASE MESSAGE EXPECTED-DECISION
   local r; r="$(ask "$2")"
