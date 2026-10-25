@@ -32,6 +32,12 @@ Security-sensitive areas include:
 - Store database, Ernest, Kafka and bundle-signing secrets in a secrets manager.
 - Validate your identity provider with `scripts/idp-acceptance.sh` before going live.
 
+## Automated checks
+
+Every push and pull request runs CodeQL static analysis and a secret scan of the whole history
+(`.github/workflows/security.yml`); Dependabot proposes dependency updates weekly; release images
+are scanned with Trivy and not published if a critical vulnerability with a fix is found.
+
 ## Verifying release images
 
 Release tags publish images to GHCR, each signed with Sigstore cosign (keyless, by the release

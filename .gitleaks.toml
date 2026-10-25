@@ -1,0 +1,13 @@
+# Secret scanning (gitleaks, run in CI by .github/workflows/security.yml). The default rules apply;
+# the paths below hold known non-secrets and are excluded by path, so anything new still fails.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Known non-secrets"
+paths = [
+  # a REPLACE_WITH placeholder
+  '''^policy/managed/opa-config\.example\.yaml$''',
+  # a throw-away key for a local load test
+  '''^loadtest/run-local\.sh$''',
+]
