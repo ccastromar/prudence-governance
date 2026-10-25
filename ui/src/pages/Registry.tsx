@@ -10,6 +10,7 @@ import {
   type RiskTier,
 } from "../api";
 import { RiskBadge, StatusBadge } from "../components";
+import { ssoEnabled } from "../auth";
 import {
   Alert,
   Button,
@@ -69,6 +70,16 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       );
   useEffect(() => {
     load();
+  }, []);
+
+  // Registering a system is system.declare; the backend refuses it otherwise.
+  const [canDeclare, setCanDeclare] = useState(!ssoEnabled);
+  useEffect(() => {
+    if (!ssoEnabled) return;
+    api
+      .me()
+      .then((me) => setCanDeclare(me.functions.includes("system.declare")))
+      .catch(() => setCanDeclare(false));
   }, []);
 
   // A deep link (`?system=<id>`) scrolls to that AI system once the list has loaded.
@@ -164,197 +175,201 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
       title="AI system registry"
       subtitle="Every AI use case, its EU AI Act risk tier, owner and approval state — the governance spine."
     >
-      <Card className="ct-mb-6">
-        <form onSubmit={submit}>
-          <div className="ct-grid-2">
-            <Field label="Name" htmlFor="registry-name">
+      {canDeclare && (
+        <Card className="ct-mb-6">
+          <form onSubmit={submit}>
+            <div className="ct-grid-2">
+              <Field label="Name" htmlFor="registry-name">
+                <Input
+                  id="registry-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Risk tier" htmlFor="registry-risk-tier">
+                <Select
+                  id="registry-risk-tier"
+                  value={form.riskTier}
+                  onChange={(e) =>
+                    setForm({ ...form, riskTier: e.target.value as RiskTier })
+                  }
+                >
+                  {TIERS.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+              <Field label="EU AI Act role" htmlFor="registry-eu-ai-act-role">
+                <Select
+                  id="registry-eu-ai-act-role"
+                  value={form.regulatoryRole}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      regulatoryRole: e.target.value as RegulatoryRole,
+                    })
+                  }
+                >
+                  {ROLES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+            <Field label="Intended purpose" htmlFor="registry-intended-purpose">
               <Input
-                id="registry-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                id="registry-intended-purpose"
+                value={form.intendedPurpose}
+                onChange={(e) =>
+                  setForm({ ...form, intendedPurpose: e.target.value })
+                }
                 required
               />
             </Field>
-            <Field label="Risk tier" htmlFor="registry-risk-tier">
-              <Select
-                id="registry-risk-tier"
-                value={form.riskTier}
-                onChange={(e) =>
-                  setForm({ ...form, riskTier: e.target.value as RiskTier })
-                }
+            <div className="ct-grid-2">
+              <Field label="Owner name" htmlFor="registry-owner-name">
+                <Input
+                  id="registry-owner-name"
+                  value={form.ownerName}
+                  onChange={(e) =>
+                    setForm({ ...form, ownerName: e.target.value })
+                  }
+                  required
+                />
+              </Field>
+              <Field label="Owner email" htmlFor="registry-owner-email">
+                <Input
+                  id="registry-owner-email"
+                  type="email"
+                  value={form.ownerEmail}
+                  onChange={(e) =>
+                    setForm({ ...form, ownerEmail: e.target.value })
+                  }
+                />
+              </Field>
+            </div>
+            <div className="ct-grid-2">
+              <Field label="System version" htmlFor="registry-system-version">
+                <Input
+                  id="registry-system-version"
+                  value={form.systemVersion}
+                  onChange={(e) =>
+                    setForm({ ...form, systemVersion: e.target.value })
+                  }
+                  required
+                  placeholder="e.g. 2026.10"
+                />
+              </Field>
+              <Field
+                label="Model / build SHA-256"
+                htmlFor="registry-model-build-sha-256"
               >
-                {TIERS.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-            <Field label="EU AI Act role" htmlFor="registry-eu-ai-act-role">
-              <Select
-                id="registry-eu-ai-act-role"
-                value={form.regulatoryRole}
+                <Input
+                  id="registry-model-build-sha-256"
+                  value={form.modelHash}
+                  onChange={(e) =>
+                    setForm({ ...form, modelHash: e.target.value })
+                  }
+                  required
+                />
+              </Field>
+            </div>
+            <div className="ct-grid-2">
+              <Field
+                label="Operating geography"
+                htmlFor="registry-operating-geography"
+              >
+                <Input
+                  id="registry-operating-geography"
+                  value={form.operatingGeography}
+                  onChange={(e) =>
+                    setForm({ ...form, operatingGeography: e.target.value })
+                  }
+                  required
+                />
+              </Field>
+              <Field
+                label="Affected population"
+                htmlFor="registry-affected-population"
+              >
+                <Input
+                  id="registry-affected-population"
+                  value={form.affectedPopulation}
+                  onChange={(e) =>
+                    setForm({ ...form, affectedPopulation: e.target.value })
+                  }
+                  required
+                  placeholder="e.g. retail credit applicants"
+                />
+              </Field>
+            </div>
+            <div className="ct-grid-2 ct-mb-4">
+              <Checkbox
+                label="Annex I regulated product"
+                checked={form.annexI}
+                onChange={(e) => setForm({ ...form, annexI: e.target.checked })}
+              />
+              <Checkbox
+                label="Annex III use case"
+                checked={form.annexIII}
+                onChange={(e) =>
+                  setForm({ ...form, annexIII: e.target.checked })
+                }
+              />
+            </div>
+            <Field
+              label="Classification justification"
+              htmlFor="registry-classification-justification"
+            >
+              <Textarea
+                id="registry-classification-justification"
+                value={form.classificationJustification}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    regulatoryRole: e.target.value as RegulatoryRole,
+                    classificationJustification: e.target.value,
                   })
                 }
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
-          <Field label="Intended purpose" htmlFor="registry-intended-purpose">
-            <Input
-              id="registry-intended-purpose"
-              value={form.intendedPurpose}
-              onChange={(e) =>
-                setForm({ ...form, intendedPurpose: e.target.value })
-              }
-              required
-            />
-          </Field>
-          <div className="ct-grid-2">
-            <Field label="Owner name" htmlFor="registry-owner-name">
-              <Input
-                id="registry-owner-name"
-                value={form.ownerName}
-                onChange={(e) =>
-                  setForm({ ...form, ownerName: e.target.value })
-                }
-                required
-              />
-            </Field>
-            <Field label="Owner email" htmlFor="registry-owner-email">
-              <Input
-                id="registry-owner-email"
-                type="email"
-                value={form.ownerEmail}
-                onChange={(e) =>
-                  setForm({ ...form, ownerEmail: e.target.value })
-                }
-              />
-            </Field>
-          </div>
-          <div className="ct-grid-2">
-            <Field label="System version" htmlFor="registry-system-version">
-              <Input
-                id="registry-system-version"
-                value={form.systemVersion}
-                onChange={(e) =>
-                  setForm({ ...form, systemVersion: e.target.value })
-                }
-                required
-                placeholder="e.g. 2026.10"
-              />
-            </Field>
-            <Field
-              label="Model / build SHA-256"
-              htmlFor="registry-model-build-sha-256"
-            >
-              <Input
-                id="registry-model-build-sha-256"
-                value={form.modelHash}
-                onChange={(e) =>
-                  setForm({ ...form, modelHash: e.target.value })
-                }
-                required
-              />
-            </Field>
-          </div>
-          <div className="ct-grid-2">
-            <Field
-              label="Operating geography"
-              htmlFor="registry-operating-geography"
-            >
-              <Input
-                id="registry-operating-geography"
-                value={form.operatingGeography}
-                onChange={(e) =>
-                  setForm({ ...form, operatingGeography: e.target.value })
-                }
                 required
               />
             </Field>
             <Field
-              label="Affected population"
-              htmlFor="registry-affected-population"
+              label="Applicable obligations (one per line)"
+              htmlFor="registry-applicable-obligations-one-per-line"
             >
-              <Input
-                id="registry-affected-population"
-                value={form.affectedPopulation}
+              <Textarea
+                id="registry-applicable-obligations-one-per-line"
+                value={form.obligations.join("\n")}
                 onChange={(e) =>
-                  setForm({ ...form, affectedPopulation: e.target.value })
+                  setForm({ ...form, obligations: e.target.value.split("\n") })
                 }
                 required
-                placeholder="e.g. retail credit applicants"
+                placeholder={
+                  "Article 9 risk management\nArticle 10 data governance"
+                }
               />
             </Field>
-          </div>
-          <div className="ct-grid-2 ct-mb-4">
-            <Checkbox
-              label="Annex I regulated product"
-              checked={form.annexI}
-              onChange={(e) => setForm({ ...form, annexI: e.target.checked })}
-            />
-            <Checkbox
-              label="Annex III use case"
-              checked={form.annexIII}
-              onChange={(e) => setForm({ ...form, annexIII: e.target.checked })}
-            />
-          </div>
-          <Field
-            label="Classification justification"
-            htmlFor="registry-classification-justification"
-          >
-            <Textarea
-              id="registry-classification-justification"
-              value={form.classificationJustification}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  classificationJustification: e.target.value,
-                })
-              }
-              required
-            />
-          </Field>
-          <Field
-            label="Applicable obligations (one per line)"
-            htmlFor="registry-applicable-obligations-one-per-line"
-          >
-            <Textarea
-              id="registry-applicable-obligations-one-per-line"
-              value={form.obligations.join("\n")}
-              onChange={(e) =>
-                setForm({ ...form, obligations: e.target.value.split("\n") })
-              }
-              required
-              placeholder={
-                "Article 9 risk management\nArticle 10 data governance"
-              }
-            />
-          </Field>
-          <div className="ct-row ct-between">
-            {error ? (
-              <Alert tone="danger">{error}</Alert>
-            ) : (
-              <span className="ct-muted ct-text-sm">
-                Registration creates an assessment dossier; submit it for review
-                before it can be approved.
-              </span>
-            )}
-            <Button type="submit" variant="primary" disabled={busy}>
-              {busy ? "Registering…" : "Register system"}
-            </Button>
-          </div>
-        </form>
-      </Card>
+            <div className="ct-row ct-between">
+              {error ? (
+                <Alert tone="danger">{error}</Alert>
+              ) : (
+                <span className="ct-muted ct-text-sm">
+                  Registration creates an assessment dossier; submit it for
+                  review before it can be approved.
+                </span>
+              )}
+              <Button type="submit" variant="primary" disabled={busy}>
+                {busy ? "Registering…" : "Register system"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       <Table>
         <thead>
