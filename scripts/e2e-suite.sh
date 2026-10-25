@@ -304,6 +304,10 @@ pdp_token="$(curl -sf "$TOKEN_URL" -d grant_type=client_credentials -d client_id
   -d scope=pdp.decide | json 'd["access_token"]')"
 code="$(http -X POST -H "Authorization: Bearer $pdp_token" -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$P_PORT/api/policy/decisions")"
 record functions "Prudence: a workload's bad request is a 400, not a 403" "$([ "$code" = 400 ] && echo true || echo false)" "HTTP $code"
+code="$(http -X POST -H "Authorization: Bearer $pdp_token" -H 'Content-Type: application/json' \
+  -d '{"subject":"e2e","pipeline":"e2e","aiSystemId":"not-registered-e2e","action":"invoke"}' \
+  "http://127.0.0.1:$P_PORT/api/policy/decisions")"
+record functions "Prudence: an unregistered system is a DENY (403), not a 500" "$([ "$code" = 403 ] && echo true || echo false)" "HTTP $code"
 aud_idt="$(curl -sf "$TOKEN_URL" -d grant_type=password -d client_id=ernest-spa -d username=auditor -d password=auditor \
   -d scope=openid | json 'd["id_token"]')"
 code="$(http -X POST -H "Authorization: Bearer $aud_idt" -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$E_PORT/api/models")"

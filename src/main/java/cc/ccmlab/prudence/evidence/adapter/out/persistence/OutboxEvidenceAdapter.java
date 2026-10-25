@@ -49,16 +49,24 @@ public class OutboxEvidenceAdapter implements EvidencePort {
             verdict,
             reason);
     record.setSystemIdentity(context.aiSystemName(), context.riskTier());
-    var envelope =
-        causality.envelope(
-            "GOVERNANCE_DECISION",
-            context.aiSystemId(),
-            context.systemVersion(),
-            record.getId(),
-            null,
-            null,
-            java.util.Map.of("verdict", verdict));
-    record.setCausality(envelope.eventId(), envelope.correlationId(), envelope.systemSequence());
+    if (context.riskTier() == null) {
+      // The PDP stamps the registered risk tier, so none means the registry does not know this
+      // system. Its fail-closed DENY is still evidence, but an unregistered id has no event
+      // sequence (system_event_sequence references ai_system): record it unsequenced rather
+      // than fail the decision or mint sequence rows from a caller-supplied id.
+      record.setCausality(UUID.randomUUID().toString(), UUID.randomUUID().toString(), null);
+    } else {
+      var envelope =
+          causality.envelope(
+              "GOVERNANCE_DECISION",
+              context.aiSystemId(),
+              context.systemVersion(),
+              record.getId(),
+              null,
+              null,
+              java.util.Map.of("verdict", verdict));
+      record.setCausality(envelope.eventId(), envelope.correlationId(), envelope.systemSequence());
+    }
     outbox.save(record);
   }
 }

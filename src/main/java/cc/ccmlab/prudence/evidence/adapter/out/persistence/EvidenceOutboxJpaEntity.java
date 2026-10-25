@@ -35,7 +35,7 @@ public class EvidenceOutboxJpaEntity {
   private String riskTier;
   private String causationId;
   private String correlationId;
-  private long systemSequence;
+  private Long systemSequence;
   @Embedded private Delivery delivery;
 
   protected EvidenceOutboxJpaEntity() {}
@@ -141,11 +141,11 @@ public class EvidenceOutboxJpaEntity {
     return correlationId;
   }
 
-  public long getSystemSequence() {
+  public Long getSystemSequence() {
     return systemSequence;
   }
 
-  public void setCausality(String causationId, String correlationId, long systemSequence) {
+  public void setCausality(String causationId, String correlationId, Long systemSequence) {
     this.causationId = causationId;
     this.correlationId = correlationId;
     this.systemSequence = systemSequence;
