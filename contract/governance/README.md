@@ -180,7 +180,9 @@ python contract/governance/reference/check_vectors.py
 
 Prudence's CI runs it on every push. Each app adds the same vectors to its own tests in phase 2.
 
-## 8. Decisions to confirm before phase 2
+## 8. Decisions
+
+Approved with the vectors on 2026-10-25; changing one is a change to this contract.
 
 1. **Publishing policies is `platform.admin`**, not `policy.approve`: today publication is an
    admin action, separate from approving a draft.
