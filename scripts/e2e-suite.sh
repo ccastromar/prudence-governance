@@ -238,6 +238,20 @@ ask() {  # ask MESSAGE → prints "status decision reason error" of the finished
 is() { [[ "$1" == $2 ]] && echo true || echo false; }  # is VALUE GLOB → true/false
 SUPPORT_MSG="Run the governed customer-support lookup demo"
 
+ask_as() {  # ask_as USER MESSAGE: like ask, as another test user
+  local body id task tok
+  body="$(python3 -I -c 'import json,sys; print(json.dumps({"lang":"en","message":sys.argv[1]}))' "$2")"
+  tok="$(token aos-spa "$1")"
+  id="$(curl -s -X POST "http://127.0.0.1:$A_PORT/ask" -H "Authorization: Bearer $tok" \
+    -H 'Content-Type: application/json' -d "$body" | json 'd.get("id","")')"
+  for _ in $(seq 1 40); do
+    task="$(curl -s -H "Authorization: Bearer $tok" "http://127.0.0.1:$A_PORT/task?id=$id")"
+    echo "$task" | grep -qE '"status":"(completed|error|governance_blocked|timeout)"' && break
+    sleep 1
+  done
+  echo "$task" | json '" ".join([str(d.get("status")), str(d.get("error") or "").replace(" ","_")[:80]])' 2>/dev/null || echo "no-result"
+}
+
 executions() {  # executions Ernest has recorded for the support system
   curl -s -H "X-Ernest-Api-Key: $ERNEST_KEY" "http://127.0.0.1:$E_PORT/api/stats/executions?modelId=$SUPPORT" \
     | json "d['counts'].get('$SUPPORT',0)" 2>/dev/null || echo -1
@@ -278,6 +292,19 @@ idt="$(curl -sf "$TOKEN_URL" -d grant_type=password -d client_id=ernest-spa -d u
 fns="$(curl -s -H "Authorization: Bearer $idt" "http://127.0.0.1:$E_PORT/api/auth/whoami" | json '",".join(d.get("functions", []))')"
 record identity "alice's functions in Ernest (whoami)" "$([ "$fns" = "evidence.write,platform.admin" ] && echo true || echo false)" "$fns"
 
+# Authorization by function (phase 3): each route needs the function the contract assigns it.
+http() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
+code="$(http -H "Authorization: Bearer $(token prudence-spa auditor)" "http://127.0.0.1:$P_PORT/api/policy-admin/status")"
+record functions "Prudence: audit reads policies" "$([ "$code" = 200 ] && echo true || echo false)" "HTTP $code"
+code="$(http -X POST -H "Authorization: Bearer $(token prudence-spa alice)" -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$P_PORT/api/policy-admin/publications")"
+record functions "Prudence: an author cannot publish (platform.admin)" "$([ "$code" = 403 ] && echo true || echo false)" "HTTP $code"
+code="$(http -X POST -H "Authorization: Bearer $(token prudence-spa alice)" -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$P_PORT/api/policy/decisions")"
+record functions "Prudence: a person cannot call the PDP (runtime.decide)" "$([ "$code" = 403 ] && echo true || echo false)" "HTTP $code"
+aud_idt="$(curl -sf "$TOKEN_URL" -d grant_type=password -d client_id=ernest-spa -d username=auditor -d password=auditor \
+  -d scope=openid | json 'd["id_token"]')"
+code="$(http -X POST -H "Authorization: Bearer $aud_idt" -H 'Content-Type: application/json' -d '{}' "http://127.0.0.1:$E_PORT/api/models")"
+record functions "Ernest: audit cannot write evidence (evidence.write)" "$([ "$code" = 401 ] && echo true || echo false)" "HTTP $code"
+
 # Governance verdicts for the four MVP systems, as AOS gets them.
 check_verdict() {  # check_verdict CASE MESSAGE EXPECTED-DECISION
   local r; r="$(ask "$2")"
@@ -287,6 +314,9 @@ check_verdict "support (under assessment) → DENY" "$SUPPORT_MSG" DENY
 check_verdict "credit (high risk, pending) → APPROVAL_REQUIRED" "Pre-screen the consumer credit application APP-1001" APPROVAL_REQUIRED
 check_verdict "social scoring (prohibited) → DENY" "Run the social scoring for citizen CIT-77" DENY
 check_verdict "translator (suspended) → DENY" 'Translate "hola" into English' DENY
+# AOS: the support demo needs ai.use:support or :operator; the auditor holds only ai.use:guest.
+r="$(ask_as auditor "$SUPPORT_MSG")"
+record functions "AOS: the auditor cannot run the support demo (ai.use)" "$(is "$r" "error*rbac*")" "$r"
 
 # Approve the support system in Prudence (author submits, a reviewer approves): AOS may now run it.
 curl -sf -o /dev/null -X POST -H "Authorization: Bearer $(token prudence-spa alice)" \

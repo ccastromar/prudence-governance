@@ -68,6 +68,9 @@ Keycloak and checks the loop and its failure modes, in about three minutes:
 - identity: the token carries the `prudence-api` audience and suite roles; no token → 401; the
   auditor cannot register a system (403); Prudence (`/api/me`) and Ernest (`whoami`) resolve the
   same person to their own governance functions (contract v1)
+- functions: each app authorizes by function, not by role: the auditor reads policy status but
+  cannot write evidence in Ernest (401) or run the support demo in AOS; alice cannot publish a
+  policy (`platform.admin`) or call the PDP (`runtime.decide`)
 - governance: the four MVP systems give AOS DENY / APPROVAL_REQUIRED / DENY / DENY; once
   approved in Prudence, the support lookup runs
 - evidence: the run reaches Ernest over Kafka and Prudence shows the system GREEN
