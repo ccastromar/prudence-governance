@@ -32,7 +32,7 @@ for the founding architecture.
 | `policy/opa/` | OPA/Rego policy bundle (the authorization half of the PDP) |
 | `integrations/` | Python adapters for agent runtimes (LangGraph, Pydantic AI) |
 | `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
-| `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model and test vectors |
+| `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model, test vectors, organization templates and the `ct-model` tool |
 | `docs/api/` | Published contracts: Decision API v1 (OpenAPI) and evidence events v1 (AsyncAPI) |
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
