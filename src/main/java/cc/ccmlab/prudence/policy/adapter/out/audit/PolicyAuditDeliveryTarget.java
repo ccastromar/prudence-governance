@@ -35,7 +35,7 @@ public class PolicyAuditDeliveryTarget implements DeliveryTarget<PolicyAuditEnti
 
   public PolicyAuditDeliveryTarget(PolicyAuditRepository repository, IntegrationProperties props) {
     this.repository = repository;
-    this.client = ErnestHttp.writeClient(props);
+    this.client = ErnestHttp.writeClient(props, observations);
     String url = props.qtsp() == null ? null : props.qtsp().cscUrl();
     this.sealer = url == null || url.isBlank() ? null : new ErnestSealer(url);
   }

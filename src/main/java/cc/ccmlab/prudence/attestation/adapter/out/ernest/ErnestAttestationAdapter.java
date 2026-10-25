@@ -7,6 +7,7 @@ import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestEventProof;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,9 +40,9 @@ public class ErnestAttestationAdapter implements AttestationSealPort, Attestatio
   private final boolean enabled;
   private volatile boolean modelEnsured = false;
 
-  public ErnestAttestationAdapter(IntegrationProperties props) {
-    this.ernest = ErnestHttp.writeClient(props);
-    this.reader = ErnestHttp.readClient(props);
+  public ErnestAttestationAdapter(IntegrationProperties props, ObservationRegistry observations) {
+    this.ernest = ErnestHttp.writeClient(props, observations);
+    this.reader = ErnestHttp.readClient(props, observations);
 
     String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
     boolean canSeal = cscUrl != null && !cscUrl.isBlank();

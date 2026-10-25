@@ -6,6 +6,7 @@ import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
 import cc.ccmlab.prudence.registry.application.port.out.ReviewSealPort;
 import cc.ccmlab.prudence.registry.domain.ReviewEvent;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -31,8 +32,8 @@ public class ReviewSealAdapter implements ReviewSealPort {
   private final boolean enabled;
   private volatile boolean modelEnsured = false;
 
-  public ReviewSealAdapter(IntegrationProperties props) {
-    this.ernest = ErnestHttp.writeClient(props);
+  public ReviewSealAdapter(IntegrationProperties props, ObservationRegistry observations) {
+    this.ernest = ErnestHttp.writeClient(props, observations);
 
     String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
     boolean canSeal = cscUrl != null && !cscUrl.isBlank();

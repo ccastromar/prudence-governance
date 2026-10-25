@@ -4,6 +4,7 @@ import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.policy.application.bundle.PolicyPublicationService;
 import cc.ccmlab.prudence.policy.application.port.out.PolicyEnginePort;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
+import io.micrometer.observation.ObservationRegistry;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,6 +41,7 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
 
   public OpaPolicyAdapter(
       IntegrationProperties props,
+      ObservationRegistry observations,
       PolicyPublicationService publications,
       @Value("${prudence.managed.enabled:false}") boolean managed,
       @Value("${prudence.managed.opa-token:}") String opaToken,
@@ -48,7 +50,10 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
     if (managed && (instanceId.isBlank() || instanceId.length() > 255))
       throw new IllegalStateException("managed policy requires a distinct OPA instance ID");
     var builder =
-        RestClient.builder().baseUrl(props.opa().baseUrl()).requestFactory(factory(caFile));
+        RestClient.builder()
+            .baseUrl(props.opa().baseUrl())
+            .requestFactory(factory(caFile))
+            .observationRegistry(observations);
     if (!opaToken.isBlank()) builder.defaultHeader("Authorization", "Bearer " + opaToken);
     this.client = builder.build();
     this.decisionPath = props.opa().decisionPath();

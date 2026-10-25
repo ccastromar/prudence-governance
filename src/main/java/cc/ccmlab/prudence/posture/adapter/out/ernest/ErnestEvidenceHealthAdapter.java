@@ -3,6 +3,7 @@ package cc.ccmlab.prudence.posture.adapter.out.ernest;
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.posture.application.port.out.EvidenceHealthPort;
 import cc.ccmlab.prudence.posture.application.port.out.ExecutionEvidencePort;
+import io.micrometer.observation.ObservationRegistry;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
@@ -34,9 +35,13 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
 
   private final RestClient client;
 
-  public ErnestEvidenceHealthAdapter(IntegrationProperties props) {
+  public ErnestEvidenceHealthAdapter(
+      IntegrationProperties props, ObservationRegistry observations) {
     RestClient.Builder builder =
-        RestClient.builder().baseUrl(props.ernest().baseUrl()).requestFactory(timeoutFactory());
+        RestClient.builder()
+            .baseUrl(props.ernest().baseUrl())
+            .requestFactory(timeoutFactory())
+            .observationRegistry(observations);
     String apiKey = props.ernest().apiKey();
     if (apiKey != null && !apiKey.isBlank()) {
       // Prudence authenticates to Ernest as a read client (ADR-002 caller identity).

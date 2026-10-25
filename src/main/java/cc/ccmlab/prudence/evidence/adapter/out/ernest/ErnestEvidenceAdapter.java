@@ -4,6 +4,7 @@ import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.evidence.delivery.DecisionPublisher;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
+import io.micrometer.observation.ObservationRegistry;
 import jakarta.annotation.PreDestroy;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -55,8 +56,8 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
   /// Non-null when decisions are published to Kafka (Ernest ADR-005).
   private final ErnestKafkaPublisher kafka;
 
-  public ErnestEvidenceAdapter(IntegrationProperties props) {
-    this.ernest = ErnestHttp.writeClient(props);
+  public ErnestEvidenceAdapter(IntegrationProperties props, ObservationRegistry observations) {
+    this.ernest = ErnestHttp.writeClient(props, observations);
 
     String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
     boolean canSeal = cscUrl != null && !cscUrl.isBlank();
@@ -75,7 +76,7 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
         throw new IllegalStateException(
             "qualified seals (prudence.qtsp.csc-url) need decision-transport=direct");
       }
-      this.ingestor = ErnestHttp.ingestorClient(url, props.ernest().ingestorKey());
+      this.ingestor = ErnestHttp.ingestorClient(url, props.ernest().ingestorKey(), observations);
       this.kafka = null;
       log.info("PDP decisions are queued on Ernest's event-ingestor at {}", url);
     } else if (props.ernest().decisionsViaKafka()) {

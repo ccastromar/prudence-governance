@@ -2,6 +2,7 @@ package cc.ccmlab.prudence.evidence.adapter.out.ernest;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.evidence.delivery.GovernanceRecordWriter;
+import io.micrometer.observation.ObservationRegistry;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,8 +33,8 @@ public class ErnestRecordWriter implements GovernanceRecordWriter {
   private final boolean enabled;
   private final Set<String> ensuredModels = ConcurrentHashMap.newKeySet();
 
-  public ErnestRecordWriter(IntegrationProperties props) {
-    this.ernest = ErnestHttp.writeClient(props);
+  public ErnestRecordWriter(IntegrationProperties props, ObservationRegistry observations) {
+    this.ernest = ErnestHttp.writeClient(props, observations);
     String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
     this.sealer = cscUrl != null && !cscUrl.isBlank() ? new ErnestSealer(cscUrl) : null;
     this.enabled = props.ernest().baseUrl() != null && !props.ernest().baseUrl().isBlank();

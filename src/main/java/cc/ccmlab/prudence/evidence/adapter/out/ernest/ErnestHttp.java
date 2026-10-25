@@ -2,6 +2,7 @@ package cc.ccmlab.prudence.evidence.adapter.out.ernest;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.evidence.delivery.DeliveryFailure;
+import io.micrometer.observation.ObservationRegistry;
 import java.time.Duration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.ResourceAccessException;
@@ -20,31 +21,43 @@ public final class ErnestHttp {
 
   /// A RestClient for Ernest's write side (the writer when the deployment is split), with
   /// timeouts and the X-Ernest-Api-Key credential.
-  public static RestClient writeClient(IntegrationProperties props) {
-    return client(props.ernest().writeUrl(), props);
+  public static RestClient writeClient(
+      IntegrationProperties props, ObservationRegistry observations) {
+    return client(props.ernest().writeUrl(), props, observations);
   }
 
   /// A RestClient for Ernest's read side (any replica).
-  public static RestClient readClient(IntegrationProperties props) {
-    return client(props.ernest().baseUrl(), props);
+  public static RestClient readClient(
+      IntegrationProperties props, ObservationRegistry observations) {
+    return client(props.ernest().baseUrl(), props, observations);
   }
 
-  private static RestClient client(String baseUrl, IntegrationProperties props) {
+  private static RestClient client(
+      String baseUrl, IntegrationProperties props, ObservationRegistry observations) {
     SimpleClientHttpRequestFactory timeouts = new SimpleClientHttpRequestFactory();
     timeouts.setConnectTimeout(CONNECT_TIMEOUT);
     timeouts.setReadTimeout(READ_TIMEOUT);
-    RestClient.Builder b = RestClient.builder().baseUrl(baseUrl).requestFactory(timeouts);
+    RestClient.Builder b =
+        RestClient.builder()
+            .baseUrl(baseUrl)
+            .requestFactory(timeouts)
+            .observationRegistry(observations);
     String apiKey = props.ernest().apiKey();
     if (apiKey != null && !apiKey.isBlank()) b.defaultHeader("X-Ernest-Api-Key", apiKey);
     return b.build();
   }
 
   /// A RestClient for Ernest's event-ingestor, with the same timeouts and its own credential.
-  public static RestClient ingestorClient(String ingestorUrl, String ingestorKey) {
+  public static RestClient ingestorClient(
+      String ingestorUrl, String ingestorKey, ObservationRegistry observations) {
     SimpleClientHttpRequestFactory timeouts = new SimpleClientHttpRequestFactory();
     timeouts.setConnectTimeout(CONNECT_TIMEOUT);
     timeouts.setReadTimeout(READ_TIMEOUT);
-    RestClient.Builder b = RestClient.builder().baseUrl(ingestorUrl).requestFactory(timeouts);
+    RestClient.Builder b =
+        RestClient.builder()
+            .baseUrl(ingestorUrl)
+            .requestFactory(timeouts)
+            .observationRegistry(observations);
     if (ingestorKey != null && !ingestorKey.isBlank())
       b.defaultHeader("X-Ernest-Ingest-Key", ingestorKey);
     return b.build();
