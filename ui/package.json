@@ -13,11 +13,12 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@chestertown/design": "file:vendor/chestertown-design-0.3.10.tgz",
+    "@chestertown/design": "file:vendor/chestertown-design-0.3.11.tgz",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.61.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
