@@ -83,7 +83,7 @@ function DemoCard({
     api
       .me()
       .then((me) =>
-        setWriteAllowed(me.roles.some((r) => r === "author" || r === "admin")),
+        setWriteAllowed(me.functions.includes("system.declare")),
       )
       .catch(() => setWriteAllowed(false));
   }, []);

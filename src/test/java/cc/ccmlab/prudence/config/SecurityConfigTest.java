@@ -3,9 +3,15 @@ package cc.ccmlab.prudence.config;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import cc.ccmlab.prudence.governance.GovernanceModel;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.env.MockEnvironment;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 class SecurityConfigTest {
 
@@ -30,6 +36,38 @@ class SecurityConfigTest {
         assertThrows(IllegalStateException.class, () -> run(environment));
 
     assertTrue(failure.getMessage().contains("kafka-sasl-username"));
+  }
+
+  @Test
+  void tokensBecomeGovernanceFunctionAuthorities() throws Exception {
+    var model =
+        GovernanceModel.load(
+            new ClassPathResource("governance/default-model.yaml").getInputStream());
+    var converter = SecurityConfig.rolesConverter("roles", "legacy", "", model);
+
+    var person =
+        converter.convert(
+            jwt(Map.of("sub", "alice", "roles", List.of("prudence-author", "aos-operator"))));
+    assertTrue(has(person, "FN_system.declare"));
+    assertTrue(!has(person, "FN_runtime.decide"));
+    assertTrue(
+        person.getAuthorities().stream().noneMatch(a -> a.getAuthority().startsWith("FN_ai.use")));
+
+    var workload = converter.convert(jwt(Map.of("sub", "svc", "scope", "pdp.decide")));
+    assertTrue(has(workload, "FN_runtime.decide"));
+
+    // A person cannot reach a machine function through a group named like a scope.
+    var impostor = converter.convert(jwt(Map.of("sub", "mallory", "roles", List.of("pdp.decide"))));
+    assertTrue(
+        impostor.getAuthorities().stream().noneMatch(a -> a.getAuthority().startsWith("FN_")));
+  }
+
+  private static boolean has(Authentication auth, String authority) {
+    return auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals(authority));
+  }
+
+  private static Jwt jwt(Map<String, Object> claims) {
+    return Jwt.withTokenValue("t").header("alg", "none").claims(c -> c.putAll(claims)).build();
   }
 
   private static MockEnvironment productionEnvironment() {

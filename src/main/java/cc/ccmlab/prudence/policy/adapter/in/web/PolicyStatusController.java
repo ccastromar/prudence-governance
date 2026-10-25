@@ -33,6 +33,7 @@ public class PolicyStatusController {
       String actorMode,
       boolean approvalAvailable,
       List<String> roles,
+      List<String> functions,
       String requiredPublicationId,
       String requiredDigest) {}
 
@@ -45,12 +46,20 @@ public class PolicyStatusController {
             .map(a -> a.substring(5))
             .sorted()
             .toList();
+    var functions =
+        auth.getAuthorities().stream()
+            .map(a -> a.getAuthority())
+            .filter(a -> a.startsWith("FN_"))
+            .map(a -> a.substring(3))
+            .sorted()
+            .toList();
     var current = managed ? publications.current() : null;
     return new Status(
         managed,
         actorMode,
         "issuer-subject".equals(actorMode),
         roles,
+        functions,
         current == null ? null : current.id(),
         current == null ? null : current.digest());
   }

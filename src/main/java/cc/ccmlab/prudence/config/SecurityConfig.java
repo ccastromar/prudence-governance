@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.config;
 
+import cc.ccmlab.prudence.governance.Fn;
 import cc.ccmlab.prudence.governance.GovernanceModel;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -57,80 +58,73 @@ public class SecurityConfig {
     http.cors(c -> c.configurationSource(cors))
         .csrf(csrf -> csrf.disable())
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // Each route needs a governance function (contract/governance, section 2). The caller's
+        // functions come from the governance model as FN_* authorities.
         .authorizeHttpRequests(
             auth ->
                 auth.requestMatchers(HttpMethod.GET, "/api/policy-admin/**")
-                    .hasAnyRole(
-                        PrudenceRoles.AUTHOR, PrudenceRoles.POLICY_REVIEWER, PrudenceRoles.ADMIN)
+                    .hasAnyAuthority(
+                        Fn.AUDIT, Fn.POLICY_AUTHOR, Fn.POLICY_APPROVE, Fn.PLATFORM_ADMIN)
                     .requestMatchers(HttpMethod.GET, "/internal/policy-bundles/current")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/policy-admin/drafts/*/approve")
-                    .hasRole(PrudenceRoles.POLICY_REVIEWER)
+                    .hasAuthority(Fn.POLICY_APPROVE)
+                    // Publishing and rolling back are operating the platform, not approving.
                     .requestMatchers("/api/policy-admin/publications/**")
-                    .hasRole(PrudenceRoles.ADMIN)
+                    .hasAuthority(Fn.PLATFORM_ADMIN)
                     .requestMatchers("/api/policy-admin/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
+                    .hasAuthority(Fn.POLICY_AUTHOR)
                     .requestMatchers("/actuator/health")
                     .permitAll()
                     // The PDP is a machine-to-machine endpoint: an AOS gate or a runtime adapter
-                    // calls it with a client-credentials token. Require the `pdp.decide` scope
-                    // (a human SSO token does not carry it, so humans can't drive the PDP
-                    // directly).
+                    // calls it with its workload identity. runtime.decide is a machine function,
+                    // which a person's token never resolves to, so humans can't drive the PDP.
                     .requestMatchers(HttpMethod.POST, "/api/policy/decisions")
-                    .hasAuthority("SCOPE_pdp.decide")
-                    // A runtime reports what it executed with its own workload token and a
-                    // separate scope: asking for decisions does not imply reporting executions.
+                    .hasAuthority(Fn.RUNTIME_DECIDE)
+                    // A runtime reports what it executed with a separate function: asking for
+                    // decisions does not imply reporting executions.
                     .requestMatchers(HttpMethod.POST, "/api/executions")
-                    .hasAuthority("SCOPE_execution.report")
-                    // OpenID AuthZEN front door to the same PDP: same scope as Decision API v1.
-                    // Its discovery document is public, as the specification intends.
+                    .hasAuthority(Fn.RUNTIME_REPORT)
+                    // OpenID AuthZEN front door to the same PDP. Its discovery document is public,
+                    // as the specification intends.
                     .requestMatchers(
                         HttpMethod.POST, "/access/v1/evaluation", "/access/v1/evaluations")
-                    .hasAuthority("SCOPE_pdp.decide")
+                    .hasAuthority(Fn.RUNTIME_DECIDE)
                     .requestMatchers(HttpMethod.GET, "/.well-known/authzen-configuration")
                     .permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/governance/change-assessments")
-                    .hasAuthority("SCOPE_pdp.decide")
+                    .hasAuthority(Fn.RUNTIME_DECIDE)
+                    // Declaring a system covers its dossier: controls, cases, impact, snapshots,
+                    // evidence re-drives and demonstrator runs (the browser never calls the PDP
+                    // or Ernest directly: the private runner presents its workload token).
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/registry/systems",
                         "/api/registry/systems/*/submit",
-                        "/api/registry/systems/*/compliance-controls/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    // Registering an incident and recording its reports change the register (and
-                    // may
-                    // suspend a system); reading it only needs authentication.
-                    .requestMatchers(HttpMethod.POST, "/api/incidents", "/api/incidents/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    .requestMatchers(
-                        HttpMethod.POST, "/api/governance/cases", "/api/governance/cases/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    .requestMatchers(
-                        HttpMethod.POST,
-                        "/api/governance/change-assessments",
-                        "/api/monitoring/**",
-                        "/api/oversight/**",
+                        "/api/registry/systems/*/compliance-controls/**",
+                        "/api/governance/cases",
+                        "/api/governance/cases/**",
                         "/api/impact/**",
-                        "/api/compliance-snapshots/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    // Re-driving dead-lettered evidence is an operator act.
-                    .requestMatchers(HttpMethod.POST, "/api/evidence/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    // A human can request a demonstrator run, but the browser never calls the
-                    // PDP or Ernest directly: the private runner presents its workload token.
-                    .requestMatchers(HttpMethod.POST, "/api/demos/**")
-                    .hasAnyRole(PrudenceRoles.AUTHOR, PrudenceRoles.ADMIN)
-                    // Approving/rejecting/renewing a system and issuing an attestation are reviewer
-                    // acts.
+                        "/api/compliance-snapshots/**",
+                        "/api/evidence/**",
+                        "/api/demos/**")
+                    .hasAuthority(Fn.SYSTEM_DECLARE)
+                    // Registering an incident and recording its reports change the register (and
+                    // may suspend a system); reading it only needs a function.
+                    .requestMatchers(HttpMethod.POST, "/api/incidents", "/api/incidents/**")
+                    .hasAuthority(Fn.INCIDENT_HANDLE)
+                    .requestMatchers(HttpMethod.POST, "/api/monitoring/**", "/api/oversight/**")
+                    .hasAuthority(Fn.OVERSIGHT)
                     .requestMatchers(
                         HttpMethod.POST,
                         "/api/registry/systems/*/approve",
                         "/api/registry/systems/*/reject",
                         "/api/registry/systems/*/renew",
                         "/api/attestations")
-                    .hasRole(PrudenceRoles.SYSTEM_APPROVER)
+                    .hasAuthority(Fn.SYSTEM_APPROVE)
+                    // Any person function also lets its holder read Prudence.
                     .anyRequest()
-                    .hasAnyRole(PrudenceRoles.ALL))
+                    .hasAnyAuthority(Fn.PERSON))
         .oauth2ResourceServer(
             oauth ->
                 oauth.jwt(

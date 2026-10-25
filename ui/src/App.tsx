@@ -124,7 +124,7 @@ export default function App() {
     }
     api
       .me()
-      .then((me) => setNoAccess(me.roles.length === 0))
+      .then((me) => setNoAccess(me.functions.length === 0))
       .catch((e: Error) => setNoAccess(e.message === NOT_ALLOWED));
   }, [authed]);
 

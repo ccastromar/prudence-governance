@@ -601,7 +601,7 @@ const post = <T>(url: string, body: unknown) =>
 export const api = {
   me: () =>
     fetch("/api/me", { headers: withAuth() }).then(
-      ok<{ name: string; roles: string[] }>,
+      ok<{ name: string; roles: string[]; functions: string[] }>,
     ),
   assessChange: (body: {
     aiSystemId: string;

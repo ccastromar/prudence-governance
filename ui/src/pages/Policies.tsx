@@ -27,6 +27,7 @@ type Status = {
   actorMode: string;
   approvalAvailable: boolean;
   roles: string[];
+  functions: string[];
   requiredPublicationId: string | null;
   requiredDigest: string | null;
 };
@@ -51,10 +52,11 @@ class RequestError extends Error {
   }
 }
 
-const REQUIRED_ROLE: Record<string, string> = {
-  approve: "policy-reviewer",
-  publish: "admin",
-  rollback: "admin",
+// The governance function each action needs (contract/governance, section 2).
+const REQUIRED_FUNCTION: Record<string, string> = {
+  approve: "policy.approve",
+  publish: "platform.admin",
+  rollback: "platform.admin",
 };
 
 /** A readable explanation for an HTTP failure; never exposes raw tokens or stack traces. */
@@ -64,9 +66,9 @@ function explain(error: unknown, action = ""): string {
     return "Your session has expired. Sign in again to continue.";
   if (error.status === 403) {
     if (action === "read")
-      return 'Your account cannot view policies. Ask an administrator for the "author", "policy-reviewer" or "admin" role.';
-    const role = REQUIRED_ROLE[action] ?? "author";
-    return `Your account is not allowed to do this. It needs the "${role}" role in the identity provider${
+      return 'Your account cannot view policies. Ask an administrator for one of the governance functions "audit", "policy.author", "policy.approve" or "platform.admin".';
+    const fn = REQUIRED_FUNCTION[action] ?? "policy.author";
+    return `Your account is not allowed to do this. It needs the "${fn}" governance function${
       action === "approve"
         ? ", and it cannot be the account that authored or edited the revision"
         : ""
@@ -132,10 +134,10 @@ export default function Policies() {
   const [editing, setEditing] = useState<string | null>(null);
   const [rules, setRules] = useState<Rule[]>([]);
   const [status, setStatus] = useState<Status | null>(null);
-  const roles = status?.roles ?? [];
-  const canDraft = roles.includes("author") || roles.includes("admin");
-  const canPublish = roles.includes("admin");
-  const canReview = roles.includes("policy-reviewer");
+  const functions = status?.functions ?? [];
+  const canDraft = functions.includes("policy.author");
+  const canPublish = functions.includes("platform.admin");
+  const canReview = functions.includes("policy.approve");
   const [probe, setProbe] = useState<Probe | null>(null);
   const [publications, setPublications] = useState<Publication[] | null>(null);
   const [observations, setObservations] = useState<Observation[]>([]);
@@ -265,8 +267,8 @@ export default function Policies() {
           <h2>Status</h2>
           <ul>
             <li>
-              Your policy roles:{" "}
-              {status.roles.length ? status.roles.join(", ") : "none"}
+              Your governance functions:{" "}
+              {status.functions.length ? status.functions.join(", ") : "none"}
             </li>
             <li>
               Publication:{" "}
