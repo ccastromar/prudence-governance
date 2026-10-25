@@ -36,7 +36,7 @@ jobs:
         run: mvn -B -ntp verify
 
   ui:
-    name: Console (build)
+    name: Console (format, build and e2e)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -53,10 +53,24 @@ jobs:
         working-directory: ui
         run: npm ci
 
+      - name: Check formatting
+        working-directory: ui
+        run: npm run format:check
+
       # Type-checks (tsc -b) and bundles.
       - name: Type-check and build
         working-directory: ui
         run: npm run build
+
+      # The console against a mocked API and identity provider: what each governance function
+      # sees, no access without one, and a switched identity-provider session ending ours.
+      - name: Install Playwright's Chromium
+        working-directory: ui
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser tests
+        working-directory: ui
+        run: npm run test:e2e
 
   adapters:
     name: Python adapters (syntax)

@@ -44,3 +44,7 @@ CLAUDE.md
 ui/node_modules/
 ui/dist/
 ui/*.tsbuildinfo
+
+# Playwright
+ui/test-results/
+ui/playwright-report/
