@@ -115,6 +115,7 @@ UCUM annotation (`{record}`, `{decision}`).
 | Prudence | `prudence.decision.duration` (s) | `verdict` (`ALLOW`, `DENY`, `APPROVAL_REQUIRED`, `ERROR`), `front_door` (`decision_api`, `authzen`) |
 | Prudence | `prudence.policy.evaluation.duration` (s), OPA as a dependency | `outcome` |
 | Prudence | `prudence.delivery.records`, `.send`, `.due`, `.backlog.age` (existing) | `target`, `outcome` |
+| Prudence | `prudence.delivery.delay` (s), written to delivered, retries included | `target` |
 | AOS | `aos.run.duration` (s), one governed run | `outcome` (`completed`, `blocked`, `error`, `timeout`) |
 | AOS | `aos.step.duration` (s), one tool call | `tool.type` (`http`, `mcp`, `a2a`, `local`), `outcome` |
 | AOS | `aos.gate.duration` (s), the call to Prudence | `verdict` |
@@ -123,6 +124,11 @@ UCUM annotation (`{record}`, `{decision}`).
 | Ernest | `ernest.evidence.chaining.delay` (s), accepted to chained | — |
 | Ernest | `ernest.proof.duration` (s), proof generation and verification | `operation` (`generate`, `verify`), `outcome` |
 | Ernest | `ernest.ingestor.*`, `ernest.writer.*` (existing) | as today |
+
+**USE, every process:** the runtime's own metrics. Prudence: Micrometer's JVM, process, HikariCP
+and executor metrics. AOS: Prometheus's Go names (`go_goroutines`, `go_memstats_*`, `go_gc_*`,
+`process_*`). Ernest's backend: the Node runtime instrumentation (event loop delay and
+utilization, V8 heap and GC). Ernest's ingestor: the Prometheus Go client's.
 
 **Never an attribute:** user, person, AI system, decision, task, correlation, trace or event ids;
 pipeline names unless the deployment bounds them; raw paths; error messages; anything a user
@@ -227,7 +233,7 @@ How each indicator is computed in Prometheus (the error ratio is 1 − SLI; `obs
 | F1 availability | decisions with `verdict="ERROR"` / all decisions (`prudence_decision_duration_seconds_count`). Requests refused before deciding (400, 401, 403 without a decision) never reach it |
 | F1 latency | decisions with a verdict above 0.25 s / decisions with a verdict (`…_bucket{le="0.25"}`) |
 | F2 completeness | dead-lettered / delivered + dead-lettered (`prudence_delivery_records_total`) |
-| F2 freshness, F3 proof readiness | events chained after 900 s / events chained (`ernest_evidence_chaining_delay_seconds`). It starts when Ernest accepts the event: time waiting in Prudence's outbox is covered by `EvidenceDeliveryStuck`, not by this indicator |
+| F2 freshness, F3 proof readiness | events chained after 900 s / events chained (`ernest_evidence_chaining_delay_seconds`). It starts when Ernest accepts the event; the wait in Prudence's outbox before that is `prudence_delivery_delay_seconds` (written to delivered, same buckets), on the Services dashboard and behind `EvidenceDeliveryStuck` |
 | F3 verifiability | chain checks not `success` / chain checks (`ernest_proof_duration_seconds_count{operation="verify"}`) |
 | F4 | not measured yet: drift scans export no metric |
 
@@ -256,6 +262,7 @@ ratio: an alert also needs a minimum number of events in its long window (10 for
 | Trace context stored for asynchronous hops | Each journal entry keeps its `traceparent`; sent as a Kafka header and over HTTP | Each outbound record keeps its `traceparent` (V2); the delivery's context goes as a Kafka header | — | Stored with each stream entry |
 | `correlation_id` end to end | The task id: `X-Correlation-Id` and `correlationId` to Prudence; `metadata.correlationId` and a `correlationId` header in the evidence | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata | Kept in evidence metadata |
 | Logs (section 5) | JSON by default outside development (`LOG_FORMAT`); a task's lines carry `correlation_id`, `trace_id`, `span_id`; `LOG_LEVEL` applied | JSON by default (`ChestertownLogFormat`), text in the `dev` profile; MDC trace, span and correlation; named events for delivery | JSON with `NODE_ENV=production` (`LOG_FORMAT`); active span's trace and `X-Correlation-Id` | JSON by default (`LOG_FORMAT`); failures `WARN`/`ERROR` with `error.type`; no trace on lines yet |
+| Runtime (USE) | Go runtime and process | JVM, process, pools | Node event loop, heap, GC | Go runtime and process |
 | RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`, seconds) | Yes (`http.server.request.duration` over OTLP) | Ingestion counters |
 | Domain metrics (section 6) | Run, step and gate histograms; evidence shipped and backlog | Decision and policy evaluation histograms; delivery pipeline | Evidence received, chaining delay, proof duration | Ingestion and writer counters |
 
