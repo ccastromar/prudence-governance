@@ -40,8 +40,10 @@ Posture reflects the decision and review backlog: a system with dead-lettered ev
 delivery state shows in its verification (`PENDING` while queued, `UNSEALED` if dead-lettered).
 "Recorded" and "qualified-sealed" are distinct: without a QTSP, evidence is recorded in Ernest
 unsealed, and verification still confirms it. Delivery is at-least-once;
-Ernest does not yet deduplicate by `inferenceId`, so a crash between Ernest's acceptance and
-the outbox update can produce a duplicate block carrying the same id.
+Ernest deduplicates by `inferenceId` with its event store (`EVIDENCE_BATCHING=events`, its
+default, or `on`): a re-sent record is a duplicate, one re-sent with other content is refused.
+With batching turned off it does not, and a crash between Ernest's acceptance and the outbox
+update can produce a duplicate block carrying the same id.
 
 ## Periodic review (approval lifecycle)
 
