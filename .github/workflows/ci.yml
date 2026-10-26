@@ -19,6 +19,22 @@ jobs:
   backend:
     name: Backend (mvn verify)
     runs-on: ubuntu-latest
+    # A real PostgreSQL, the production version, for PostgresMigrationsTest: every Flyway
+    # migration applied to an empty database and Hibernate validating the entities against it.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: prudence_migrations
+          POSTGRES_USER: prudence
+          POSTGRES_PASSWORD: prudence-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U prudence -d prudence_migrations"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,9 +46,14 @@ jobs:
           java-version: '25'
           cache: maven
 
-      # Compiles, runs the whole test suite (in-memory H2, test profile: no database, Kafka or
-      # Ernest needed) and checks google-java-format (spotless:check is bound to verify).
+      # Compiles, runs the whole test suite (in-memory H2, test profile: no Kafka or Ernest
+      # needed; the PostgreSQL service only for the migrations) and checks google-java-format
+      # (spotless:check is bound to verify).
       - name: Build, test and check formatting
+        env:
+          PRUDENCE_TEST_POSTGRES_URL: jdbc:postgresql://127.0.0.1:5432/prudence_migrations
+          PRUDENCE_TEST_POSTGRES_USER: prudence
+          PRUDENCE_TEST_POSTGRES_PASSWORD: prudence-ci
         run: mvn -B -ntp verify
 
   ui:

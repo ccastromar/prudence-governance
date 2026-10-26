@@ -47,7 +47,8 @@ for the founding architecture.
 **Connect your own orchestrator:** see [docs/integration/README.md](docs/integration/README.md).
 
 **Deploy and run the suite** (identity, secrets and keys, first start, monitoring, backups,
-runbooks, security checklist): [docs/operations/operator-guide.md](docs/operations/operator-guide.md).
+runbooks, security checklist): [docs/operations/operator-guide.md](docs/operations/operator-guide.md);
+upgrading it: [docs/operations/upgrades.md](docs/operations/upgrades.md).
 
 **What works with what** (app versions, contracts, identity providers, platform):
 [docs/compatibility.md](docs/compatibility.md).

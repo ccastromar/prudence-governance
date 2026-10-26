@@ -5,7 +5,8 @@ How to deploy and run the Chestertown suite in production: **AOS** (orchestrate)
 provider and keeps it running. Each app's own documentation goes deeper; this guide is the path
 through all three.
 
-Versions that work together: [`compatibility.md`](../compatibility.md). What the suite does for
+Versions that work together: [`compatibility.md`](../compatibility.md); how to upgrade them:
+[`upgrades.md`](upgrades.md). What the suite does for
 the EU AI Act and ISO/IEC 42001: [`../compliance/traceability.md`](../compliance/traceability.md).
 Prudence's own operations (evidence delivery, approvals, alerts, incidents):
 [`deployment.md`](deployment.md).
