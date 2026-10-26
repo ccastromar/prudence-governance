@@ -4,7 +4,7 @@ How AOS, Prudence and Ernest describe what they do, so that one trace, one log q
 dashboard can follow a governed run across the three. It is a convention, not a library: each
 app instruments itself with OpenTelemetry and follows these names.
 
-Status: **agreed conventions; tracing and correlation implemented (step 2)**. Section 9 says what each app does today.
+Status: **agreed conventions; tracing, correlation (step 2) and JSON logs (step 3) implemented**. Section 9 says what each app does today.
 Objectives for the service-level indicators (section 8) are not set here: they are agreed with
 product and operations.
 
@@ -167,7 +167,7 @@ on F3 and F4. Until then, the availability and backlog alerts in the deployment 
 | Traces | Server spans by route; `aos.plan`, `aos.run`, `aos.step`; calls to Prudence continue the trace; the execution report is a linked span | Server spans; continues incoming traces; outbox delivery is a new span linked to the trace that wrote each record | HTTP, Express, Nest and MongoDB spans; continues incoming traces | Server spans; worker and Kafka processing are new spans linked to the sender's context |
 | Trace context stored for asynchronous hops | Each journal entry keeps its `traceparent`; sent as a Kafka header and over HTTP | Each outbound record keeps its `traceparent` (V2); the delivery's context goes as a Kafka header | — | Stored with each stream entry |
 | `correlation_id` end to end | The task id: `X-Correlation-Id` and `correlationId` to Prudence; `metadata.correlationId` and a `correlationId` header in the evidence | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata | Kept in evidence metadata |
-| Logs | Text, plus one JSON line per HTTP request (with `trace_id`) | JSON (logstash format) when the overlay sets it | Text (Nest logger) | Text |
+| Logs (section 5) | JSON by default outside development (`LOG_FORMAT`); a task's lines carry `correlation_id`, `trace_id`, `span_id`; `LOG_LEVEL` applied | JSON by default (`ChestertownLogFormat`), text in the `dev` profile; MDC trace, span and correlation; named events for delivery | JSON with `NODE_ENV=production` (`LOG_FORMAT`); active span's trace and `X-Correlation-Id` | JSON by default (`LOG_FORMAT`); failures `WARN`/`ERROR` with `error.type`; no trace on lines yet |
 | RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`) | No | Ingestion counters |
 | Domain metrics | Bus and LLM counters | Delivery pipeline | No | Ingestion and writer counters |
 
