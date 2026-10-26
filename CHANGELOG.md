@@ -24,6 +24,9 @@ conformity.
   executions are reported to `POST /api/executions`. `contract/decision/` turns the API into
   test vectors that Prudence, AOS and prudence-core's gate run in CI: only status 200 with
   `ALLOW` and a `decisionId` lets a step run.
+- **Evidence contract with Ernest.** `contract/ernest/` lists what Prudence sends to Ernest and
+  the fields it reads back; Prudence's adapters run it against a stub and Ernest's backend
+  replays it against itself, with batching on as deployed.
 - **Policy control plane.** Policy drafts are validated, simulated, approved by someone other
   than their contributors, and published to managed OPA instances, whose observed state is
   reported.
