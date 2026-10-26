@@ -115,6 +115,39 @@ class PolicyDecisionServiceTest {
     assertEquals(decision, recordedDecision.get());
   }
 
+  /// The caller's flow (an AOS task) reaches the evidence of a registered system's decision:
+  /// the context rebuilt with the registered version and identity keeps it.
+  @Test
+  void aRegisteredSystemsDecisionKeepsTheCallersCorrelationId() {
+    AtomicReference<DecisionContext> recorded = new AtomicReference<>();
+    PolicyDecisionService service =
+        service(
+            approvedSystemLookup(),
+            ignoredContext -> true,
+            (context, decision) -> recorded.set(context));
+    DecisionContext context =
+        new DecisionContext(
+            "subject",
+            "pipeline",
+            "system-1",
+            "run",
+            "v1",
+            "sha",
+            "unknown",
+            "unknown",
+            "cause-1",
+            "task-4f1c2a5e",
+            null,
+            null,
+            null,
+            "d-1");
+
+    service.decide(context);
+
+    assertEquals("task-4f1c2a5e", recorded.get().correlationId());
+    assertEquals("cause-1", recorded.get().causationId());
+  }
+
   private static RegisteredSystemLookup approvedSystemLookup() {
     return aiSystemId ->
         Optional.of(new RegisteredSystemLookup.SystemRiskView(aiSystemId, RiskTier.LIMITED, true));
