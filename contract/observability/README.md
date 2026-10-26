@@ -165,7 +165,7 @@ on F3 and F4. Until then, the availability and backlog alerts in the deployment 
 | --- | --- | --- | --- | --- |
 | OpenTelemetry SDK | No | Yes (Micrometer + OTLP) | No | No |
 | Traces | Sends `traceparent` to Prudence derived from the task id (**transitional**, see below) | Server spans; continues incoming traces | No | No |
-| `correlation_id` end to end | Task id in the journal and evidence (`traceId` field) | Stored on decisions and the outbox, but the Decision API does not receive it yet | Kept in evidence metadata when sent | Passes it through |
+| `correlation_id` end to end | Task id in the journal and evidence (`traceId` field) | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata when sent | Passes it through |
 | Logs | Text, plus one JSON line per HTTP request | JSON (logstash format) when the overlay sets it | Text (Nest logger) | Text |
 | RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`) | No | Ingestion counters |
 | Domain metrics | Bus and LLM counters | Delivery pipeline | No | Ingestion and writer counters |

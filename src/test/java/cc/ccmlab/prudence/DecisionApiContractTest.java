@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import cc.ccmlab.prudence.policy.application.port.in.DecidePolicyUseCase;
+import cc.ccmlab.prudence.policy.domain.DecisionContext;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -55,12 +56,13 @@ class DecisionApiContractTest {
   private static final Map<String, Object> SPEC = spec();
 
   @Autowired private WebApplicationContext context;
+  @Autowired private cc.ccmlab.prudence.config.CorrelationIdFilter correlationIdFilter;
   @MockitoBean private DecidePolicyUseCase pdp;
   private MockMvc mvc;
 
   @BeforeEach
   void setUp() {
-    mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    mvc = MockMvcBuilders.webAppContextSetup(context).addFilters(correlationIdFilter).build();
   }
 
   @Test
@@ -123,6 +125,42 @@ class DecisionApiContractTest {
         assertEquals(List.of(), errors(record, schema("ExecutionReportRecord"), "$"), name);
       }
     }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void theCorrelationIdIsRecordedWithTheDecision() throws Exception {
+    Map<String, Object> request =
+        new LinkedHashMap<>((Map<String, Object>) vectors("provider.json").get("request"));
+    var captured = org.mockito.ArgumentCaptor.forClass(DecisionContext.class);
+
+    reset(pdp);
+    when(pdp.decideWithDetails(any()))
+        .thenReturn(new DecidePolicyUseCase.Result(new PolicyDecision.Allow(), "lab", null));
+    request.put("correlationId", "task-4f1c2a5e");
+    assertEquals(200, decide(JSON.writeValueAsString(request)).getResponse().getStatus());
+    verify(pdp).decideWithDetails(captured.capture());
+    assertEquals("task-4f1c2a5e", captured.getValue().correlationId());
+
+    // Without the field, the X-Correlation-Id header.
+    reset(pdp);
+    when(pdp.decideWithDetails(any()))
+        .thenReturn(new DecidePolicyUseCase.Result(new PolicyDecision.Allow(), "lab", null));
+    request.remove("correlationId");
+    mvc.perform(
+            post("/api/policy/decisions")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("X-Correlation-Id", "task-from-header")
+                .content(JSON.writeValueAsString(request)))
+        .andReturn();
+    verify(pdp).decideWithDetails(captured.capture());
+    assertEquals("task-from-header", captured.getValue().correlationId());
+
+    // Not a plain token: refused before deciding.
+    reset(pdp);
+    request.put("correlationId", "has spaces and <tags>");
+    assertEquals(400, decide(JSON.writeValueAsString(request)).getResponse().getStatus());
+    verify(pdp, never()).decideWithDetails(any());
   }
 
   private MvcResult decide(String body) throws Exception {

@@ -33,6 +33,10 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Correlation ids.** A decision request may carry `correlationId` (or `X-Correlation-Id`), the
+  caller's business flow: it is recorded with the decision, sent with its evidence (record header
+  and metadata) and put in every log line of the request as `correlation_id`
+  (contract/observability).
 - **Decision events contract.** `contract/decision-events/` pins the Kafka record each PDP
   decision becomes (key, headers, body) and what Ernest's event-ingestor makes of it
   (deduplication id, `policy_decision`, the system of record).

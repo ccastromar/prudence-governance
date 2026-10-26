@@ -22,7 +22,8 @@ final class RecordedDecisions {
       String subject,
       String pipeline,
       String aiSystemId,
-      String action) {
+      String action,
+      String correlationId) {
     String decisionId = UUID.randomUUID().toString();
     String policyVersion = properties.opa().policyVersion();
     var result =
@@ -37,7 +38,7 @@ final class RecordedDecisions {
                 "unknown",
                 "unknown",
                 null,
-                null,
+                correlationId == null || correlationId.isBlank() ? null : correlationId.strip(),
                 null,
                 null,
                 null,

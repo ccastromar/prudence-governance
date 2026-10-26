@@ -109,7 +109,8 @@ class DecisionEventsContractTest {
               .getRequestHeaders()
               .forEach(
                   (name, values) -> {
-                    if (name.toLowerCase().startsWith("x-ernest-"))
+                    if (name.toLowerCase().startsWith("x-ernest-")
+                        || name.equalsIgnoreCase("x-correlation-id"))
                       headers.put(name.toLowerCase(), values.getFirst());
                   });
           Map<String, Object> request = new LinkedHashMap<>();

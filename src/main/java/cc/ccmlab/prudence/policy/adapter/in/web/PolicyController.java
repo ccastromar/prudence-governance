@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
+import cc.ccmlab.prudence.config.CorrelationIdFilter;
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.policy.adapter.in.web.dto.DecisionRequest;
 import cc.ccmlab.prudence.policy.adapter.in.web.dto.DecisionResponse;
@@ -35,7 +36,16 @@ public class PolicyController {
     String subject = authentication != null ? authentication.getName() : request.subject();
     var recorded =
         RecordedDecisions.decide(
-            pdp, properties, subject, request.pipeline(), request.aiSystemId(), request.action());
+            pdp,
+            properties,
+            subject,
+            request.pipeline(),
+            request.aiSystemId(),
+            request.action(),
+            // The body's correlationId, else the X-Correlation-Id header.
+            request.correlationId() != null
+                ? request.correlationId()
+                : CorrelationIdFilter.current());
     String decisionId = recorded.decisionId();
     String policyVersion = recorded.policyVersion();
     String policyDigest = recorded.policyDigest();

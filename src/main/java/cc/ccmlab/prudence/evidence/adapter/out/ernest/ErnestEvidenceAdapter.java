@@ -331,6 +331,10 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
         .header("X-Ernest-Event-Source", "prudence-pdp")
         .header("X-Ernest-Event-Type", DECISION_EVENT_TYPE)
         .header("X-Ernest-Source-Event-Id", inferenceId)
+        .headers(
+            h -> {
+              if (ctx.correlationId() != null) h.set("X-Correlation-Id", ctx.correlationId());
+            })
         .body(body)
         .retrieve()
         .toBodilessEntity();

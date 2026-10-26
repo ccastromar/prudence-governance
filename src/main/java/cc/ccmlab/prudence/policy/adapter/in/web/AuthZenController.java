@@ -1,6 +1,7 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
 import cc.ccmlab.prudence.config.AuthZenProperties;
+import cc.ccmlab.prudence.config.CorrelationIdFilter;
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.policy.application.port.in.DecidePolicyUseCase;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
@@ -135,7 +136,13 @@ public class AuthZenController {
     String subject = authentication != null ? authentication.getName() : e.subjectId();
     var recorded =
         RecordedDecisions.decide(
-            pdp, properties, subject, e.pipeline(), e.aiSystemId(), e.action());
+            pdp,
+            properties,
+            subject,
+            e.pipeline(),
+            e.aiSystemId(),
+            e.action(),
+            CorrelationIdFilter.current());
     Map<String, Object> context = new LinkedHashMap<>();
     context.put("decisionId", recorded.decisionId());
     context.put("policyVersion", recorded.policyVersion());
