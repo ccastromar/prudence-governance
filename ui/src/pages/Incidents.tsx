@@ -8,7 +8,7 @@ import {
   type OpenIncidentInput,
   type ReportingState,
 } from "../api";
-import { EvidenceState } from "../components";
+import { EvidenceState, PERMANENT_EVIDENCE_HINT } from "../components";
 import {
   Alert,
   Button,
@@ -230,7 +230,11 @@ export default function Incidents() {
                 ))}
               </Select>
             </Field>
-            <Field label="Title" htmlFor="incidents-title">
+            <Field
+              label="Title"
+              htmlFor="incidents-title"
+              hint={PERMANENT_EVIDENCE_HINT}
+            >
               <Input
                 id="incidents-title"
                 value={form.title}
@@ -239,7 +243,11 @@ export default function Incidents() {
               />
             </Field>
           </div>
-          <Field label="What happened" htmlFor="incidents-what-happened">
+          <Field
+            label="What happened"
+            htmlFor="incidents-what-happened"
+            hint={PERMANENT_EVIDENCE_HINT}
+          >
             <Textarea
               id="incidents-what-happened"
               value={form.description}
@@ -511,6 +519,7 @@ export default function Incidents() {
                       <Field
                         label="Root cause (final report)"
                         htmlFor="incidents-root-cause-final-report"
+                        hint={PERMANENT_EVIDENCE_HINT}
                       >
                         <Textarea
                           id="incidents-root-cause-final-report"
@@ -523,6 +532,7 @@ export default function Incidents() {
                       <Field
                         label="Corrective actions (final report)"
                         htmlFor="incidents-corrective-actions-final-report"
+                        hint={PERMANENT_EVIDENCE_HINT}
                       >
                         <Textarea
                           id="incidents-corrective-actions-final-report"
@@ -571,6 +581,7 @@ export default function Incidents() {
               <Field
                 label="Note (required to re-triage or close)"
                 htmlFor="incidents-note-required-to-re-triage-or-close"
+                hint={PERMANENT_EVIDENCE_HINT}
               >
                 <Textarea
                   id="incidents-note-required-to-re-triage-or-close"

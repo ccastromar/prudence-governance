@@ -185,6 +185,16 @@ Back up together, and copy off the host:
 Test a restore regularly. Without the two keys, a restored suite still runs but can no longer link
 old evidence.
 
+### Personal data in evidence
+
+Evidence in Ernest is append-only: what reaches it cannot be erased later. People never travel by
+name: reviewers and the actors of incidents and policy changes are keyed pseudonyms (the
+Prudence pseudonym key). What people **type** travels as written, though: the reason for a review
+decision, and an incident's title, description, notes and reports. Nothing can pseudonymise free
+text, so the console says so under each of those fields. Tell the people who use them: no names,
+emails or other personal data there; refer to a person by role ("the reviewing analyst"), and
+keep the details in your own systems.
+
 ### Scaling
 
 - **Prudence**: runs as several instances on one PostgreSQL; state changes lock the system's row.
@@ -280,5 +290,7 @@ like a data-protection incident.
 - [ ] The governance model passes `ct_model.py check --strict`; separation of duties as your
       organization requires.
 - [ ] Alerts reach real mailboxes (governance and operations).
+- [ ] People who review systems and record incidents know free text is kept for good: no
+      personal data in it.
 - [ ] Images are verified before deployment (cosign; each app's `SECURITY.md`).
 - [ ] A restore has been tested (`scripts/dr-drill.sh`, or the same steps on a copy of your data).

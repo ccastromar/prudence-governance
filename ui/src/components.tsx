@@ -5,6 +5,11 @@ import type { EvidenceDelivery } from "./api";
 export { DecisionBadge, RiskBadge } from "@chestertown/design";
 
 /// Evidence receipt: queued, recorded (with or without a qualified seal), or failed for good.
+/** Under every free-text field whose words travel, as written, to the append-only evidence store:
+ * people there are pseudonyms, but nothing can pseudonymise what someone types. */
+export const PERMANENT_EVIDENCE_HINT =
+  "Kept for good as evidence, as written: no names or other personal data.";
+
 export function EvidenceState({
   delivery,
   sealed,

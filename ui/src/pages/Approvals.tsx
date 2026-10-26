@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
 import { api, type AiSystem, type ReviewEvent } from "../api";
-import { EvidenceState, RiskBadge, StatusBadge } from "../components";
+import {
+  EvidenceState,
+  RiskBadge,
+  StatusBadge,
+  PERMANENT_EVIDENCE_HINT,
+} from "../components";
 import { ssoEnabled } from "../auth";
 import {
   Alert,
@@ -461,7 +466,11 @@ export default function Approvals() {
             The system stays off-limits to the PDP until it is re-submitted or
             reclassified.
           </p>
-          <Field label="Reason" htmlFor="approvals-reason">
+          <Field
+            label="Reason"
+            htmlFor="approvals-reason"
+            hint={PERMANENT_EVIDENCE_HINT}
+          >
             <Input
               id="approvals-reason"
               value={reason}
