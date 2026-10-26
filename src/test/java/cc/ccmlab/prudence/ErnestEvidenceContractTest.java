@@ -51,13 +51,7 @@ class ErnestEvidenceContractTest {
   private IntegrationProperties props;
 
   @BeforeEach
-  @SuppressWarnings("unchecked")
   void start() throws IOException {
-    Map<String, Object> contract =
-        JSON.readValue(Files.readString(Path.of("contract/ernest/interactions.json")), Map.class);
-    script =
-        ((List<Map<String, Object>>) contract.get("interactions"))
-            .stream().filter(i -> i.get("consumer") != null).toList();
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext("/", this::answer);
     server.start();
@@ -69,13 +63,25 @@ class ErnestEvidenceContractTest {
             new IntegrationProperties.Qtsp(""));
   }
 
+  /// The interactions of one file that Prudence sends (setup steps of other runtimes left out).
+  @SuppressWarnings("unchecked")
+  private void play(String file) throws IOException {
+    Map<String, Object> contract =
+        JSON.readValue(Files.readString(Path.of("contract/ernest", file)), Map.class);
+    script =
+        ((List<Map<String, Object>>) contract.get("interactions"))
+            .stream().filter(i -> i.get("consumer") != null).toList();
+    next = 0;
+  }
+
   @AfterEach
   void stop() {
     server.stop(0);
   }
 
   @Test
-  void prudenceSpeaksTheInteractionsInOrder() {
+  void withBatchingAsDeployed() throws IOException {
+    play("interactions.json");
     var observations = ObservationRegistry.NOOP;
 
     // Governance reviews: registered once, recorded, retried, conflicting, and from a fresh
@@ -113,6 +119,54 @@ class ErnestEvidenceContractTest {
     assertEquals(1L, confirmation.blockIndex());
 
     // Posture: chain health, which systems have evidence, and executions per system.
+    var health = new ErnestEvidenceHealthAdapter(props, observations);
+    assertTrue(health.check().healthy());
+    assertEquals(
+        Set.of("sys-credit"), health.systemsWithEvidence(List.of("sys-credit", "sys-unused")));
+    assertTrue(health.hasEvidence("sys-credit"));
+    var scan = health.scan();
+    assertTrue(scan.complete());
+    assertEquals(Map.of("sys-credit", 1L), scan.counts());
+
+    assertEquals(List.of(), List.copyOf(problems));
+    assertEquals(script.size(), next, "every interaction was used");
+  }
+
+  /// Batching off (Ernest's default): blocks at once, no event proofs (attestations are
+  /// confirmed through the model's provenance), and no retry or conflict interactions, since
+  /// Ernest does not deduplicate in this mode.
+  @Test
+  void withBatchingOff() throws IOException {
+    play("interactions-unbatched.json");
+    var observations = ObservationRegistry.NOOP;
+
+    var reviews = new ReviewSealAdapter(props, observations);
+    assertEquals(2L, reviews.seal(review("rev-1", null)).blockIndex());
+    assertEquals(
+        3L, new ReviewSealAdapter(props, observations).seal(review("rev-2", null)).blockIndex());
+
+    var outcomes =
+        new ErnestEvidenceAdapter(props, observations)
+            .publishDecisions(
+                List.of(
+                    new DecisionPublisher.Item(
+                        "dec-1", decision("dec-1"), new PolicyDecision.Allow()),
+                    new DecisionPublisher.Item(
+                        "dec-2",
+                        decision("dec-2"),
+                        new PolicyDecision.Deny("prohibited AI system"))));
+    outcomes.forEach(e -> assertNull(e, "every decision delivered"));
+
+    var attestations = new ErnestAttestationAdapter(props, observations);
+    String hash = "a".repeat(64);
+    assertEquals(
+        8L, attestations.seal("att-1", hash, Map.of("overallPosture", "GREEN")).blockIndex());
+    var confirmation = attestations.confirm("prudence-attestations", "att-1", hash);
+    assertTrue(
+        confirmation.reachable() && confirmation.present() && confirmation.chainValid(),
+        "attestation confirmed through provenance: " + confirmation);
+    assertEquals(8L, confirmation.blockIndex());
+
     var health = new ErnestEvidenceHealthAdapter(props, observations);
     assertTrue(health.check().healthy());
     assertEquals(
