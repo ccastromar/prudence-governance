@@ -38,6 +38,8 @@ management:
         enabled: ${PRUDENCE_OTEL_ENABLED:false}
         url: ${PRUDENCE_OTEL_ENDPOINT:http://localhost:4318}/v1/metrics
         step: 30s
+        # Durations in seconds, as the suite's conventions name them (section 6).
+        base-time-unit: seconds
   opentelemetry:
     tracing:
       export:

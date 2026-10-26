@@ -21,10 +21,13 @@ public class PolicyController {
 
   private final DecidePolicyUseCase pdp;
   private final IntegrationProperties properties;
+  private final DecisionMetrics metrics;
 
-  public PolicyController(DecidePolicyUseCase pdp, IntegrationProperties properties) {
+  public PolicyController(
+      DecidePolicyUseCase pdp, IntegrationProperties properties, DecisionMetrics metrics) {
     this.pdp = pdp;
     this.properties = properties;
+    this.metrics = metrics;
   }
 
   @PostMapping("/decisions")
@@ -35,17 +38,20 @@ public class PolicyController {
     // A caller must not be able to impersonate another principal by changing JSON.
     String subject = authentication != null ? authentication.getName() : request.subject();
     var recorded =
-        RecordedDecisions.decide(
-            pdp,
-            properties,
-            subject,
-            request.pipeline(),
-            request.aiSystemId(),
-            request.action(),
-            // The body's correlationId, else the X-Correlation-Id header.
-            request.correlationId() != null
-                ? request.correlationId()
-                : CorrelationIdFilter.current());
+        metrics.time(
+            "decision_api",
+            () ->
+                RecordedDecisions.decide(
+                    pdp,
+                    properties,
+                    subject,
+                    request.pipeline(),
+                    request.aiSystemId(),
+                    request.action(),
+                    // The body's correlationId, else the X-Correlation-Id header.
+                    request.correlationId() != null
+                        ? request.correlationId()
+                        : CorrelationIdFilter.current()));
     String decisionId = recorded.decisionId();
     String policyVersion = recorded.policyVersion();
     String policyDigest = recorded.policyDigest();

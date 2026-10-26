@@ -45,12 +45,15 @@ public class AuthZenController {
   private final IntegrationProperties properties;
   private final Map<String, String> toolSystems;
   private final String publicUrl;
+  private final DecisionMetrics metrics;
 
   public AuthZenController(
       DecidePolicyUseCase pdp,
       IntegrationProperties properties,
       AuthZenProperties authZen,
-      @Value("${prudence.authzen.pdp-url:${PRUDENCE_CONSOLE_URL:}}") String publicUrl) {
+      @Value("${prudence.authzen.pdp-url:${PRUDENCE_CONSOLE_URL:}}") String publicUrl,
+      DecisionMetrics metrics) {
+    this.metrics = metrics;
     this.pdp = pdp;
     this.properties = properties;
     this.toolSystems = authZen.toolSystems();
@@ -135,14 +138,17 @@ public class AuthZenController {
     // As in Decision API v1: the token, not the JSON, names the subject outside dev.
     String subject = authentication != null ? authentication.getName() : e.subjectId();
     var recorded =
-        RecordedDecisions.decide(
-            pdp,
-            properties,
-            subject,
-            e.pipeline(),
-            e.aiSystemId(),
-            e.action(),
-            CorrelationIdFilter.current());
+        metrics.time(
+            "authzen",
+            () ->
+                RecordedDecisions.decide(
+                    pdp,
+                    properties,
+                    subject,
+                    e.pipeline(),
+                    e.aiSystemId(),
+                    e.action(),
+                    CorrelationIdFilter.current()));
     Map<String, Object> context = new LinkedHashMap<>();
     context.put("decisionId", recorded.decisionId());
     context.put("policyVersion", recorded.policyVersion());

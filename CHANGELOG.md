@@ -33,6 +33,11 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Decision metrics** (contract/observability, section 6): `prudence.decision.duration`
+  (`verdict`, `front_door`: `decision_api` or `authzen`; a failure before a verdict is `ERROR`) and
+  `prudence.policy.evaluation.duration` (`outcome`), with buckets from 5 ms to the gate's 5 s
+  timeout so the admission objective is read from them. OTLP durations are now exported in
+  seconds (`base-time-unit`).
 - **JSON logs with the suite's fields** (contract/observability, section 5). Every line is one
   JSON object: `timestamp`, `severity`, `service.name`, `service.version`,
   `deployment.environment.name` (`OTEL_DEPLOYMENT_ENVIRONMENT`), `message`, `trace_id`,

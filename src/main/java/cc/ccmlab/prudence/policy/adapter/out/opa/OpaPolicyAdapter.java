@@ -1,9 +1,12 @@
 package cc.ccmlab.prudence.policy.adapter.out.opa;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
+import cc.ccmlab.prudence.config.MetricBuckets;
 import cc.ccmlab.prudence.policy.application.bundle.PolicyPublicationService;
 import cc.ccmlab.prudence.policy.application.port.out.PolicyEnginePort;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.micrometer.observation.ObservationRegistry;
 import java.net.http.HttpClient;
 import java.nio.file.Files;
@@ -38,10 +41,12 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
   private final PolicyPublicationService publications;
   private final boolean managed;
   private final String instanceId;
+  private final MeterRegistry meters;
 
   public OpaPolicyAdapter(
       IntegrationProperties props,
       ObservationRegistry observations,
+      MeterRegistry meters,
       PolicyPublicationService publications,
       @Value("${prudence.managed.enabled:false}") boolean managed,
       @Value("${prudence.managed.opa-token:}") String opaToken,
@@ -58,6 +63,7 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
     this.client = builder.build();
     this.decisionPath = props.opa().decisionPath();
     this.publications = publications;
+    this.meters = meters;
     this.managed = managed;
     this.instanceId = instanceId;
   }
@@ -116,8 +122,28 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
     }
   }
 
+  /// `prudence.policy.evaluation.duration{outcome}` (contract/observability, section 6): the
+  /// time OPA takes to evaluate, as a dependency of the decision. `failure` when it could not
+  /// decide (unreachable, failing, or a managed check refused): the decision fails closed.
   @Override
   public Evaluation evaluate(DecisionContext context) {
+    long started = System.nanoTime();
+    String outcome = "failure";
+    try {
+      Evaluation evaluation = evaluateTimed(context);
+      if (evaluation.outcome() != Outcome.ERROR) outcome = "success";
+      return evaluation;
+    } finally {
+      Timer.builder("prudence.policy.evaluation.duration")
+          .description("Time for the policy engine (OPA) to evaluate one decision")
+          .tag("outcome", outcome)
+          .serviceLevelObjectives(MetricBuckets.DECISION)
+          .register(meters)
+          .record(Duration.ofNanos(System.nanoTime() - started));
+    }
+  }
+
+  private Evaluation evaluateTimed(DecisionContext context) {
     if (!managed) return PolicyEnginePort.super.evaluate(context);
     var authentication = SecurityContextHolder.getContext().getAuthentication();
     if (!(authentication instanceof JwtAuthenticationToken)

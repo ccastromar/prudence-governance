@@ -7,6 +7,7 @@ import cc.ccmlab.prudence.policy.adapter.in.web.dto.DecisionRequest;
 import cc.ccmlab.prudence.policy.application.port.in.DecidePolicyUseCase;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,7 @@ class PolicyControllerTest {
         new IntegrationProperties(
             new IntegrationProperties.Opa("http://opa", "/allow", "test-v1", "test-hash"),
             new IntegrationProperties.Ernest("http://ernest", "key"),
-            new IntegrationProperties.Qtsp("")));
+            new IntegrationProperties.Qtsp("")),
+        new DecisionMetrics(new SimpleMeterRegistry()));
   }
 }
