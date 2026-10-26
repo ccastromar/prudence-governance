@@ -2,6 +2,16 @@ package cc.ccmlab.prudence.evidence.delivery;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.opentelemetry.api.OpenTelemetry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanBuilder;
+import io.opentelemetry.api.trace.SpanContext;
+import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.StatusCode;
+import io.opentelemetry.api.trace.TraceFlags;
+import io.opentelemetry.api.trace.TraceState;
+import io.opentelemetry.api.trace.Tracer;
+import io.opentelemetry.context.Scope;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.time.Instant;
@@ -20,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -56,6 +67,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
   private final TransactionTemplate tx;
   private final int maxAttempts;
   private final DeliveryMetrics metrics;
+  private final Tracer tracer;
   /// Sends run on this pool: chunks (or single records) of one pass go out concurrently.
   private final ExecutorService senders;
   /// Targets whose configuration is currently failing, so the operator gets one ERROR (and
@@ -74,7 +86,8 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         transactionManager,
         maxAttempts,
         concurrency,
-        new SimpleMeterRegistry());
+        new SimpleMeterRegistry(),
+        OpenTelemetry.noop());
   }
 
   @Autowired
@@ -84,8 +97,28 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
       PlatformTransactionManager transactionManager,
       @Value("${prudence.evidence.max-attempts:20}") int maxAttempts,
       @Value("${prudence.evidence.delivery-concurrency:8}") int concurrency,
-      MeterRegistry meters) {
+      MeterRegistry meters,
+      ObjectProvider<OpenTelemetry> openTelemetry) {
+    this(
+        targets,
+        listeners,
+        transactionManager,
+        maxAttempts,
+        concurrency,
+        meters,
+        openTelemetry.getIfAvailable(OpenTelemetry::noop));
+  }
+
+  EvidenceDeliveryWorker(
+      List<DeliveryTarget<?>> targets,
+      List<DeliveryListener> listeners,
+      PlatformTransactionManager transactionManager,
+      int maxAttempts,
+      int concurrency,
+      MeterRegistry meters,
+      OpenTelemetry openTelemetry) {
     this.metrics = new DeliveryMetrics(meters);
+    this.tracer = openTelemetry.getTracer("cc.ccmlab.prudence.evidence.delivery");
     this.targets = targets;
     this.listeners = listeners;
     this.tx = new TransactionTemplate(transactionManager);
@@ -178,7 +211,45 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
     }
   }
 
+  /// Each send is a new span (a new trace: it runs after the work that wrote the records has
+  /// ended), linked to the trace context stored with each record, so a decision's trace leads
+  /// to its delivery and every retry of it (contract/observability, section 4).
   private <E> void sendChunk(DeliveryTarget<E> target, List<E> chunk) {
+    SpanBuilder builder =
+        tracer
+            .spanBuilder("prudence.evidence.deliver")
+            .setNoParent()
+            .setSpanKind(SpanKind.PRODUCER)
+            .setAttribute("prudence.delivery.target", target.name())
+            .setAttribute("messaging.batch.message_count", (long) chunk.size());
+    for (E record : chunk) {
+      SpanContext stored = spanContext(target.delivery(record).getTraceparent());
+      if (stored.isValid()) builder.addLink(stored);
+    }
+    Span span = builder.startSpan();
+    try (Scope ignored = span.makeCurrent()) {
+      send(target, chunk, span);
+    } finally {
+      span.end();
+    }
+  }
+
+  /// The span context a stored traceparent names, or an invalid one.
+  static SpanContext spanContext(String traceparent) {
+    if (traceparent == null) return SpanContext.getInvalid();
+    String[] parts = traceparent.split("-");
+    if (parts.length != 4 || !"00".equals(parts[0]) || parts[3].length() != 2) {
+      return SpanContext.getInvalid();
+    }
+    try {
+      return SpanContext.createFromRemoteParent(
+          parts[1], parts[2], TraceFlags.fromHex(parts[3], 0), TraceState.getDefault());
+    } catch (RuntimeException e) {
+      return SpanContext.getInvalid();
+    }
+  }
+
+  private <E> void send(DeliveryTarget<E> target, List<E> chunk, Span span) {
     List<DeliveryTarget.Outcome<E>> outcomes;
     long started = System.nanoTime();
     try {
@@ -186,6 +257,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
       metrics.send(target.name(), true, System.nanoTime() - started);
     } catch (Exception e) {
       metrics.send(target.name(), false, System.nanoTime() - started);
+      span.setStatus(StatusCode.ERROR, "send failed");
       chunk.forEach(record -> handleFailure(target, target.id(record), e));
       return;
     }

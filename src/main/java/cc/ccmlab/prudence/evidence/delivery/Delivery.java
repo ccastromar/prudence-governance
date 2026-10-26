@@ -1,5 +1,7 @@
 package cc.ccmlab.prudence.evidence.delivery;
 
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import java.time.Duration;
@@ -36,13 +38,27 @@ public class Delivery {
   @Column(length = 2000)
   private String lastError;
 
+  /// The W3C trace context of the work that wrote the record (contract/observability, section
+  /// 4): its delivery, later, is a new span linked to it rather than a span kept open while the
+  /// record waits. Null when the record was written outside a trace.
+  @Column(length = 55)
+  private String traceparent;
+
   protected Delivery() {}
 
-  /// A new record, due for delivery immediately.
+  /// A new record, due for delivery immediately, remembering the current trace context.
   public static Delivery pending() {
     Delivery d = new Delivery();
     d.nextAttemptAt = stamp(Instant.now());
+    d.traceparent = currentTraceparent();
     return d;
+  }
+
+  /// The current span's W3C traceparent, or null outside a trace.
+  public static String currentTraceparent() {
+    SpanContext span = Span.current().getSpanContext();
+    if (!span.isValid()) return null;
+    return "00-" + span.getTraceId() + "-" + span.getSpanId() + "-" + span.getTraceFlags().asHex();
   }
 
   public static String stamp(Instant instant) {
@@ -119,5 +135,9 @@ public class Delivery {
 
   public String getLastError() {
     return lastError;
+  }
+
+  public String getTraceparent() {
+    return traceparent;
   }
 }

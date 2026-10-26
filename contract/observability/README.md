@@ -4,7 +4,7 @@ How AOS, Prudence and Ernest describe what they do, so that one trace, one log q
 dashboard can follow a governed run across the three. It is a convention, not a library: each
 app instruments itself with OpenTelemetry and follows these names.
 
-Status: **agreed conventions, partly implemented**. Section 9 says what each app does today.
+Status: **agreed conventions; tracing and correlation implemented (step 2)**. Section 9 says what each app does today.
 Objectives for the service-level indicators (section 8) are not set here: they are agreed with
 product and operations.
 
@@ -163,17 +163,16 @@ on F3 and F4. Until then, the availability and backlog alerts in the deployment 
 
 | | AOS | Prudence | Ernest backend | Ernest ingestor |
 | --- | --- | --- | --- | --- |
-| OpenTelemetry SDK | No | Yes (Micrometer + OTLP) | No | No |
-| Traces | Sends `traceparent` to Prudence derived from the task id (**transitional**, see below) | Server spans; continues incoming traces | No | No |
-| `correlation_id` end to end | Task id in the journal and evidence (`traceId` field) | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata when sent | Passes it through |
-| Logs | Text, plus one JSON line per HTTP request | JSON (logstash format) when the overlay sets it | Text (Nest logger) | Text |
+| OpenTelemetry SDK | Yes (Go SDK, OTLP/HTTP; off without an endpoint) | Yes (Micrometer + OTLP) | Yes (Node SDK, OTLP; off without an endpoint) | Yes (Go SDK, OTLP/HTTP; off without an endpoint) |
+| Traces | Server spans by route; `aos.plan`, `aos.run`, `aos.step`; calls to Prudence continue the trace; the execution report is a linked span | Server spans; continues incoming traces; outbox delivery is a new span linked to the trace that wrote each record | HTTP, Express, Nest and MongoDB spans; continues incoming traces | Server spans; worker and Kafka processing are new spans linked to the sender's context |
+| Trace context stored for asynchronous hops | Each journal entry keeps its `traceparent`; sent as a Kafka header and over HTTP | Each outbound record keeps its `traceparent` (V2); the delivery's context goes as a Kafka header | — | Stored with each stream entry |
+| `correlation_id` end to end | The task id: `X-Correlation-Id` and `correlationId` to Prudence; `metadata.correlationId` and a `correlationId` header in the evidence | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata | Kept in evidence metadata |
+| Logs | Text, plus one JSON line per HTTP request (with `trace_id`) | JSON (logstash format) when the overlay sets it | Text (Nest logger) | Text |
 | RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`) | No | Ingestion counters |
 | Domain metrics | Bus and LLM counters | Delivery pipeline | No | Ingestion and writer counters |
 
-**Transitional:** AOS currently sends a `traceparent` whose trace id is its task id (a UUID).
-That ties Prudence's spans to the task without an SDK, but makes a business id a trace id, which
-section 3 rules out. It is replaced when AOS adopts the OpenTelemetry SDK: a real trace context,
-and the task id as `correlation_id`.
+AOS no longer derives a trace id from its task id: the task id is the correlation id, and trace
+context comes from the SDK (section 3).
 
 ## 10. Order of work
 

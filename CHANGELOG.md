@@ -33,6 +33,11 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Trace context through the outbox.** Every outbound record (decisions, reviews,
+  attestations, incidents, policy audit, alerts) keeps the W3C `traceparent` of the work that
+  wrote it (migration V2). Delivery is a new span (`prudence.evidence.deliver`) linked to the
+  records it sends, never a span held open while they wait, and Kafka records carry the
+  delivery's `traceparent` so Ernest links to it (contract/observability, section 4).
 - **Correlation ids.** A decision request may carry `correlationId` (or `X-Correlation-Id`), the
   caller's business flow: it is recorded with the decision, sent with its evidence (record header
   and metadata) and put in every log line of the request as `correlation_id`

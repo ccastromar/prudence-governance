@@ -1,8 +1,21 @@
 package cc.ccmlab.prudence.evidence.delivery;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.context.Context;
+import io.opentelemetry.context.Scope;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.trace.ReadWriteSpan;
+import io.opentelemetry.sdk.trace.ReadableSpan;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
+import io.opentelemetry.sdk.trace.SpanProcessor;
+import io.opentelemetry.sdk.trace.data.SpanData;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -88,6 +101,105 @@ class EvidenceDeliveryWorkerTest {
     assertEquals(1, record.delivery.getAttempts());
     assertTrue(record.delivery.getDeadAt() != null);
     assertEquals(List.of("decisions:bad-record:PERMANENT:payload rejected"), deadLetters);
+  }
+
+  @Test
+  void deliveryIsANewSpanLinkedToTheTraceThatWroteTheRecords() {
+    List<SpanData> ended = new CopyOnWriteArrayList<>();
+    SdkTracerProvider provider =
+        SdkTracerProvider.builder().addSpanProcessor(collecting(ended)).build();
+    OpenTelemetrySdk otel = OpenTelemetrySdk.builder().setTracerProvider(provider).build();
+
+    // The records are written inside a request's trace (the decision), and delivered later.
+    Span decision = otel.getTracer("test").spanBuilder("POST /api/policy/decisions").startSpan();
+    FakeTarget target;
+    try (Scope ignored = decision.makeCurrent()) {
+      target = new FakeTarget(10, List.of("one", "two"));
+    } finally {
+      decision.end();
+    }
+    target.records.forEach(
+        record ->
+            assertEquals(
+                "00-"
+                    + decision.getSpanContext().getTraceId()
+                    + "-"
+                    + decision.getSpanContext().getSpanId()
+                    + "-"
+                    + decision.getSpanContext().getTraceFlags().asHex(),
+                record.delivery.getTraceparent()));
+    assertNull(new FakeRecord("outside").delivery.getTraceparent(), "outside a trace");
+
+    EvidenceDeliveryWorker worker =
+        new EvidenceDeliveryWorker(
+            List.of(target),
+            List.of(),
+            new ImmediateTransactionManager(),
+            3,
+            2,
+            new SimpleMeterRegistry(),
+            otel);
+    worker.deliverNow(target.name());
+    worker.shutdown();
+    provider.close();
+
+    SpanData delivery =
+        ended.stream()
+            .filter(span -> span.getName().equals("prudence.evidence.deliver"))
+            .findFirst()
+            .orElseThrow();
+    assertNotEquals(
+        decision.getSpanContext().getTraceId(), delivery.getTraceId(), "a new trace, not a child");
+    assertEquals(2, delivery.getLinks().size());
+    delivery
+        .getLinks()
+        .forEach(
+            link -> {
+              assertEquals(
+                  decision.getSpanContext().getTraceId(), link.getSpanContext().getTraceId());
+              assertEquals(
+                  decision.getSpanContext().getSpanId(), link.getSpanContext().getSpanId());
+            });
+  }
+
+  @Test
+  void aStoredTraceparentThatIsNotOneIsIgnored() {
+    for (String bad :
+        new String[] {
+          null,
+          "",
+          "garbage",
+          "01-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01",
+          "00-00000000000000000000000000000000-b7ad6b7169203331-01"
+        }) {
+      assertFalse(EvidenceDeliveryWorker.spanContext(bad).isValid(), String.valueOf(bad));
+    }
+    assertTrue(
+        EvidenceDeliveryWorker.spanContext(
+                "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01")
+            .isValid());
+  }
+
+  private static SpanProcessor collecting(List<SpanData> ended) {
+    return new SpanProcessor() {
+      @Override
+      public void onStart(Context parentContext, ReadWriteSpan span) {}
+
+      @Override
+      public boolean isStartRequired() {
+        return false;
+      }
+
+      @Override
+      public void onEnd(ReadableSpan span) {
+        ended.add(span.toSpanData());
+      }
+
+      @Override
+      public boolean isEndRequired() {
+        return true;
+      }
+    };
   }
 
   private static EvidenceDeliveryWorker worker(

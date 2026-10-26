@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.ernest;
 
+import cc.ccmlab.prudence.evidence.delivery.Delivery;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -80,6 +81,10 @@ public final class ErnestKafkaPublisher implements AutoCloseable {
         if (event.body().get("metadata") instanceof Map<?, ?> metadata
             && metadata.get("correlationId") instanceof String correlationId)
           record.headers().add(new RecordHeader("correlationId", bytes(correlationId)));
+        // The delivery's trace context: Ernest's processing of the record links to it.
+        String traceparent = Delivery.currentTraceparent();
+        if (traceparent != null)
+          record.headers().add(new RecordHeader("traceparent", bytes(traceparent)));
         sent.add(producer.send(record));
         outcomes.add(null);
       } catch (Exception e) {
