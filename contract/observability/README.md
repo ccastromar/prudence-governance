@@ -4,7 +4,7 @@ How AOS, Prudence and Ernest describe what they do, so that one trace, one log q
 dashboard can follow a governed run across the three. It is a convention, not a library: each
 app instruments itself with OpenTelemetry and follows these names.
 
-Status: **agreed conventions; tracing, correlation (step 2) and JSON logs (step 3) implemented**. Section 9 says what each app does today.
+Status: **agreed conventions; tracing and correlation (step 2), JSON logs (step 3) and domain metrics (step 4) implemented**. Section 9 says what each app does today.
 Objectives for the service-level indicators (section 8) are not set here: they are agreed with
 product and operations.
 
@@ -129,7 +129,23 @@ pipeline names unless the deployment bounds them; raw paths; error messages; any
 typed. They belong in spans and logs.
 
 Histogram buckets must contain the thresholds the objectives will use (section 8), so the
-indicators are computed from the histograms without guessing.
+indicators are computed from the histograms without guessing. The buckets in use, in seconds:
+
+| Histograms | Buckets | Indicator |
+| --- | --- | --- |
+| `prudence.decision.duration`, `prudence.policy.evaluation.duration`, `aos.gate.duration` | 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5 | F1 latency (the gate times out at 5 s) |
+| `aos.step.duration` | 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60 | — |
+| `aos.run.duration` | 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120, 300, 600 | — |
+| `ernest.evidence.chaining.delay` | 0.5, 1, 2, 5, 10, 30, 60, 120, 300, 900, 3600 | F2 freshness, F3 proof readiness |
+| `ernest.proof.duration` | 0.01, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30 | F3 |
+
+An objective's threshold T should be one of its buckets; a new threshold adds a bucket (a
+compatible change: existing queries keep working).
+
+AOS exposes its metrics on `/metrics` (scraped) with Prometheus names: `aos_run_duration_seconds`,
+`aos_step_duration_seconds` (`tool_type`), `aos_gate_duration_seconds`, `aos_evidence_shipped_total`
+and `aos_evidence_backlog_bytes` (journal not yet shipped, `transport`). `aos.run.duration` excludes
+time waiting for a person or a callback.
 
 Names in Prometheus follow the OTLP translation: dots become underscores, the unit becomes a
 suffix and counters end in `_total` (`prudence.delivery.records` → `prudence_delivery_records_total`).
@@ -168,8 +184,8 @@ on F3 and F4. Until then, the availability and backlog alerts in the deployment 
 | Trace context stored for asynchronous hops | Each journal entry keeps its `traceparent`; sent as a Kafka header and over HTTP | Each outbound record keeps its `traceparent` (V2); the delivery's context goes as a Kafka header | — | Stored with each stream entry |
 | `correlation_id` end to end | The task id: `X-Correlation-Id` and `correlationId` to Prudence; `metadata.correlationId` and a `correlationId` header in the evidence | Decision API `correlationId` or `X-Correlation-Id`: stored on the decision, in its logs (`correlation_id`), and sent with its evidence (Kafka header, HTTP header, metadata) | Kept in evidence metadata | Kept in evidence metadata |
 | Logs (section 5) | JSON by default outside development (`LOG_FORMAT`); a task's lines carry `correlation_id`, `trace_id`, `span_id`; `LOG_LEVEL` applied | JSON by default (`ChestertownLogFormat`), text in the `dev` profile; MDC trace, span and correlation; named events for delivery | JSON with `NODE_ENV=production` (`LOG_FORMAT`); active span's trace and `X-Correlation-Id` | JSON by default (`LOG_FORMAT`); failures `WARN`/`ERROR` with `error.type`; no trace on lines yet |
-| RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`) | No | Ingestion counters |
-| Domain metrics | Bus and LLM counters | Delivery pipeline | No | Ingestion and writer counters |
+| RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`, seconds) | Yes (`http.server.request.duration` over OTLP) | Ingestion counters |
+| Domain metrics (section 6) | Run, step and gate histograms; evidence shipped and backlog | Decision and policy evaluation histograms; delivery pipeline | Evidence received, chaining delay, proof duration | Ingestion and writer counters |
 
 AOS no longer derives a trace id from its task id: the task id is the correlation id, and trace
 context comes from the SDK (section 3).
