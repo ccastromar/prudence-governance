@@ -61,6 +61,8 @@ type Point struct {
 	Value      float64           `json:"value,omitempty"`
 	Count      uint64            `json:"count,omitempty"`
 	Bounds     []float64         `json:"bounds,omitempty"`
+	// Exemplars are the trace ids measurements carried: the way from a metric to its trace.
+	Exemplars []string `json:"exemplars,omitempty"`
 }
 
 type sink struct {
@@ -199,6 +201,11 @@ func (s *sink) metrics(w http.ResponseWriter, r *http.Request) {
 					for _, dp := range data.Histogram.DataPoints {
 						p := base
 						p.Type, p.Attributes, p.Count, p.Bounds = "histogram", attrs(dp.Attributes), dp.Count, dp.ExplicitBounds
+						for _, ex := range dp.Exemplars {
+							if len(ex.TraceId) > 0 {
+								p.Exemplars = append(p.Exemplars, hex.EncodeToString(ex.TraceId))
+							}
+						}
 						got = append(got, p)
 					}
 				}

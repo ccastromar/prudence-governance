@@ -4,7 +4,7 @@ How AOS, Prudence and Ernest describe what they do, so that one trace, one log q
 dashboard can follow a governed run across the three. It is a convention, not a library: each
 app instruments itself with OpenTelemetry and follows these names.
 
-Status: **agreed conventions; steps 1 to 5 implemented** (section 10); objectives, dashboards and burn-rate alerts are pending. Section 9 says what each app does today.
+Status: **agreed conventions; steps 1 to 6 implemented** (section 10): objectives, burn-rate alerts and dashboards included. Section 9 says what each app does today.
 Objectives for the service-level indicators (section 8) are not set here: they are agreed with
 product and operations.
 
@@ -149,6 +149,24 @@ time waiting for a person or a callback.
 
 Names in Prometheus follow the OTLP translation: dots become underscores, the unit becomes a
 suffix and counters end in `_total` (`prudence.delivery.records` → `prudence_delivery_records_total`).
+
+### 6.1 From a metric to its trace
+
+Latency histograms carry **exemplars**: a bucket keeps the trace id of a recent measurement, so a
+dashboard goes from a slow bucket to the trace behind it. Prudence's come from Micrometer (Spring
+Boot attaches them to its OTLP histograms when tracing is on); AOS's gate, run and step
+histograms add them on `/metrics` when the scraper asks for OpenMetrics. Ernest's backend has
+none: the Node SDK does not support exemplars yet. Prometheus stores them with
+`--enable-feature=exemplar-storage`, the collector exposes them with `enable_open_metrics`, and
+Grafana links the label `trace_id` to Tempo.
+
+### 6.2 Dashboards
+
+`observability/dashboards/` holds the suite's Grafana dashboards: **Flows and objectives** (each
+indicator of section 8: good events over the time range, error budget left over 28 days, burn
+rate, error ratio by window) and **Services** (RED and domain metrics of AOS, Prudence and
+Ernest, health probes and the collector). Their queries use the Prometheus names of section 6.
+The local stack provisions them; a deployment copies them.
 
 ## 7. Never in any signal
 

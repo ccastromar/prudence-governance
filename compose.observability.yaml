@@ -9,7 +9,8 @@
 #   AOS, Ernest:  OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 #   Prudence:     PRUDENCE_OTEL_ENABLED=true PRUDENCE_OTEL_ENDPOINT=http://localhost:4318
 #
-# Grafana on http://localhost:3000 (signed in as an anonymous admin) has Tempo and Prometheus;
+# Grafana on http://localhost:3000 (signed in as an anonymous admin) has Tempo, Prometheus and the
+# suite's dashboards (folder Chestertown: flows and objectives, services);
 # search Tempo by the attribute correlation_id (an AOS task id) to follow one business flow.
 # Prometheus also scrapes AOS's /metrics on the host at :8080 (observability/local/prometheus.yml).
 # Without Docker, scripts/otlp-sink is the same collector endpoint in one small binary
@@ -52,6 +53,8 @@ services:
       GF_AUTH_DISABLE_LOGIN_FORM: "true"
     volumes:
       - ./observability/local/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./observability/local/grafana-dashboards.yaml:/etc/grafana/provisioning/dashboards/chestertown.yaml:ro
+      - ./observability/dashboards:/var/lib/grafana/dashboards/chestertown:ro
     ports: ["127.0.0.1:3000:3000"]
     depends_on: [tempo, prometheus]
 

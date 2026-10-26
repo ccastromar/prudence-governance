@@ -33,6 +33,10 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Dashboards and exemplars** (contract/observability, 6.1 and 6.2): `observability/dashboards`
+  holds the suite's Grafana dashboards (flows and objectives, services), provisioned by the local
+  stack. Decision histograms carry exemplars, and the end-to-end check follows one from the
+  metric to its trace; `scripts/otlp-sink` keeps exemplars.
 - **Sampling and retention policy for the suite's telemetry** (contract/observability, 7.1 and
   7.2): every span recorded, the collector keeping errors, slow traces, governed flows and their
   asynchronous hops plus one in ten of the rest; metrics 28 days, traces 7, logs 14.

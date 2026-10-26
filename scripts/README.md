@@ -96,8 +96,9 @@ Keycloak and checks the loop and its failure modes, in about three minutes:
 - observability: every app exports to `otlp-sink`; for the allowed run, an AOS log line gives its
   `trace_id`, the trace crosses AOS and Prudence and holds the run's steps, the execution report,
   Prudence's evidence delivery and Ernest's Kafka processing are new spans linked to it, Ernest
-  holds the AOS run and the Prudence decision under the same `correlationId`, and the decision,
-  chaining and gate histograms have the objectives' buckets
+  holds the AOS run and the Prudence decision under the same `correlationId`, the decision,
+  chaining and gate histograms have the objectives' buckets, and Prudence's decision and AOS's
+  gate histograms carry exemplars naming traces the receiver holds (from a metric to its trace)
 - failure modes: with Kafka down AOS still runs and the evidence arrives once Kafka is back; with
   Ernest down Prudence reports it unhealthy, then healthy again; with Prudence down AOS fails
   closed

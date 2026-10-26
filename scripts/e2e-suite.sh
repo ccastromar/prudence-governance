@@ -409,6 +409,19 @@ ok=false; wait_for 60 has_bucket prudence.decision.duration "p['attributes'].get
 record observability "Prudence: decision histogram with the 0.25 s bucket" $ok "$(bounds prudence.decision.duration "p['attributes'].get('verdict')=='ALLOW'" | cut -c1-50)"
 ok=false; wait_for 90 has_bucket ernest.evidence.chaining.delay True 900 && ok=true
 record observability "Ernest: chaining delay histogram" $ok "$(bounds ernest.evidence.chaining.delay True | cut -c1-50)"
+# From a metric to its trace: a histogram's exemplar names a trace the sink holds spans of.
+known() { [ -n "$1" ] && [ "$(curl -s "$SINK/spans?trace_id=$1" | json 'len(d)')" -ge 1 ]; }
+prudence_exemplar() { curl -s "$SINK/metrics?name=prudence.decision.duration" | json 'next((e for p in d for e in p.get("exemplars") or []), "")'; }
+ex_ok() { known "$(prudence_exemplar)"; }
+ok=false; wait_for 60 ex_ok && ok=true
+record observability "metric → trace: Prudence decision histogram exemplar" $ok "exemplar=$(prudence_exemplar | cut -c1-12)"
+aos_exemplar() {
+  curl -s -H 'Accept: application/openmetrics-text' "http://127.0.0.1:$A_PORT/metrics" \
+    | sed -n 's/^aos_gate_duration_seconds_bucket{verdict="ALLOW".*# {trace_id="\([0-9a-f]*\)"}.*/\1/p' | head -1
+}
+aos_ex_ok() { known "$(aos_exemplar)"; }
+ok=false; wait_for 30 aos_ex_ok && ok=true
+record observability "metric → trace: AOS gate histogram exemplar" $ok "exemplar=$(aos_exemplar | cut -c1-12)"
 gate="$(curl -s "http://127.0.0.1:$A_PORT/metrics" | grep -c 'aos_gate_duration_seconds_bucket{verdict="ALLOW",le="0.25"}')"
 record observability "AOS: gate histogram with the 0.25 s bucket" "$([ "$gate" -ge 1 ] && echo true || echo false)" "series=$gate"
 
