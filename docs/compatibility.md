@@ -21,7 +21,7 @@ their version.
 | AuthZEN evaluation (`/access/v1/evaluation(s)`) | Prudence | MCP gateways | AuthZEN 1.0 | `integrations/conformance/run-sso.py` (needs the local stack, not in CI) |
 | Evidence events (`docs/api/evidence-events-v1.yaml`) | Prudence | A company's own audit store (Kafka or webhook) | `chestertown.prudence.<kind>.v1` | `chestertown-infra/tests/cloudevents` (needs the stack) |
 | Prudence → Ernest evidence (`contract/ernest/`): reviews, decisions, attestations, proofs, Posture reads | Ernest | Prudence (`ReviewSealAdapter`, `ErnestEvidenceAdapter`, `ErnestAttestationAdapter`, `ErnestEvidenceHealthAdapter`) | `prudence.ernest-evidence/v1` | `ErnestEvidenceContractTest` (Prudence's adapters against the interactions); Ernest `prudence-contract.test.js` (the real backend, MongoDB, `EVIDENCE_BATCHING=on`) on a synced copy. Not covered: the fallbacks for Ernest without batching, the ingestor and Kafka transports, qualified seals |
-| AOS audit journal → Ernest event-ingestor | AOS | Ernest | journal v1 | End to end only (the suite stack); **no contract vectors yet** |
+| AOS audit events (`contract/audit-events/` in AOS): the Kafka record each journal entry becomes | AOS | Ernest event-ingestor | `aos.audit-events/v1` | AOS `contract_test.go` (exact records; no user id, parameter or error leaves AOS); Ernest `kafkasource/contract_test.go` on a synced copy (deduplication id, model, `stage: execution`). Not covered: the HTTP path to the ingestor (`POST /events`), and the backend's counting of what the ingestor recorded (Ernest's own tests) |
 | Design system | `@chestertown/design` | the three consoles | 0.3.x | Vendored tarball pinned by version and integrity; axe (WCAG 2.1 AA) in each console's e2e |
 
 ## Identity providers
