@@ -112,14 +112,14 @@ to every browser. People sign in with OIDC.
 
 ## 5. Configure each app
 
-Prudence and AOS **refuse to start in production** without what they need, so a
-misconfiguration fails at start, not at the first request. Ernest does not yet: check it yourself.
+Each app **refuses to start in production** without what it needs, so a misconfiguration fails
+at start, not at the first request:
 
 | App | Outside development |
 | --- | --- |
 | Prudence | Refuses to start without: issuer and audience; database URL, user and password; Ernest URL and write key (or the CloudEvents sink); Kafka over SSL/SASL_SSL when used; the pseudonym key; SMTP host and alert recipients; CORS origins |
 | AOS | Refuses to start without: the evidence key when evidence goes to Ernest; Kafka over SSL/SASL_SSL; the ingestor key for HTTP evidence |
-| Ernest | **Starts open when no credential is configured**: without `ERNEST_API_KEY`, `ERNEST_READ_API_KEY` and OIDC, anyone can read and write evidence. Always set the write key, the read key and OIDC (`docs/deployment-vps.md` in Ernest), and check that an anonymous write answers `401` |
+| Ernest | Refuses to start without: the write key and the read key (different), and the OIDC issuer and audience. `ERNEST_OPEN_ACCESS=true` lets a local demo run without them, open to anyone: never in production (`docs/deployment-vps.md` in Ernest) |
 
 Choices to make:
 
@@ -212,8 +212,8 @@ old evidence.
 - [ ] Production profiles everywhere (`APP_ENV=production` for AOS, no `dev`/`test` profile for
       Prudence, `NODE_ENV=production` for Ernest).
 - [ ] The two evidence keys are in the secret store and in the backups.
-- [ ] Ernest has its write key, read key and OIDC set: an anonymous `POST /api/inferences`
-      answers `401`.
+- [ ] Ernest has its write key, read key and OIDC set, and no `ERNEST_OPEN_ACCESS`: an anonymous
+      `POST /api/inferences` answers `401`.
 - [ ] No `PUBLIC_ERNEST_API_KEY` in Ernest's console build.
 - [ ] Machine clients have only the scopes they need (`pdp.decide`, `execution.report`).
 - [ ] The governance model passes `ct_model.py check --strict`; separation of duties as your
