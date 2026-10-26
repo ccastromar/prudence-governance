@@ -33,6 +33,9 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Sampling and retention policy for the suite's telemetry** (contract/observability, 7.1 and
+  7.2): every span recorded, the collector keeping errors, slow traces, governed flows and their
+  asynchronous hops plus one in ten of the rest; metrics 28 days, traces 7, logs 14.
 - **Service-level objectives for the suite: 99.5 % over 28 days** (contract/observability,
   section 8), with admission latency under 250 ms and evidence chained within 15 minutes.
   `observability/rules/slo.yml` records each indicator's error ratio and raises multi-window

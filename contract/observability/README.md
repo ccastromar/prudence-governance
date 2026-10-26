@@ -157,6 +157,34 @@ values, tool inputs and outputs; names, emails, usernames or other personal iden
 person, when needed, is a keyed pseudonym, as in the evidence); free text a person typed. Client
 IP addresses only in access logs, under their retention.
 
+### 7.1 Sampling
+
+The apps record every span (head sampling at 100 %: `PRUDENCE_TRACING_SAMPLING=1.0`, the Go and
+Node SDKs' default); the deployment's collector decides which traces to keep, on the whole trace
+once it is complete (tail sampling). A trace is kept when any of these holds:
+
+| Kept | Why |
+| --- | --- |
+| Any span with an error status | Every failure is investigated |
+| Longer than 2 s | Far outside the admission objective (section 8) |
+| A governed flow: a span with `correlation_id` (an AOS run), a decision at either front door, or an asynchronous hop (`aos.execution.report`, `prudence.evidence.deliver`, `ernest.kafka.process`, `ernest.events.process`) | What an investigation follows end to end; low volume |
+| One in ten of the rest | Consoles, scheduled passes, reads |
+
+So a log line's `trace_id` may name a trace that was not kept when it is outside these. Metrics
+are not sampled. The local stack (`compose.observability.yaml`) keeps everything.
+
+### 7.2 Retention and access
+
+| Signal | Kept | Why |
+| --- | --- | --- |
+| Metrics | 28 days | The objectives' window (section 8); no personal data |
+| Traces | 7 days | Recent executions; ids and routes only |
+| Logs | 14 days | Access logs hold client IP addresses and user agents (section 7): only as long as investigating an incident needs |
+
+Telemetry is not evidence: what an auditor relies on is in Ernest, under its own retention and
+legal holds. Telemetry is read only by the suite's administrators (in the deployment, Grafana
+admits the `prudence-admin` role only).
+
 ## 8. Critical flows and their indicators
 
 Objective: **99.5 %** of valid events good, for every indicator, over a **rolling 28-day window**
