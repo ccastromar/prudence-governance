@@ -7,6 +7,7 @@ name = "prudence-governance"
 version = "0.1.0"
 description = "Framework-agnostic govern+prove core: Prudence PDP gate + Ernest evidence."
 requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
 dependencies = ["httpx>=0.27"]
 
 [tool.setuptools]

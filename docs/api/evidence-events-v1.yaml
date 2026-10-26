@@ -28,7 +28,8 @@ info:
     they do not know. A breaking change gets a new type (`….v2`), sent alongside v1 for a
     transition period.
   license:
-    name: Proprietary (CCMLab)
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 defaultContentType: application/cloudevents+json
 
 servers:

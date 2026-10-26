@@ -16,6 +16,12 @@
     <version>0.1.0</version>
     <name>prudence</name>
     <description>Prudence — the governance vertex (AOS orchestrates, Ernest proves, Prudence governs)</description>
+    <licenses>
+        <license>
+            <name>Apache-2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
 
     <properties>
         <java.version>25</java.version>
