@@ -49,6 +49,9 @@ for the founding architecture.
 **What works with what** (app versions, contracts, identity providers, platform):
 [docs/compatibility.md](docs/compatibility.md).
 
+**Which EU AI Act and ISO/IEC 42001 obligations it supports**, how and with what evidence, and
+the gaps: [docs/compliance/traceability.md](docs/compliance/traceability.md).
+
 Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md) (step by step) or
 [scripts/README.md](scripts/README.md).
 
