@@ -33,6 +33,9 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **A decision keeps its caller's correlation id on its way to Ernest.** The evidence outbox
+  replaced it with a new random id, so a decision in Ernest could not be found under the AOS task
+  that asked for it. Found by the suite's end-to-end observability check.
 - **Decision metrics** (contract/observability, section 6): `prudence.decision.duration`
   (`verdict`, `front_door`: `decision_api` or `authzen`; a failure before a verdict is `ERROR`) and
   `prudence.policy.evaluation.duration` (`outcome`), with buckets from 5 ms to the gate's 5 s

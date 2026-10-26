@@ -54,7 +54,7 @@ public class OutboxEvidenceAdapter implements EvidencePort {
       // system. Its fail-closed DENY is still evidence, but an unregistered id has no event
       // sequence (system_event_sequence references ai_system): record it unsequenced rather
       // than fail the decision or mint sequence rows from a caller-supplied id.
-      record.setCausality(UUID.randomUUID().toString(), UUID.randomUUID().toString(), null);
+      record.setCausality(UUID.randomUUID().toString(), correlationOf(context), null);
     } else {
       var envelope =
           causality.envelope(
@@ -63,10 +63,16 @@ public class OutboxEvidenceAdapter implements EvidencePort {
               context.systemVersion(),
               record.getId(),
               null,
-              null,
+              // The caller's business flow, when it named one (an AOS task): kept, not replaced.
+              context.correlationId(),
               java.util.Map.of("verdict", verdict));
       record.setCausality(envelope.eventId(), envelope.correlationId(), envelope.systemSequence());
     }
     outbox.save(record);
+  }
+
+  /// The caller's correlation id, or a new one for a decision that belongs to no named flow.
+  private static String correlationOf(DecisionContext context) {
+    return context.correlationId() != null ? context.correlationId() : UUID.randomUUID().toString();
   }
 }
