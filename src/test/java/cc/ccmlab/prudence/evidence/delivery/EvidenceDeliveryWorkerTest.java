@@ -163,6 +163,38 @@ class EvidenceDeliveryWorkerTest {
   }
 
   @Test
+  void eachDeliveredRecordIsTimedFromItsWritingInTheFreshnessBuckets() {
+    FakeTarget target = new FakeTarget(10, List.of("one", "two"));
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    EvidenceDeliveryWorker worker =
+        new EvidenceDeliveryWorker(
+            List.of(target),
+            List.of(),
+            new ImmediateTransactionManager(),
+            3,
+            2,
+            registry,
+            io.opentelemetry.api.OpenTelemetry.noop());
+
+    worker.deliverNow(target.name());
+    worker.shutdown();
+
+    var timer = registry.find("prudence.delivery.delay").tags("target", target.name()).timer();
+    assertEquals(2, timer.count());
+    assertTrue(
+        java.util.Arrays.stream(timer.takeSnapshot().histogramCounts())
+            .anyMatch(b -> b.bucket(java.util.concurrent.TimeUnit.SECONDS) == 900),
+        "the 15-minute freshness threshold is a bucket");
+  }
+
+  @Test
+  void aRecordKnowsHowLongItWaited() {
+    Delivery delivery = Delivery.pending();
+    var waited = delivery.waited(java.time.Instant.now().plusSeconds(90));
+    assertTrue(waited.getSeconds() >= 89 && waited.getSeconds() <= 90, waited.toString());
+  }
+
+  @Test
   void aStoredTraceparentThatIsNotOneIsIgnored() {
     for (String bad :
         new String[] {

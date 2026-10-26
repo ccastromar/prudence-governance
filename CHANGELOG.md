@@ -33,6 +33,9 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Delivery delay** (`prudence.delivery.delay{target}`): from an outbound record being written to
+  its delivery, retries included, with the 15-minute freshness threshold as a bucket. Migration
+  **V3** adds `queued_at` to the outbound tables.
 - **Dashboards and exemplars** (contract/observability, 6.1 and 6.2): `observability/dashboards`
   holds the suite's Grafana dashboards (flows and objectives, services), provisioned by the local
   stack. Decision histograms carry exemplars, and the end-to-end check follows one from the

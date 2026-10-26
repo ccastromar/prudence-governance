@@ -17,6 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
 ///   batch size). A value that does not go down is a backlog.
 /// - `prudence.delivery.backlog.age{target}`: seconds since the target last had nothing due; 0
 ///   when it is keeping up. Grows while delivery is stuck.
+/// - `prudence.delivery.delay{target}`: from a record being written to its delivery, retries
+///   included; the buckets hold the 15-minute freshness threshold (contract/observability, 8).
 final class DeliveryMetrics {
   private final MeterRegistry registry;
   private final Map<String, AtomicLong> due = new ConcurrentHashMap<>();
@@ -32,6 +34,31 @@ final class DeliveryMetrics {
       registry
           .counter("prudence.delivery.records", "target", target, "outcome", outcome)
           .increment(count);
+  }
+
+  /// Upper bounds of `prudence.delivery.delay`'s buckets, as Ernest's chaining delay.
+  static final Duration[] DELAY_BUCKETS = {
+    Duration.ofMillis(500),
+    Duration.ofSeconds(1),
+    Duration.ofSeconds(2),
+    Duration.ofSeconds(5),
+    Duration.ofSeconds(10),
+    Duration.ofSeconds(30),
+    Duration.ofMinutes(1),
+    Duration.ofMinutes(2),
+    Duration.ofMinutes(5),
+    Duration.ofMinutes(15),
+    Duration.ofHours(1)
+  };
+
+  void delay(String target, Duration waited) {
+    if (waited == null || waited.isNegative()) return;
+    Timer.builder("prudence.delivery.delay")
+        .description("From a record being written to its delivery")
+        .tag("target", target)
+        .serviceLevelObjectives(DELAY_BUCKETS)
+        .register(registry)
+        .record(waited);
   }
 
   void send(String target, boolean ok, long nanos) {

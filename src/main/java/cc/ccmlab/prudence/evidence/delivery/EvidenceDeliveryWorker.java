@@ -274,6 +274,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         continue;
       }
       delivered.put(id, outcome.receipt());
+      metrics.delay(target.name(), target.delivery(chunk.get(i)).waited(Instant.now()));
     }
     if (delivered.isEmpty()) return;
     markDelivered(target, delivered);

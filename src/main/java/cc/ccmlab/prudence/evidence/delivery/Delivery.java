@@ -44,12 +44,17 @@ public class Delivery {
   @Column(length = 55)
   private String traceparent;
 
+  /// When the record was written: `prudence.delivery.delay` measures from here to its delivery.
+  /// Null for records written before V3.
+  private String queuedAt;
+
   protected Delivery() {}
 
   /// A new record, due for delivery immediately, remembering the current trace context.
   public static Delivery pending() {
     Delivery d = new Delivery();
-    d.nextAttemptAt = stamp(Instant.now());
+    d.queuedAt = stamp(Instant.now());
+    d.nextAttemptAt = d.queuedAt;
     d.traceparent = currentTraceparent();
     return d;
   }
@@ -139,5 +144,15 @@ public class Delivery {
 
   public String getTraceparent() {
     return traceparent;
+  }
+
+  public String getQueuedAt() {
+    return queuedAt;
+  }
+
+  /// How long the record waited from being written until `now`, or null when it is not known.
+  public Duration waited(Instant now) {
+    if (queuedAt == null) return null;
+    return Duration.between(Instant.from(STAMP.parse(queuedAt)), now);
   }
 }
