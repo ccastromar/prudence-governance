@@ -33,6 +33,7 @@ for the founding architecture.
 | `integrations/` | Python adapters for agent runtimes (LangGraph, Pydantic AI) |
 | `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
 | `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model, test vectors, organization templates and the `ct-model` tool |
+| `contract/decision/` | Decision API v1 as test vectors: when a gate may run a step, what a runtime does with each report answer, what Prudence must answer. Prudence, AOS and prudence-core run them |
 | `docs/api/` | Published contracts: Decision API v1 (OpenAPI) and evidence events v1 (AsyncAPI) |
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
@@ -42,6 +43,9 @@ for the founding architecture.
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
 
 **Connect your own orchestrator:** see [docs/integration/README.md](docs/integration/README.md).
+
+**What works with what** (app versions, contracts, identity providers, platform):
+[docs/compatibility.md](docs/compatibility.md).
 
 Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md) (step by step) or
 [scripts/README.md](scripts/README.md).
