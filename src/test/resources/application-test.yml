@@ -2,3 +2,7 @@ spring:
   # Tests build their own in-memory schema (create-drop); migrations target PostgreSQL.
   flyway:
     enabled: false
+
+prudence:
+  observability:
+    environment: test

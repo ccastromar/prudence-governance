@@ -13,3 +13,11 @@ spring:
   flyway:
     # Dev evolves the local H2 file with ddl-auto=update; migrations target PostgreSQL.
     enabled: false
+
+logging:
+  structured:
+    format:
+      # Readable text locally; JSON everywhere else (application.yml).
+      console: ""
+
+prudence.observability.environment: development

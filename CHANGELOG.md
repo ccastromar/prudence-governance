@@ -33,6 +33,13 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **JSON logs with the suite's fields** (contract/observability, section 5). Every line is one
+  JSON object: `timestamp`, `severity`, `service.name`, `service.version`,
+  `deployment.environment.name` (`OTEL_DEPLOYMENT_ENVIRONMENT`), `message`, `trace_id`,
+  `span_id`, `correlation_id`, and named events (`event.name`, `outcome`, `error.type`) where
+  Prudence reports one, such as a dead-lettered delivery. An exception is written as its type
+  and frames, never its message. The `dev` profile keeps text. This replaces the logstash format
+  the deployment used to set (`LOGGING_STRUCTURED_FORMAT_CONSOLE`), which should be removed.
 - **Trace context through the outbox.** Every outbound record (decisions, reviews,
   attestations, incidents, policy audit, alerts) keeps the W3C `traceparent` of the work that
   wrote it (migration V2). Delivery is a new span (`prudence.evidence.deliver`) linked to the

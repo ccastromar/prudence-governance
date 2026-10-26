@@ -22,6 +22,13 @@ spring:
 server:
   port: 8099
 
+logging:
+  structured:
+    format:
+      # One JSON object per line with the suite's fields (contract/observability, section 5).
+      # The dev profile writes text.
+      console: cc.ccmlab.prudence.config.ChestertownLogFormat
+
 management:
   # Telemetry is pushed over OTLP to the collector; nothing is scraped, so no extra actuator
   # endpoint is exposed. Off unless PRUDENCE_OTEL_ENABLED=true (metrics and traces together).
@@ -59,6 +66,9 @@ management:
 # Prudence integrations (control plane): the OPA policy engine (PDP sidecar) and Ernest
 # (evidence + attestation sealing). Fail-closed when unreachable.
 prudence:
+  observability:
+    # deployment.environment.name on every log line.
+    environment: ${OTEL_DEPLOYMENT_ENVIRONMENT:production}
   governance:
     # Approval expires unless it is deliberately renewed through review.
     approval-validity-days: ${PRUDENCE_APPROVAL_VALIDITY_DAYS:365}

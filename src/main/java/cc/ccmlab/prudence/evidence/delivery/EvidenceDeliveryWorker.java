@@ -279,7 +279,11 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
     markDelivered(target, delivered);
     metrics.records(target.name(), "delivered", delivered.size());
     if (configurationFailing.remove(target.name())) {
-      log.info("{} delivery recovered", target.name());
+      log.atInfo()
+          .addKeyValue("event.name", "evidence.delivery.recovered")
+          .addKeyValue("outcome", "success")
+          .addKeyValue("delivery.target", target.name())
+          .log("{} delivery recovered", target.name());
     }
   }
 
@@ -359,25 +363,42 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
         1);
     if (failure == DeliveryFailure.CONFIGURATION) {
       if (configurationFailing.add(target.name())) {
-        log.error(
-            "{} delivery refuses Prudence's configuration (credentials/endpoint); records are "
-                + "queued until fixed: {}",
-            target.name(),
-            e.getMessage());
+        log.atError()
+            .addKeyValue("event.name", "evidence.delivery.misconfigured")
+            .addKeyValue("outcome", "failure")
+            .addKeyValue("error.type", e.getClass().getName())
+            .addKeyValue("delivery.target", target.name())
+            .log(
+                "{} delivery refuses Prudence's configuration (credentials/endpoint); records are "
+                    + "queued until fixed: {}",
+                target.name(),
+                e.getMessage());
         if (target.reportsFailures()) {
           tx.executeWithoutResult(
               s -> listeners.forEach(l -> l.configurationFailing(target.name(), e.getMessage())));
         }
       }
     } else if (outcome[0] == Delivery.Status.DEAD) {
-      log.error(
-          "{} record {} dead-lettered ({}): {}",
-          target.name(),
-          id,
-          failure == DeliveryFailure.PERMANENT ? "rejected" : "out of attempts",
-          e.getMessage());
+      log.atError()
+          .addKeyValue("event.name", "evidence.delivery.dead_lettered")
+          .addKeyValue("outcome", "failure")
+          .addKeyValue("error.type", e.getClass().getName())
+          .addKeyValue("delivery.target", target.name())
+          .addKeyValue("record_id", id)
+          .log(
+              "{} record {} dead-lettered ({}): {}",
+              target.name(),
+              id,
+              failure == DeliveryFailure.PERMANENT ? "rejected" : "out of attempts",
+              e.getMessage());
     } else {
-      log.warn("{} delivery failed for {} (will retry): {}", target.name(), id, e.getMessage());
+      log.atWarn()
+          .addKeyValue("event.name", "evidence.delivery.retry")
+          .addKeyValue("outcome", "failure")
+          .addKeyValue("error.type", e.getClass().getName())
+          .addKeyValue("delivery.target", target.name())
+          .addKeyValue("record_id", id)
+          .log("{} delivery failed for {} (will retry): {}", target.name(), id, e.getMessage());
     }
   }
 
