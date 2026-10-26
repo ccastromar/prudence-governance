@@ -21,7 +21,9 @@ conformity.
 - **Policy decision point.** Decision API v1 (`POST /api/policy/decisions`, OpenAPI in
   `docs/api/`) backed by OPA/Rego, plus an OpenID AuthZEN front door; fail-closed, with the policy
   version and digest recorded on every decision. An unregistered system is a `DENY`. Governed
-  executions are reported to `POST /api/executions`.
+  executions are reported to `POST /api/executions`. `contract/decision/` turns the API into
+  test vectors that Prudence, AOS and prudence-core's gate run in CI: only status 200 with
+  `ALLOW` and a `decisionId` lets a step run.
 - **Policy control plane.** Policy drafts are validated, simulated, approved by someone other
   than their contributors, and published to managed OPA instances, whose observed state is
   reported.

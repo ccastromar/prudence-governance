@@ -8,8 +8,10 @@ info:
     before it executes a pipeline backed by a governed AI system. AOS is the reference
     runtime; any orchestrator can call it (see `integrations/` for Pydantic AI and LangGraph).
 
-    **Fail closed.** A gate must treat anything other than an `ALLOW` decision as "do not
-    run": a `DENY`, an `APPROVAL_REQUIRED`, an error status, a timeout or an unreadable body.
+    **Fail closed.** A gate runs a step only on status 200 with an `ALLOW` decision and a
+    `decisionId`; anything else means "do not run": a `DENY`, an `APPROVAL_REQUIRED`, an
+    `ERROR`, an `ALLOW` under another status, a timeout or an unreadable body. The test vectors
+    in `contract/decision/` spell this out case by case; gates run them.
 
     **Who is asking comes from the token, not the body.** The subject is the authenticated
     workload identity (`email`, then `preferred_username`, then `sub` of the access token).
@@ -90,6 +92,20 @@ paths:
                 reason: prohibited AI system
                 approver: null
                 decisionId: 7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d
+                policyVersion: lab
+        '503':
+          description: |
+            ERROR — Prudence could not decide (the policy engine did not answer). Recorded as
+            evidence like any decision. Do not run.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionResponse'
+              example:
+                decision: ERROR
+                reason: policy engine unavailable
+                approver: null
+                decisionId: 9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a
                 policyVersion: lab
   /api/executions:
     post:
@@ -261,7 +277,10 @@ components:
       properties:
         decision:
           type: string
-          enum: [ALLOW, DENY, APPROVAL_REQUIRED]
+          enum: [ALLOW, DENY, APPROVAL_REQUIRED, ERROR]
+          description: |
+            Paired with the status: 200 ALLOW, 202 APPROVAL_REQUIRED, 403 DENY, 503 ERROR. Only
+            200 with ALLOW lets a step run (contract/decision/README.md).
         reason:
           type: [string, 'null']
           description: Why it was denied or is waiting; null for ALLOW.
@@ -274,6 +293,9 @@ components:
         policyVersion:
           type: string
           description: The policy bundle version that produced the decision.
+        policyDigest:
+          type: [string, 'null']
+          description: The digest of the policy bundle that produced it, when Prudence knows it.
     ExecutionReport:
       type: object
       required: [runtime, executionId, aiSystemId, pipeline, startedAt]

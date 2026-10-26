@@ -89,7 +89,7 @@ jobs:
         run: python -m compileall -q -x '/\.venv/' integrations
 
   contract:
-    name: Governance contract (test vectors)
+    name: Contracts (test vectors)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -116,3 +116,12 @@ jobs:
           python contract/governance/ct-model/ct_model.py entra contract/governance/templates/banking.yaml -o "$RUNNER_TEMP/entra.json"
           python contract/governance/ct-model/ct_model.py explain contract/governance/templates/banking.yaml \
             '{"roles":["ai-internal-audit"]}' | grep -qx "prudence: audit"
+
+      # Decision API: the vectors agree with the README and the OpenAPI schemas, and the Python
+      # gate every framework adapter uses agrees with the vectors (Prudence's side runs in
+      # DecisionApiContractTest, AOS's in its own CI).
+      - name: Check the Decision API vectors and prudence-core's gate
+        run: |
+          python -m pip install httpx==0.28.1
+          python contract/decision/reference/check_vectors.py
+          python -m unittest discover -s integrations/prudence-core/tests -v
