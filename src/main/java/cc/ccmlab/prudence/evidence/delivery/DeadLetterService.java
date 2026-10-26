@@ -49,7 +49,7 @@ public class DeadLetterService {
             .orElseThrow(
                 () -> new IllegalArgumentException("unknown delivery target: " + targetName));
     requeue(target, id);
-    log.info("dead-lettered {} record {} requeued by {}", targetName, id, actor);
+    log.info("dead-lettered {} record {} requeued", targetName, id);
     TransactionSynchronizationManager.registerSynchronization(
         new TransactionSynchronization() {
           @Override

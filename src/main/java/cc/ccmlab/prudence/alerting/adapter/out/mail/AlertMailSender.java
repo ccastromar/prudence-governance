@@ -29,7 +29,9 @@ public class AlertMailSender {
 
   public void send(List<String> to, String subject, String body) {
     if (mail == null) {
-      log.warn("ALERT (no SMTP configured, not emailed) to={} subject={}\n{}", to, subject, body);
+      // The alert itself is kept in the alert register. The log carries no addresses, subject or
+      // body: a subject can hold an incident's title, free text that may name people.
+      log.warn("ALERT not emailed (no SMTP configured) for {} recipient(s)", to.size());
       return;
     }
     if (to.isEmpty()) {

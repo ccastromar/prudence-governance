@@ -131,10 +131,9 @@ public class AiSystemService
         previous,
         saved.approvalStatus().name());
     log.info(
-        "governance review: {} system={} by={}",
+        "governance review: {} system={}",
         finalApproval ? "APPROVE" : "FIRST_APPROVAL",
-        id.value(),
-        reviewer);
+        id.value());
     return saved;
   }
 
@@ -150,7 +149,8 @@ public class AiSystemService
     system.reject();
     AiSystem saved = repository.save(system);
     recordReview(id.value(), "REJECT", reviewer, reason, previous, saved.approvalStatus().name());
-    log.info("governance review: REJECT system={} by={} reason={}", id.value(), reviewer, reason);
+    // Who and why stay in the review record (and, pseudonymised, in Ernest), not in the logs.
+    log.info("governance review: REJECT system={}", id.value());
     return saved;
   }
 
@@ -165,7 +165,7 @@ public class AiSystemService
     AiSystem saved = repository.save(system);
     String action = finalRenewal ? "RENEW" : "FIRST_RENEWAL_APPROVAL";
     recordReview(id.value(), action, reviewer, null, "APPROVED", "APPROVED");
-    log.info("governance review: {} system={} by={}", action, id.value(), reviewer);
+    log.info("governance review: {} system={}", action, id.value());
     return saved;
   }
 
@@ -179,7 +179,7 @@ public class AiSystemService
     system.suspend();
     AiSystem saved = repository.save(system);
     recordReview(id.value(), "SUSPEND", actor, reason, previous, saved.approvalStatus().name());
-    log.info("governance review: SUSPEND system={} by={} reason={}", id.value(), actor, reason);
+    log.info("governance review: SUSPEND system={}", id.value());
     return saved;
   }
 
