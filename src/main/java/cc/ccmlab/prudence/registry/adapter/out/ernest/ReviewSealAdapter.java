@@ -1,6 +1,7 @@
 package cc.ccmlab.prudence.registry.adapter.out.ernest;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
@@ -30,9 +31,14 @@ public class ReviewSealAdapter implements ReviewSealPort {
   private final RestClient ernest;
   private final ErnestSealer sealer;
   private final boolean enabled;
+  private final EvidencePseudonyms pseudonyms;
   private volatile boolean modelEnsured = false;
 
-  public ReviewSealAdapter(IntegrationProperties props, ObservationRegistry observations) {
+  public ReviewSealAdapter(
+      IntegrationProperties props,
+      ObservationRegistry observations,
+      EvidencePseudonyms pseudonyms) {
+    this.pseudonyms = pseudonyms;
     this.ernest = ErnestHttp.writeClient(props, observations);
 
     String cscUrl = props.qtsp() != null ? props.qtsp().cscUrl() : null;
@@ -49,7 +55,8 @@ public class ReviewSealAdapter implements ReviewSealPort {
     Map<String, Object> content = new LinkedHashMap<>();
     content.put("aiSystemId", e.aiSystemId());
     content.put("action", e.action());
-    content.put("reviewer", e.reviewer());
+    // Who reviewed, as a pseudonym: Ernest is append-only and readable beyond governance.
+    content.put("reviewerPseudonym", pseudonyms.of(e.reviewer()));
     content.put("reason", e.reason());
     content.put("at", e.at());
     content.put("previousStatus", e.previousStatus());

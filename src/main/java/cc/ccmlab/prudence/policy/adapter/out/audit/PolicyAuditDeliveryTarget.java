@@ -1,6 +1,7 @@
 package cc.ccmlab.prudence.policy.adapter.out.audit;
 
 import cc.ccmlab.prudence.config.IntegrationProperties;
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestRecordWriter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestSealer;
@@ -32,13 +33,16 @@ public class PolicyAuditDeliveryTarget implements DeliveryTarget<PolicyAuditEnti
   private final PolicyAuditRepository repository;
   private final RestClient client;
   private final ErnestSealer sealer;
+  private final EvidencePseudonyms pseudonyms;
   private volatile boolean ensured;
 
   public PolicyAuditDeliveryTarget(
       PolicyAuditRepository repository,
       IntegrationProperties props,
-      ObservationRegistry observations) {
+      ObservationRegistry observations,
+      EvidencePseudonyms pseudonyms) {
     this.repository = repository;
+    this.pseudonyms = pseudonyms;
     this.client = ErnestHttp.writeClient(props, observations);
     String url = props.qtsp() == null ? null : props.qtsp().cscUrl();
     this.sealer = url == null || url.isBlank() ? null : new ErnestSealer(url);
@@ -82,7 +86,7 @@ public class PolicyAuditDeliveryTarget implements DeliveryTarget<PolicyAuditEnti
     metadata.put("stage", "policy_administration");
     metadata.put("aggregateId", event.getAggregateId());
     metadata.put("action", event.getEventType());
-    metadata.put("actor", event.getActor());
+    metadata.put("actorPseudonym", pseudonyms.of(event.getActor()));
     metadata.put("occurredAt", event.getOccurredAt());
     metadata.put("details", event.getDetailsJson());
     String hash = ErnestSealer.sha256Canonical(metadata);

@@ -71,6 +71,8 @@ echo "$ERNEST_URL" > "$STATE/ernest-url"
 opa run --server --watch --addr 127.0.0.1:18181 "$STATE/policy" >"$STATE/opa.log" 2>&1 &
 
 export SPRING_PROFILES_ACTIVE=""
+# People in evidence are keyed pseudonyms; a throwaway key for this local stack only.
+export PRUDENCE_EVIDENCE_PSEUDONYM_KEY="${PRUDENCE_EVIDENCE_PSEUDONYM_KEY:-local-stack-only-pseudonym-key-0123456789}"
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="$ISSUER"
 # The audience the production start check requires; provision-runtime.py adds it to each runtime.
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES="${PRUDENCE_OIDC_AUDIENCE:-prudence-api}"

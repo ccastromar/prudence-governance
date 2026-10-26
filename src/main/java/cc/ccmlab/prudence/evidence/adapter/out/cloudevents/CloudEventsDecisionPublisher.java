@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.cloudevents;
 
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport.CloudEvent;
 import cc.ccmlab.prudence.evidence.delivery.DecisionPublisher;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
@@ -24,9 +25,12 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
   static final String TYPE = "chestertown.prudence.policy.decision.v1";
 
   private final CloudEventsTransport transport;
+  private final EvidencePseudonyms pseudonyms;
 
-  public CloudEventsDecisionPublisher(CloudEventsTransport transport) {
+  public CloudEventsDecisionPublisher(
+      CloudEventsTransport transport, EvidencePseudonyms pseudonyms) {
     this.transport = transport;
+    this.pseudonyms = pseudonyms;
   }
 
   @Override
@@ -46,7 +50,7 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
         items.stream().map(i -> event(i.decisionId(), i.context(), i.decision())).toList());
   }
 
-  static CloudEvent event(String decisionId, DecisionContext ctx, PolicyDecision decision) {
+  CloudEvent event(String decisionId, DecisionContext ctx, PolicyDecision decision) {
     Map<String, Object> aiSystem = new LinkedHashMap<>();
     aiSystem.put("id", ctx.aiSystemId());
     if (ctx.aiSystemName() != null) aiSystem.put("name", ctx.aiSystemName());
@@ -81,7 +85,7 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("aiSystem", aiSystem);
     data.put("decision", outcome);
-    data.put("subjectHash", sha256(ctx.subject()));
+    data.put("subjectHash", pseudonyms.of(ctx.subject()));
     if (ctx.correlationId() != null) data.put("correlationId", ctx.correlationId());
     if (ctx.causationId() != null) data.put("causationId", ctx.causationId());
     return new CloudEvent(decisionId, TYPE, ctx.aiSystemId(), Instant.now(), data);

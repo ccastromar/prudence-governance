@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import cc.ccmlab.prudence.attestation.adapter.out.ernest.ErnestAttestationAdapter;
 import cc.ccmlab.prudence.config.IntegrationProperties;
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestEvidenceAdapter;
 import cc.ccmlab.prudence.evidence.adapter.out.ernest.ErnestHttp;
 import cc.ccmlab.prudence.evidence.delivery.DecisionPublisher;
@@ -43,6 +44,8 @@ class ErnestEvidenceContractTest {
 
   private static final ObjectMapper JSON = new ObjectMapper();
   private static final String KEY = "contract-key";
+  private static final EvidencePseudonyms PSEUDONYMS =
+      EvidencePseudonyms.withKey("contract-pseudonym-key-0123456789abcdef");
 
   private HttpServer server;
   private List<Map<String, Object>> script;
@@ -86,7 +89,7 @@ class ErnestEvidenceContractTest {
 
     // Governance reviews: registered once, recorded, retried, conflicting, and from a fresh
     // instance that finds the register already there.
-    var reviews = new ReviewSealAdapter(props, observations);
+    var reviews = new ReviewSealAdapter(props, observations, PSEUDONYMS);
     var review = review("rev-1", null);
     // With batching (as deployed) Ernest accepts a record before chaining it: no block yet.
     assertNull(reviews.seal(review).blockIndex());
@@ -95,7 +98,10 @@ class ErnestEvidenceContractTest {
         assertThrows(
             RestClientResponseException.class, () -> reviews.seal(review("rev-1", "changed")));
     assertEquals(DeliveryFailure.PERMANENT, ErnestHttp.classify(conflict));
-    assertNull(new ReviewSealAdapter(props, observations).seal(review("rev-2", null)).blockIndex());
+    assertNull(
+        new ReviewSealAdapter(props, observations, PSEUDONYMS)
+            .seal(review("rev-2", null))
+            .blockIndex());
 
     // PDP decisions, in one batch.
     var decisions = new ErnestEvidenceAdapter(props, observations);
@@ -139,7 +145,7 @@ class ErnestEvidenceContractTest {
     play("interactions-events.json");
     var observations = ObservationRegistry.NOOP;
 
-    var reviews = new ReviewSealAdapter(props, observations);
+    var reviews = new ReviewSealAdapter(props, observations, PSEUDONYMS);
     var review = review("rev-1", null);
     assertEquals(2L, reviews.seal(review).blockIndex());
     assertEquals(2L, reviews.seal(review).blockIndex(), "a retry is the same record");
@@ -148,7 +154,10 @@ class ErnestEvidenceContractTest {
             RestClientResponseException.class, () -> reviews.seal(review("rev-1", "changed")));
     assertEquals(DeliveryFailure.PERMANENT, ErnestHttp.classify(conflict));
     assertEquals(
-        3L, new ReviewSealAdapter(props, observations).seal(review("rev-2", null)).blockIndex());
+        3L,
+        new ReviewSealAdapter(props, observations, PSEUDONYMS)
+            .seal(review("rev-2", null))
+            .blockIndex());
 
     var outcomes =
         new ErnestEvidenceAdapter(props, observations)
@@ -193,10 +202,13 @@ class ErnestEvidenceContractTest {
     play("interactions-unbatched.json");
     var observations = ObservationRegistry.NOOP;
 
-    var reviews = new ReviewSealAdapter(props, observations);
+    var reviews = new ReviewSealAdapter(props, observations, PSEUDONYMS);
     assertEquals(2L, reviews.seal(review("rev-1", null)).blockIndex());
     assertEquals(
-        3L, new ReviewSealAdapter(props, observations).seal(review("rev-2", null)).blockIndex());
+        3L,
+        new ReviewSealAdapter(props, observations, PSEUDONYMS)
+            .seal(review("rev-2", null))
+            .blockIndex());
 
     var outcomes =
         new ErnestEvidenceAdapter(props, observations)
@@ -253,6 +265,8 @@ class ErnestEvidenceContractTest {
         problems.add(id + ": expected " + expected + ", Prudence sent " + call);
       if (!KEY.equals(exchange.getRequestHeaders().getFirst("X-Ernest-Api-Key")))
         problems.add(id + ": no X-Ernest-Api-Key");
+      // People leave Prudence only as pseudonyms (EvidencePseudonyms): never the reviewer's name.
+      if (body.contains("carol")) problems.add(id + ": a reviewer's name leaves Prudence");
       if (request.containsKey("body")) {
         Object sent = body.isBlank() ? null : JSON.readValue(body, Object.class);
         var diff = new ArrayList<String>();

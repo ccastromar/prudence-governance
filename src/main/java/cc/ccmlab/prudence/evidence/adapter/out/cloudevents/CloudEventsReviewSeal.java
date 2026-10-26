@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.evidence.adapter.out.cloudevents;
 
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.adapter.out.cloudevents.CloudEventsTransport.CloudEvent;
 import cc.ccmlab.prudence.registry.application.port.out.ReviewSealPort;
 import cc.ccmlab.prudence.registry.domain.ReviewEvent;
@@ -18,9 +19,11 @@ public class CloudEventsReviewSeal implements ReviewSealPort {
   static final String TYPE = "chestertown.prudence.review.v1";
 
   private final CloudEventsTransport transport;
+  private final EvidencePseudonyms pseudonyms;
 
-  public CloudEventsReviewSeal(CloudEventsTransport transport) {
+  public CloudEventsReviewSeal(CloudEventsTransport transport, EvidencePseudonyms pseudonyms) {
     this.transport = transport;
+    this.pseudonyms = pseudonyms;
   }
 
   @Override
@@ -29,7 +32,7 @@ public class CloudEventsReviewSeal implements ReviewSealPort {
     data.put("reviewId", event.id());
     data.put("aiSystem", Map.of("id", event.aiSystemId(), "systemOfRecord", "prudence"));
     data.put("action", event.action());
-    data.put("reviewerHash", CloudEventsDecisionPublisher.sha256(event.reviewer()));
+    data.put("reviewerHash", pseudonyms.of(event.reviewer()));
     if (event.reason() != null) data.put("reason", event.reason());
     data.put("at", event.at());
     data.put("previousStatus", event.previousStatus());

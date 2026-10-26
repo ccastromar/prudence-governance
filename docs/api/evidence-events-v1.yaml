@@ -22,7 +22,9 @@ info:
     it does not have. Ernest is the sink that adds proofs, anchoring and read-back.
 
     **What never travels.** Prompts, inputs, outputs and tool payloads. People appear only as
-    SHA-256 hashes (`subjectHash`, `reviewerHash`).
+    keyed pseudonyms (`subjectHash`, `reviewerHash`, `actorPseudonym` in record metadata):
+    HMAC-SHA256 of their identity under the installation's pseudonym key, so a reader of the store
+    cannot confirm a guess of who it was. Prudence, which holds the key, can.
 
     **Compatibility.** v1 only grows by adding optional fields. Consumers must ignore fields
     they do not know. A breaking change gets a new type (`….v2`), sent alongside v1 for a
@@ -239,7 +241,7 @@ components:
             modelHash: { type: [string, 'null'] }
         subjectHash:
           type: string
-          description: SHA-256 (hex) of the workload identity that asked.
+          description: Keyed pseudonym (hex HMAC-SHA256 under the installation's pseudonym key) of the workload identity that asked.
         correlationId: { type: string, description: Ties the events of one governed flow together. }
         causationId: { type: string, description: The event that caused this one. }
 
@@ -252,7 +254,7 @@ components:
         action:
           type: string
           description: APPROVE or FIRST_APPROVAL (final or first of two sign-offs), RENEW or FIRST_RENEWAL_APPROVAL (periodic renewal), REJECT. New values may appear.
-        reviewerHash: { type: string, description: SHA-256 (hex) of the reviewer's identity. }
+        reviewerHash: { type: string, description: "Keyed pseudonym (hex HMAC-SHA256 under the installation's pseudonym key) of the reviewer's identity." }
         reason: { type: string }
         at: { type: string, format: date-time }
         previousStatus: { type: string }

@@ -27,6 +27,12 @@ conformity.
 - **Evidence contract with Ernest.** `contract/ernest/` lists what Prudence sends to Ernest and
   the fields it reads back; Prudence's adapters run it against a stub and Ernest's backend
   replays it against itself, with batching on as deployed.
+- **People in evidence are keyed pseudonyms.** Reviewers, and the actors of incident and
+  policy-administration records, leave Prudence only as HMAC-SHA256 of their identity under the
+  installation's pseudonym key (`PRUDENCE_EVIDENCE_PSEUDONYM_KEY` or `_KEY_FILE`, at least 32
+  bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
+  store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
+  its own records.
 - **Decision events contract.** `contract/decision-events/` pins the Kafka record each PDP
   decision becomes (key, headers, body) and what Ernest's event-ingestor makes of it
   (deduplication id, `policy_decision`, the system of record).

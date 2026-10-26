@@ -1,5 +1,6 @@
 package cc.ccmlab.prudence.incident.adapter.out.ernest;
 
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.evidence.delivery.Delivery;
 import cc.ccmlab.prudence.evidence.delivery.DeliveryTarget;
 import cc.ccmlab.prudence.evidence.delivery.GovernanceRecordWriter;
@@ -22,11 +23,15 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
 
   private final IncidentEventJpaRepository events;
   private final GovernanceRecordWriter ernest;
+  private final EvidencePseudonyms pseudonyms;
 
   public IncidentEventDeliveryTarget(
-      IncidentEventJpaRepository events, GovernanceRecordWriter ernest) {
+      IncidentEventJpaRepository events,
+      GovernanceRecordWriter ernest,
+      EvidencePseudonyms pseudonyms) {
     this.events = events;
     this.ernest = ernest;
+    this.pseudonyms = pseudonyms;
   }
 
   @Override
@@ -80,7 +85,7 @@ public class IncidentEventDeliveryTarget implements DeliveryTarget<IncidentEvent
     content.put("incidentId", e.getIncidentId());
     content.put("aiSystemId", e.getAiSystemId());
     content.put("type", e.getType());
-    content.put("actor", e.getActor());
+    content.put("actorPseudonym", pseudonyms.of(e.getActor()));
     content.put("at", e.getAt());
     content.put("details", e.getDetails());
     Map<String, Object> metadata = new LinkedHashMap<>(content);

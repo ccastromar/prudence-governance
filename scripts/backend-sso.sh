@@ -37,6 +37,8 @@ if [ -x /usr/libexec/java_home ]; then
 fi
 
 export SPRING_PROFILES_ACTIVE=""
+# People in evidence are keyed pseudonyms; a throwaway key for this local stack only.
+export PRUDENCE_EVIDENCE_PSEUDONYM_KEY="${PRUDENCE_EVIDENCE_PSEUDONYM_KEY:-local-stack-only-pseudonym-key-0123456789}"
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="$ISSUER"
 # Access tokens of the test realm carry this audience (prudence-spa and pdp-client mappers).
 export SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES="${PRUDENCE_OIDC_AUDIENCE:-prudence-api}"

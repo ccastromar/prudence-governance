@@ -88,6 +88,12 @@ prudence:
     max-attempts: ${PRUDENCE_EVIDENCE_MAX_ATTEMPTS:20}
     # Undelivered evidence older than this makes the system AMBER in posture.
     overdue-after-minutes: ${PRUDENCE_EVIDENCE_OVERDUE_AFTER_MINUTES:15}
+    # People (reviewers, incident and policy actors) leave Prudence's evidence only as keyed
+    # pseudonyms, HMAC-SHA256 under this key (EvidencePseudonyms): the key itself, or a file
+    # holding it (a vault or container secret). At least 32 bytes; required outside dev/test.
+    # Keep it: the same person must keep the same pseudonym.
+    pseudonym-key: ${PRUDENCE_EVIDENCE_PSEUDONYM_KEY:}
+    pseudonym-key-file: ${PRUDENCE_EVIDENCE_PSEUDONYM_KEY_FILE:}
   authzen:
     # MCP gateways ask about tool calls (`resource: {type: tool, id: <name>}`). Map each tool to
     # the AI system it acts for; an unmapped tool is refused. Example:

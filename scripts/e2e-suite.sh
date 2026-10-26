@@ -171,6 +171,7 @@ if [ -z "$jar" ]; then
 fi
 start_prudence() {
   SPRING_PROFILES_ACTIVE="" SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI="$ISSUER" \
+  PRUDENCE_EVIDENCE_PSEUDONYM_KEY=e2e-suite-only-pseudonym-key-0123456789abcdef \
   SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_AUDIENCES=prudence-api \
   PRUDENCE_IDENTITY_ROLE_MAPPING=prudence-reader=reader,prudence-author=author,prudence-system-approver=system-approver,prudence-policy-reviewer=policy-reviewer,prudence-admin=admin \
   PRUDENCE_DB_URL="jdbc:postgresql://127.0.0.1:5432/$PG_DB" PRUDENCE_DB_USER=$PG_DB PRUDENCE_DB_PASSWORD=$PG_PASSWORD \
