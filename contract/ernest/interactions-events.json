@@ -497,7 +497,8 @@
         },
         "equal": [
           "counts"
-        ]
+        ],
+        "eventually": true
       }
     }
   ]

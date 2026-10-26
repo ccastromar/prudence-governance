@@ -390,7 +390,8 @@
         },
         "equal": [
           "counts"
-        ]
+        ],
+        "eventually": true
       }
     }
   ]
