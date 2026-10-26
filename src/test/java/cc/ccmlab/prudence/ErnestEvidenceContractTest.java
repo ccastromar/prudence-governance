@@ -132,7 +132,60 @@ class ErnestEvidenceContractTest {
     assertEquals(script.size(), next, "every interaction was used");
   }
 
-  /// Batching off (Ernest's default): blocks at once, no event proofs (attestations are
+  /// Ernest's default (EVIDENCE_BATCHING=events): every record through the event store, chained in
+  /// its own block before the write answers; retries are duplicates, conflicts are refused.
+  @Test
+  void withEventsTheDefault() throws IOException {
+    play("interactions-events.json");
+    var observations = ObservationRegistry.NOOP;
+
+    var reviews = new ReviewSealAdapter(props, observations);
+    var review = review("rev-1", null);
+    assertEquals(2L, reviews.seal(review).blockIndex());
+    assertEquals(2L, reviews.seal(review).blockIndex(), "a retry is the same record");
+    var conflict =
+        assertThrows(
+            RestClientResponseException.class, () -> reviews.seal(review("rev-1", "changed")));
+    assertEquals(DeliveryFailure.PERMANENT, ErnestHttp.classify(conflict));
+    assertEquals(
+        3L, new ReviewSealAdapter(props, observations).seal(review("rev-2", null)).blockIndex());
+
+    var outcomes =
+        new ErnestEvidenceAdapter(props, observations)
+            .publishDecisions(
+                List.of(
+                    new DecisionPublisher.Item(
+                        "dec-1", decision("dec-1"), new PolicyDecision.Allow()),
+                    new DecisionPublisher.Item(
+                        "dec-2",
+                        decision("dec-2"),
+                        new PolicyDecision.Deny("prohibited AI system"))));
+    outcomes.forEach(e -> assertNull(e, "every decision delivered"));
+
+    var attestations = new ErnestAttestationAdapter(props, observations);
+    String hash = "a".repeat(64);
+    assertEquals(
+        8L, attestations.seal("att-1", hash, Map.of("overallPosture", "GREEN")).blockIndex());
+    var confirmation = attestations.confirm("prudence-attestations", "att-1", hash);
+    assertTrue(
+        confirmation.reachable() && confirmation.present() && confirmation.chainValid(),
+        "attestation confirmed through its block proof: " + confirmation);
+    assertEquals(8L, confirmation.blockIndex());
+
+    var health = new ErnestEvidenceHealthAdapter(props, observations);
+    assertTrue(health.check().healthy());
+    assertEquals(
+        Set.of("sys-credit"), health.systemsWithEvidence(List.of("sys-credit", "sys-unused")));
+    assertTrue(health.hasEvidence("sys-credit"));
+    var scan = health.scan();
+    assertTrue(scan.complete());
+    assertEquals(Map.of("sys-credit", 1L), scan.counts());
+
+    assertEquals(List.of(), List.copyOf(problems));
+    assertEquals(script.size(), next, "every interaction was used");
+  }
+
+  /// Batching turned off on purpose: blocks at once, no event proofs (attestations are
   /// confirmed through the model's provenance), and no retry or conflict interactions, since
   /// Ernest does not deduplicate in this mode.
   @Test

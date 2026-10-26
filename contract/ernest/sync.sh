@@ -14,7 +14,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
 ROOT="${CHESTERTOWN_ROOT:-$(dirname "$REPO")}"
-FILES=(README.md interactions.json interactions-unbatched.json)
+FILES=(README.md interactions.json interactions-events.json interactions-unbatched.json)
 TARGET="ai-blockchain-provenance/backend/test/contracts/prudence-evidence"
 
 if [ -n "$(git -C "$REPO" status --porcelain -- "$HERE")" ]; then
