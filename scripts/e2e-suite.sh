@@ -15,7 +15,12 @@
 #
 # Needs the sibling checkouts aos-agentic-orchestration-system and ai-blockchain-provenance, and
 # go, node, mvn (JDK 25+), opa, mongosh, psql and Kafka (brew install kafka) on the PATH.
-# Not covered: the consoles (browser sign-in/sign-out), Docker images, a real LLM.
+# Observability: the apps send traces and metrics to scripts/otlp-sink (:14318), a local OTLP
+# receiver, and AOS logs JSON; the observability cases follow one allowed run from its log line
+# to its trace across AOS and Prudence, the correlation id into Ernest's evidence, and the
+# asynchronous hops (outbox, Kafka) as linked spans (contract/observability).
+# Not covered: the consoles (browser sign-in/sign-out), Docker images, a real LLM, the
+# collector/Tempo/Grafana themselves (compose.observability.yaml).
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -25,7 +30,7 @@ ERNEST="$REPO/../ai-blockchain-provenance"
 ISSUER="http://localhost:8081/realms/chestertown"
 TOKEN_URL="$ISSUER/protocol/openid-connect/token"
 P_PORT=18099 OPA_PORT=18181 E_PORT=13001 A_PORT=18080 K_PORT=19092 KC_PORT=19093
-MOCK_PORT=19000 LLM_PORT=19435 METRICS_PORT=19102
+MOCK_PORT=19000 LLM_PORT=19435 METRICS_PORT=19102 OTLP_PORT=14318
 PG_DB=prudence_e2e PG_PASSWORD=prudence-e2e MONGO_DB=ernest_e2e
 ERNEST_KEY=e2e-write-key
 STATE="$(mktemp -d "${TMPDIR:-/tmp}/chestertown-e2e.XXXXXX")"
@@ -82,7 +87,7 @@ for cmd in go node mvn opa mongosh curl python3; do command -v "$cmd" >/dev/null
 [ -x "$KAFKA_BIN/kafka-server-start" ] || die "Kafka not found (brew install kafka)"
 [ -d "$AOS/cmd/aos" ] || die "AOS checkout not found at $AOS"
 [ -d "$ERNEST/backend" ] || die "Ernest checkout not found at $ERNEST"
-for port in $P_PORT $OPA_PORT $E_PORT $A_PORT $K_PORT $KC_PORT $MOCK_PORT $LLM_PORT $METRICS_PORT; do
+for port in $P_PORT $OPA_PORT $E_PORT $A_PORT $K_PORT $KC_PORT $MOCK_PORT $LLM_PORT $METRICS_PORT $OTLP_PORT; do
   if lsof -nP -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then
     die "port $port is in use; this run needs it free (it never stops what it did not start)"
   fi
@@ -110,6 +115,17 @@ print(json.loads(base64.urlsafe_b64decode(s)).get("aud"))' 2>/dev/null || true)"
 case "$aud" in *prudence-api*) ;; *)
   die "realm chestertown is older than scripts/chestertown-realm.json (alice's token has no prudence-api audience); recreate the realm" ;;
 esac
+
+# ── observability: a local OTLP receiver every app exports to ──────────────────────────────────
+(cd "$HERE/otlp-sink" && go build -o "$STATE/otlp-sink" .)
+"$STATE/otlp-sink" -addr "127.0.0.1:$OTLP_PORT" -dir "$STATE/otlp" >"$STATE/otlp-sink.log" 2>&1 &
+started otlp-sink $!
+wait_http "http://127.0.0.1:$OTLP_PORT/health" 30 otlp-sink
+log "OTLP receiver :$OTLP_PORT"
+# AOS, Ernest's backend and its ingestor read the standard variables; Prudence its own below.
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://127.0.0.1:$OTLP_PORT"
+export OTEL_RESOURCE_ATTRIBUTES="deployment.environment.name=e2e" OTEL_METRIC_EXPORT_INTERVAL=5000
+export OTEL_BSP_SCHEDULE_DELAY=1000
 
 # ── infrastructure: Kafka, OPA ─────────────────────────────────────────────────────────────────
 start_kafka() {
@@ -179,6 +195,8 @@ start_prudence() {
   SPRING_MAIL_HOST=127.0.0.1 SPRING_MAIL_PORT=1025 MANAGEMENT_HEALTH_MAIL_ENABLED=false \
   PRUDENCE_ALERTS_GOVERNANCE_TO=governance@example.com PRUDENCE_ALERTS_OPERATIONS_TO=ops@example.com \
   PRUDENCE_CORS_ORIGINS=http://localhost:5200 PRUDENCE_CONSOLE_URL=http://localhost:5200 \
+  PRUDENCE_OTEL_ENABLED=true PRUDENCE_OTEL_ENDPOINT="http://127.0.0.1:$OTLP_PORT" PRUDENCE_TRACING_SAMPLING=1.0 \
+  MANAGEMENT_OTLP_METRICS_EXPORT_STEP=5s OTEL_DEPLOYMENT_ENVIRONMENT=e2e \
     java -jar "$jar" --server.port=$P_PORT --prudence.opa.base-url="http://127.0.0.1:$OPA_PORT" \
     --logging.level.root=WARN >>"$STATE/prudence.log" 2>&1 &
   started prudence $!
@@ -203,7 +221,7 @@ started mocks $!
 started llm $!
 log "AOS :$A_PORT"
 # Explicit empty values win over the AOS checkout's own .env (it is loaded but never overrides).
-(cd "$AOS" && AOS_WORKSPACE_ROOT="$AOS" APP_ENV=dev AOS_STATE_STORE=memory ALLOW_LOCAL_TOOLS=false \
+(cd "$AOS" && AOS_WORKSPACE_ROOT="$AOS" APP_ENV=dev LOG_FORMAT=json AOS_STATE_STORE=memory ALLOW_LOCAL_TOOLS=false \
   AOS_TOOL_INTERNAL_HOSTS=127.0.0.1 AOS_IAM_URL= QDRANT_URL= REDIS_ADDR= REDIS_PASSWORD= \
   AOS_MOCK_BASE_URL="http://127.0.0.1:$MOCK_PORT" AOS_CALLBACK_BASE_URL="http://127.0.0.1:$A_PORT" \
   AUDIT_LOG_PATH="$STATE/aos-audit.jsonl" \
@@ -228,6 +246,7 @@ ask() {  # ask MESSAGE → prints "status decision reason error" of the finished
   AOS_TOKEN="$(token aos-spa alice)"
   id="$(curl -s -X POST "http://127.0.0.1:$A_PORT/ask" -H "Authorization: Bearer $AOS_TOKEN" \
     -H 'Content-Type: application/json' -d "$body" | json 'd.get("id","")')"
+  echo "$id" >"$STATE/last-task"  # ask runs in a subshell: the observability cases read it here
   for _ in $(seq 1 40); do
     task="$(curl -s -H "Authorization: Bearer $AOS_TOKEN" "http://127.0.0.1:$A_PORT/task?id=$id")"
     echo "$task" | grep -qE '"status":"(completed|error|governance_blocked|timeout)"' && break
@@ -334,6 +353,7 @@ curl -sf -o /dev/null -X POST -H "Authorization: Bearer $(token prudence-spa bob
   -d '{"comment":"e2e"}' "http://127.0.0.1:$P_PORT/api/registry/systems/$SUPPORT/approve"
 r="$(ask "$SUPPORT_MSG")"
 record governance "support after approval → ALLOW, runs" "$(is "$r" "completed*")" "$r"
+ALLOWED_TASK="$(cat "$STATE/last-task")"
 
 # Evidence: the execution reaches Ernest over Kafka; Prudence sees the system green.
 has_executions() { [ "$(executions)" -ge "$1" ]; }
@@ -342,6 +362,55 @@ record evidence "AOS → Kafka → Ernest: execution recorded" $ok "executions=$
 green() { [ "$(posture "[s['status'] for s in d['systems'] if s['id']=='$SUPPORT'][0]")" = GREEN ]; }
 ok=false; wait_for 60 green && ok=true
 record evidence "Prudence posture: support system GREEN" $ok "$(posture "[s['detail'] for s in d['systems'] if s['id']=='$SUPPORT'][0]" | cut -c1-60)"
+
+# Observability (contract/observability): follow the allowed run from its log line to its trace,
+# its flow into Ernest's evidence, and its asynchronous hops as linked spans.
+SINK="http://127.0.0.1:$OTLP_PORT"
+# A log line about the run carries the task as correlation_id and the trace it belongs to.
+trace="$(python3 -I - "$STATE/aos.log" "$ALLOWED_TASK" <<'PY'
+import json, sys
+for raw in open(sys.argv[1], errors="replace"):
+    try:
+        line = json.loads(raw)
+    except ValueError:
+        continue
+    if line.get("correlation_id") == sys.argv[2] and line.get("trace_id"):
+        print(line["trace_id"]); break
+PY
+)"
+record observability "AOS log line → its trace (correlation_id, trace_id)" "$([ -n "$trace" ] && echo true || echo false)" "task=${ALLOWED_TASK:0:8} trace=${trace:0:12}"
+services() { curl -s "$SINK/spans?trace_id=$trace" | json '",".join(sorted({s["service"] for s in d}))'; }
+crosses() { [[ "$(services)" == *aos*prudence* ]]; }
+ok=false; [ -n "$trace" ] && wait_for 60 crosses && ok=true
+record observability "the trace crosses AOS → Prudence" $ok "services=$(services)"
+step() { [ "$(curl -s "$SINK/spans?trace_id=$trace&name=aos.step" | json 'len(d)')" -ge 1 ]; }
+ok=false; [ -n "$trace" ] && wait_for 30 step && ok=true
+record observability "the run and its steps are spans of it" $ok "aos.step spans=$(curl -s "$SINK/spans?trace_id=$trace&name=aos.step" | json 'len(d)')"
+# Asynchronous hops are new spans linked to the run's trace, never its children.
+linked() { curl -s "$SINK/spans?linked_trace_id=$trace" | json '",".join(sorted({s["name"] for s in d if s["trace_id"] != "'"$trace"'"}))'; }
+has_link() { [[ "$(linked)" == *"$1"* ]]; }
+for hop in aos.execution.report prudence.evidence.deliver ernest.kafka.process; do
+  ok=false; [ -n "$trace" ] && wait_for 60 has_link "$hop" && ok=true
+  record observability "async hop linked, not a child: $hop" $ok "$(linked | cut -c1-60)"
+done
+# The flow reaches Ernest: AOS's execution (source aos) and Prudence's decision (an inference,
+# source api/<system>) both carry the task.
+flow() {
+  mongosh --quiet "mongodb://127.0.0.1:27017/$MONGO_DB" --eval \
+    "db.evidence_events.distinct('source', {'data.metadata.correlationId': '$ALLOWED_TASK'}).sort().join(',')" 2>/dev/null
+}
+in_ernest() { [[ "$(flow)" == *aos* && "$(flow)" == *api/* ]]; }
+ok=false; wait_for 60 in_ernest && ok=true
+record observability "correlation_id in Ernest: AOS run and Prudence decision" $ok "sources=$(flow)"
+# Metrics: histograms with the objectives' buckets, from each app.
+bounds() { curl -s "$SINK/metrics?name=$1" | json "next((p['bounds'] for p in d if p['type']=='histogram' and $2), [])"; }
+has_bucket() { [[ "$(bounds "$1" "$2")" == *"$3"* ]]; }
+ok=false; wait_for 60 has_bucket prudence.decision.duration "p['attributes'].get('verdict')=='ALLOW'" 0.25 && ok=true
+record observability "Prudence: decision histogram with the 0.25 s bucket" $ok "$(bounds prudence.decision.duration "p['attributes'].get('verdict')=='ALLOW'" | cut -c1-50)"
+ok=false; wait_for 90 has_bucket ernest.evidence.chaining.delay True 900 && ok=true
+record observability "Ernest: chaining delay histogram" $ok "$(bounds ernest.evidence.chaining.delay True | cut -c1-50)"
+gate="$(curl -s "http://127.0.0.1:$A_PORT/metrics" | grep -c 'aos_gate_duration_seconds_bucket{verdict="ALLOW",le="0.25"}')"
+record observability "AOS: gate histogram with the 0.25 s bucket" "$([ "$gate" -ge 1 ] && echo true || echo false)" "series=$gate"
 
 # Kafka down: AOS still runs (evidence is asynchronous); the backlog arrives once Kafka is back.
 before="$(executions)"

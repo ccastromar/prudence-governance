@@ -4,7 +4,7 @@ How AOS, Prudence and Ernest describe what they do, so that one trace, one log q
 dashboard can follow a governed run across the three. It is a convention, not a library: each
 app instruments itself with OpenTelemetry and follows these names.
 
-Status: **agreed conventions; tracing and correlation (step 2), JSON logs (step 3) and domain metrics (step 4) implemented**. Section 9 says what each app does today.
+Status: **agreed conventions; steps 1 to 5 implemented** (section 10); objectives, dashboards and burn-rate alerts are pending. Section 9 says what each app does today.
 Objectives for the service-level indicators (section 8) are not set here: they are agreed with
 product and operations.
 
@@ -186,6 +186,13 @@ on F3 and F4. Until then, the availability and backlog alerts in the deployment 
 | Logs (section 5) | JSON by default outside development (`LOG_FORMAT`); a task's lines carry `correlation_id`, `trace_id`, `span_id`; `LOG_LEVEL` applied | JSON by default (`ChestertownLogFormat`), text in the `dev` profile; MDC trace, span and correlation; named events for delivery | JSON with `NODE_ENV=production` (`LOG_FORMAT`); active span's trace and `X-Correlation-Id` | JSON by default (`LOG_FORMAT`); failures `WARN`/`ERROR` with `error.type`; no trace on lines yet |
 | RED metrics | Own HTTP counters (`aos_http_*`), routes normalised | Yes (Micrometer `http.server.requests`, seconds) | Yes (`http.server.request.duration` over OTLP) | Ingestion counters |
 | Domain metrics (section 6) | Run, step and gate histograms; evidence shipped and backlog | Decision and policy evaluation histograms; delivery pipeline | Evidence received, chaining delay, proof duration | Ingestion and writer counters |
+
+**Checked end to end** by `scripts/e2e-suite.sh` (group `observability`), with every app
+exporting to `scripts/otlp-sink`: an AOS log line gives the run's `trace_id`; that trace holds
+AOS's and Prudence's spans; the execution report, Prudence's evidence delivery and Ernest's Kafka
+processing are new traces linked to it; Ernest holds the AOS run and the Prudence decision under
+the same `correlationId`; the decision, chaining and gate histograms have the buckets of section
+6. `compose.observability.yaml` runs the collector, Tempo, Prometheus and Grafana locally.
 
 AOS no longer derives a trace id from its task id: the task id is the correlation id, and trace
 context comes from the SDK (section 3).

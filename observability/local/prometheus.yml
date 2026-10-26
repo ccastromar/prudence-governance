@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # Prudence and Ernest push OTLP to the collector, which exposes it here.
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+  # AOS serves its own /metrics on the host; edit the port if yours is not 8080 (Prometheus does
+  # not expand environment variables here).
+  - job_name: aos
+    static_configs:
+      - targets: ["host.docker.internal:8080"]

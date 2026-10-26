@@ -60,6 +60,24 @@ the subject from the token; the JSON `subject` is ignored, so a caller cannot im
 different principal. A token without the
 `pdp.decide` scope (e.g. a human SSO token) gets 403; no token gets 401.
 
+## Observability, locally
+
+Two ways to see the suite's traces and metrics (contract/observability):
+
+- **Without Docker:** `go run ./scripts/otlp-sink -addr 127.0.0.1:4318 -dir /tmp/otlp` is a
+  minimal OTLP/HTTP receiver. It writes every span and metric point it receives to
+  `spans.jsonl` and `metrics.jsonl` and answers `GET /spans?trace_id=…`,
+  `/spans?linked_trace_id=…`, `/spans?name=…` and `/metrics?name=…`. Nothing is kept after it
+  stops.
+- **With Docker:** `docker compose -f compose.observability.yaml up -d` runs a collector, Tempo,
+  Prometheus and Grafana (http://localhost:3000) on localhost.
+
+Either way the apps send to `http://localhost:4318`: AOS and Ernest with
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, Prudence with `PRUDENCE_OTEL_ENABLED=true
+PRUDENCE_OTEL_ENDPOINT=http://localhost:4318` (and `PRUDENCE_TRACING_SAMPLING=1.0` to keep every
+trace). AOS logs JSON with `LOG_FORMAT=json`; each line about a task carries `correlation_id` and
+`trace_id`.
+
 ## Whole suite, end to end
 
 `./scripts/e2e-suite.sh` runs AOS, Prudence (secured) and Ernest together against the local
@@ -75,6 +93,11 @@ Keycloak and checks the loop and its failure modes, in about three minutes:
 - governance: the four MVP systems give AOS DENY / APPROVAL_REQUIRED / DENY / DENY; once
   approved in Prudence, the support lookup runs
 - evidence: the run reaches Ernest over Kafka and Prudence shows the system GREEN
+- observability: every app exports to `otlp-sink`; for the allowed run, an AOS log line gives its
+  `trace_id`, the trace crosses AOS and Prudence and holds the run's steps, the execution report,
+  Prudence's evidence delivery and Ernest's Kafka processing are new spans linked to it, Ernest
+  holds the AOS run and the Prudence decision under the same `correlationId`, and the decision,
+  chaining and gate histograms have the objectives' buckets
 - failure modes: with Kafka down AOS still runs and the evidence arrives once Kafka is back; with
   Ernest down Prudence reports it unhealthy, then healthy again; with Prudence down AOS fails
   closed
