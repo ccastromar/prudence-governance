@@ -38,7 +38,9 @@ services:
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --enable-feature=exemplar-storage
-    volumes: ["./observability/local/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    volumes:
+      - ./observability/local/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/rules:/etc/prometheus/rules:ro
     extra_hosts: ["host.docker.internal:host-gateway"]
     ports: ["127.0.0.1:9090:9090"]
 

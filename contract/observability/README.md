@@ -159,8 +159,10 @@ IP addresses only in access logs, under their retention.
 
 ## 8. Critical flows and their indicators
 
-Objectives, windows and owners are to be agreed; the indicators are what they will be measured
-on. Suggested window: 28 days, rolling.
+Objective: **99.5 %** of valid events good, for every indicator, over a **rolling 28-day window**
+(an error budget of 0.5 %: about 3 h 22 min of total outage, or 1 bad event in 200). Thresholds
+T: **250 ms** for admission latency, **15 minutes** for evidence freshness and proof readiness
+(posture's overdue threshold). Owners are still to be named.
 
 | Flow | Indicator (good events / valid events) | Measured from | Exclusions |
 | --- | --- | --- | --- |
@@ -172,8 +174,30 @@ on. Suggested window: 28 days, rolling.
 | | Proof readiness: events with a proof within T of acceptance / events accepted | `ernest.evidence.chaining.delay` | — |
 | **F4. Oversight on complete data**: drift and posture see every execution | Complete drift scans / drift scans | Prudence's drift checks (`complete`) | — |
 
-Alerting, once objectives exist: multi-window burn-rate alerts on F1 and F2; ticket-level alerts
-on F3 and F4. Until then, the availability and backlog alerts in the deployment stand in.
+How each indicator is computed in Prometheus (the error ratio is 1 − SLI; `observability/rules/slo.yml`):
+
+| Indicator | Error ratio over a window w |
+| --- | --- |
+| F1 availability | decisions with `verdict="ERROR"` / all decisions (`prudence_decision_duration_seconds_count`). Requests refused before deciding (400, 401, 403 without a decision) never reach it |
+| F1 latency | decisions with a verdict above 0.25 s / decisions with a verdict (`…_bucket{le="0.25"}`) |
+| F2 completeness | dead-lettered / delivered + dead-lettered (`prudence_delivery_records_total`) |
+| F2 freshness, F3 proof readiness | events chained after 900 s / events chained (`ernest_evidence_chaining_delay_seconds`). It starts when Ernest accepts the event: time waiting in Prudence's outbox is covered by `EvidenceDeliveryStuck`, not by this indicator |
+| F3 verifiability | chain checks not `success` / chain checks (`ernest_proof_duration_seconds_count{operation="verify"}`) |
+| F4 | not measured yet: drift scans export no metric |
+
+Alerting is multi-window, multi-burn-rate (an alert needs both windows burning, so it fires fast
+on a real burn and clears fast after it):
+
+| Severity | Burn rate | Windows | Budget spent when it fires |
+| --- | --- | --- | --- |
+| page (`critical`) | 14.4 | 1 h and 5 min | 2 % in an hour |
+| page (`critical`) | 6 | 6 h and 30 min | 5 % in six hours |
+| ticket (`warning`) | 1 | 3 days and 6 h | 10 % in three days |
+
+F1 and F2 page and ticket; F3 tickets only. The rules are in `observability/rules/slo.yml`
+(the local stack loads them; a deployment adds the file to its Prometheus rules). With little traffic a few failures are a large
+ratio: an alert also needs a minimum number of events in its long window (10 for F1 and F2,
+3 for F3).
 
 ## 9. Where each app is
 

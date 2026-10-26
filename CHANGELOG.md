@@ -33,6 +33,10 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **Service-level objectives for the suite: 99.5 % over 28 days** (contract/observability,
+  section 8), with admission latency under 250 ms and evidence chained within 15 minutes.
+  `observability/rules/slo.yml` records each indicator's error ratio and raises multi-window
+  burn-rate alerts: pages for admission and evidence (F1, F2), tickets for verifiability (F3).
 - **A decision keeps its caller's correlation id on its way to Ernest.** It was lost twice: the
   decision for a registered system rebuilt its context without it, and the evidence outbox put a
   new random id in its place. A decision in Ernest could not be found under the AOS task that

@@ -1,6 +1,11 @@
 global:
   scrape_interval: 15s
 
+# The suite's service-level objectives (99.5 % over 28 days) and their burn-rate alerts; with no
+# Alertmanager here they show in Prometheus's Alerts page.
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   # Prudence and Ernest push OTLP to the collector, which exposes it here.
   - job_name: otel-collector
