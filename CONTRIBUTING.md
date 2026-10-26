@@ -41,6 +41,11 @@ lists every contract and what checks it.
 - Tests with the change. Fail closed: when Prudence cannot decide, it must not allow.
 - No secrets, real personal data or local paths in code, fixtures or docs.
 
+## Conduct
+
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md); report problems to
+conduct@ccmlab.cc.
+
 ## Security
 
 Report vulnerabilities privately, as `SECURITY.md` describes, never in a public issue.
