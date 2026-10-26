@@ -67,6 +67,10 @@ conformity.
   and pages gated by the caller's functions.
 - **Integrations.** Python adapters for LangGraph and Pydantic AI; a guide to connect any
   orchestrator (`docs/integration/`).
+- **One baseline migration.** The data model ships as a single `V1__baseline.sql`, the 31
+  pre-release migrations folded into exactly the schema they built (tested catalog against
+  catalog on PostgreSQL). A database built by them is adopted at start, data included, and its
+  history becomes the baseline's; every migration now runs on a real PostgreSQL in CI.
 - **Operations.** Docker image and Compose file; production refuses to start without an issuer,
   an audience, database credentials, an Ernest key and CORS origins; local scripts without Docker;
   a whole-suite end-to-end test (`scripts/e2e-suite.sh`) and a load test.

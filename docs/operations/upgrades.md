@@ -44,7 +44,7 @@ on an app that already understands it:
 
 | App | Data | On upgrade | Rolling back |
 | --- | --- | --- | --- |
-| Prudence | PostgreSQL | Flyway applies the new migrations at start, forward only; Hibernate then validates the schema and refuses to start if it does not match | Restore the backup taken before: migrations have no down steps |
+| Prudence | PostgreSQL | Flyway applies the new migrations at start, forward only; Hibernate then validates the schema and refuses to start if it does not match. A database from before 0.1.0 is adopted first (logged as a warning) | Restore the backup taken before: migrations have no down steps |
 | Ernest | MongoDB | Evidence is append-only and never rewritten. Read models derived from the chain (indexes, statistics) are rebuilt when their version changes | The previous version reads the chain as it was; derived read models rebuild |
 | AOS | Audit journal, SQLite state | The journal is verified at start (a broken chain stops AOS); its record format is stable. The state store creates what it needs and has had no schema change yet | Restore the state backup if needed; the journal is kept as is |
 
@@ -61,6 +61,11 @@ on an app that already understands it:
 - `PostgresMigrationsTest` applies every Prudence migration to an empty PostgreSQL and validates
   the entities against the result, in CI. A migration is never edited once released; fix
   forward with a new one.
+- Release 0.1.0 starts from one migration, `V1__baseline.sql`: the 31 pre-release migrations
+  folded into the schema they built (`PreReleaseAdoptionTest` proves the catalogs identical; the
+  31 are kept in `src/test/resources/db/pre-release`). A database built before 0.1.0 is adopted
+  at start, with its data: its Flyway history becomes the baseline's (`PreReleaseAdoption`), and
+  any other history still fails closed.
 - The contract vectors run on both sides of every contract in CI; a contract change follows its
   README (sync, version).
 - Each release records its upgrade steps under **Upgrading** and its deprecations under
