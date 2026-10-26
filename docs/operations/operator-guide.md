@@ -170,7 +170,9 @@ Choices to make:
 | `isValid: false` | Ernest `GET /api/verify` | The chain does not verify: treat as an incident (section 8) |
 
 Metrics: AOS exposes `/metrics` and the event-ingestor its Prometheus port (`METRICS_PORT`); keep
-both off the public edge. Prudence exports OpenTelemetry when `PRUDENCE_OTEL_ENABLED=true`.
+both off the public edge. Prudence exports OpenTelemetry when `PRUDENCE_OTEL_ENABLED=true`. The
+names, fields, ids and indicators the three apps share are in
+[`contract/observability/`](../../contract/observability/README.md).
 
 ### Backups
 
