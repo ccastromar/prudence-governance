@@ -80,6 +80,8 @@ class DecisionApiContractTest {
       Map<String, Object> body =
           JSON.readValue(result.getResponse().getContentAsString(), Map.class);
       assertEquals(vector.get("decision"), body.get("decision"), outcome);
+      assertEquals(vector.get("reason"), body.get("reason"), outcome + ": reason");
+      assertEquals(vector.get("approver"), body.get("approver"), outcome + ": approver");
       assertTrue(
           body.get("decisionId") instanceof String id && !id.isBlank(), outcome + ": decisionId");
       assertEquals(List.of(), errors(body, schema("DecisionResponse"), "$"), outcome + ": schema");
@@ -134,7 +136,7 @@ class DecisionApiContractTest {
     return switch ((String) vector.get("outcome")) {
       case "allow" -> new PolicyDecision.Allow();
       case "approval_required" ->
-          new PolicyDecision.ApprovalRequired(reason, (String) vector.get("approver"));
+          new PolicyDecision.ApprovalRequired((String) vector.get("approver"), reason);
       case "deny" -> new PolicyDecision.Deny(reason);
       case "error" -> new PolicyDecision.Error(reason);
       default -> throw new IllegalArgumentException("unknown outcome " + vector.get("outcome"));
