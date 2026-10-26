@@ -350,7 +350,8 @@
           "counts": {
             "sys-credit": 4
           }
-        }
+        },
+        "eventually": true
       }
     },
     {
@@ -368,7 +369,8 @@
         },
         "equal": [
           "isValid"
-        ]
+        ],
+        "eventually": true
       }
     },
     {
