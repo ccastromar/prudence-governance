@@ -81,7 +81,9 @@ trace). AOS logs JSON with `LOG_FORMAT=json`; each line about a task carries `co
 ## Whole suite, end to end
 
 `./scripts/e2e-suite.sh` runs AOS, Prudence (secured) and Ernest together against the local
-Keycloak and checks the loop and its failure modes, in about three minutes:
+Keycloak and checks the loop and its failure modes, in about three minutes. Kafka comes from
+`KAFKA_HOME` (an unpacked Apache Kafka 4.x) or Homebrew. GitHub Actions runs it every night and on
+demand (`.github/workflows/e2e.yml`, with the sibling repositories' `main` or a chosen ref):
 
 - identity: the token carries the `prudence-api` audience and suite roles; no token → 401; the
   auditor cannot register a system (403); Prudence (`/api/me`) and Ernest (`whoami`) resolve the

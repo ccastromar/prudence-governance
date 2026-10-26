@@ -14,7 +14,8 @@
 # :8081 with the realm chestertown (scripts/chestertown-realm.json); test credentials only.
 #
 # Needs the sibling checkouts aos-agentic-orchestration-system and ai-blockchain-provenance, and
-# go, node, mvn (JDK 25+), opa, mongosh, psql and Kafka (brew install kafka) on the PATH.
+# go, node, mvn (JDK 25+), opa, mongosh, psql and Kafka: KAFKA_HOME (an unpacked Apache Kafka
+# 4.x release), or `brew install kafka`. CI runs it nightly (.github/workflows/e2e.yml).
 # Observability: the apps send traces and metrics to scripts/otlp-sink (:14318), a local OTLP
 # receiver, and AOS logs JSON; the observability cases follow one allowed run from its log line
 # to its trace across AOS and Prudence, the correlation id into Ernest's evidence, and the
@@ -35,7 +36,9 @@ PG_DB=prudence_e2e PG_PASSWORD=prudence-e2e MONGO_DB=ernest_e2e
 ERNEST_KEY=e2e-write-key
 STATE="$(mktemp -d "${TMPDIR:-/tmp}/chestertown-e2e.XXXXXX")"
 PSQL="$(command -v psql || echo "$(pg_config --bindir 2>/dev/null)/psql")"
-KAFKA_BIN="$(brew --prefix kafka 2>/dev/null)/bin"
+# Apache's layout (bin/*.sh, config/server.properties), which Homebrew keeps under libexec.
+KAFKA_HOME="${KAFKA_HOME:-$(brew --prefix kafka 2>/dev/null)/libexec}"
+kafka() { local tool="$1"; shift; "$KAFKA_HOME/bin/$tool.sh" "$@"; }
 
 # ── housekeeping ───────────────────────────────────────────────────────────────────────────────
 mkdir -p "$STATE/pids"
@@ -84,7 +87,7 @@ token() {  # token CLIENT USER
 
 # ── preflight ──────────────────────────────────────────────────────────────────────────────────
 for cmd in go node mvn opa mongosh curl python3; do command -v "$cmd" >/dev/null || die "$cmd not found"; done
-[ -x "$KAFKA_BIN/kafka-server-start" ] || die "Kafka not found (brew install kafka)"
+[ -x "$KAFKA_HOME/bin/kafka-server-start.sh" ] || die "Kafka not found (set KAFKA_HOME, or brew install kafka)"
 [ -d "$AOS/cmd/aos" ] || die "AOS checkout not found at $AOS"
 [ -d "$ERNEST/backend" ] || die "Ernest checkout not found at $ERNEST"
 for port in $P_PORT $OPA_PORT $E_PORT $A_PORT $K_PORT $KC_PORT $MOCK_PORT $LLM_PORT $METRICS_PORT $OTLP_PORT; do
@@ -129,10 +132,10 @@ export OTEL_BSP_SCHEDULE_DELAY=1000
 
 # ── infrastructure: Kafka, OPA ─────────────────────────────────────────────────────────────────
 start_kafka() {
-  "$KAFKA_BIN/kafka-server-start" "$STATE/kafka.properties" >>"$STATE/kafka.log" 2>&1 &
+  kafka kafka-server-start "$STATE/kafka.properties" >>"$STATE/kafka.log" 2>&1 &
   started kafka $!
   for _ in $(seq 1 60); do
-    "$KAFKA_BIN/kafka-topics" --bootstrap-server 127.0.0.1:$K_PORT --list >/dev/null 2>&1 && return 0; sleep 1
+    kafka kafka-topics --bootstrap-server 127.0.0.1:$K_PORT --list >/dev/null 2>&1 && return 0; sleep 1
   done
   die "Kafka did not come up"
 }
@@ -140,12 +143,12 @@ sed -e "s|^log.dirs=.*|log.dirs=$STATE/kafka-data|" \
     -e "s|^listeners=.*|listeners=PLAINTEXT://127.0.0.1:$K_PORT,CONTROLLER://127.0.0.1:$KC_PORT|" \
     -e "s|^advertised.listeners=.*|advertised.listeners=PLAINTEXT://127.0.0.1:$K_PORT,CONTROLLER://127.0.0.1:$KC_PORT|" \
     -e "s|^controller.quorum.bootstrap.servers=.*|controller.quorum.bootstrap.servers=127.0.0.1:$KC_PORT|" \
-    "$(brew --prefix)/etc/kafka/server.properties" >"$STATE/kafka.properties"
-"$KAFKA_BIN/kafka-storage" format --standalone -t "$("$KAFKA_BIN/kafka-storage" random-uuid)" \
+    "$KAFKA_HOME/config/server.properties" >"$STATE/kafka.properties"
+kafka kafka-storage format --standalone -t "$(kafka kafka-storage random-uuid)" \
   -c "$STATE/kafka.properties" >/dev/null
 log "Kafka :$K_PORT"
 start_kafka
-"$KAFKA_BIN/kafka-topics" --bootstrap-server 127.0.0.1:$K_PORT --create --topic aos.executions \
+kafka kafka-topics --bootstrap-server 127.0.0.1:$K_PORT --create --topic aos.executions \
   --partitions 2 --replication-factor 1 >/dev/null
 
 log "OPA :$OPA_PORT"

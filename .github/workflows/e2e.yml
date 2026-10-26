@@ -1,0 +1,138 @@
+name: Suite e2e
+
+# The whole Chestertown suite end to end (scripts/e2e-suite.sh): AOS, Prudence and Ernest from
+# their main branches, with Keycloak, Kafka, OPA, PostgreSQL and MongoDB, through identity,
+# governance verdicts, evidence, failure modes and observability. Too heavy for every pull
+# request: nightly, and on demand with other refs of the sibling repositories.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      aos_ref:
+        description: AOS ref (branch, tag or commit)
+        default: main
+      ernest_ref:
+        description: Ernest ref (branch, tag or commit)
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-suite
+  cancel-in-progress: false
+
+jobs:
+  suite:
+    name: AOS · Prudence · Ernest
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: e2e-ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # The script's psql calls (database prudence_e2e, created and dropped by it).
+      PGUSER: postgres
+      PGPASSWORD: e2e-ci
+      # The versions the suite is run with locally (scripts/README.md).
+      KAFKA_VERSION: 4.3.1
+      KEYCLOAK_VERSION: 26.8.1
+      OPA_VERSION: 1.21.2
+    steps:
+      - name: Checkout Prudence
+        uses: actions/checkout@v4
+        with:
+          path: prudence-governance
+
+      # The script finds the other apps next to this repository, as on a developer's disk.
+      - name: Checkout AOS
+        uses: actions/checkout@v4
+        with:
+          repository: ccastromar/aos-agentic-orchestration-system
+          ref: ${{ inputs.aos_ref || 'main' }}
+          path: aos-agentic-orchestration-system
+
+      - name: Checkout Ernest
+        uses: actions/checkout@v4
+        with:
+          repository: ccastromar/ai-blockchain-provenance
+          ref: ${{ inputs.ernest_ref || 'main' }}
+          path: ai-blockchain-provenance
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: prudence-governance/pom.xml
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: aos-agentic-orchestration-system/go.mod
+          cache-dependency-path: |
+            aos-agentic-orchestration-system/go.sum
+            ai-blockchain-provenance/event-ingestor/go.sum
+            prudence-governance/scripts/otlp-sink/go.sum
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Tools (OPA, mongosh, Kafka, Keycloak)
+        run: |
+          curl -fsSL -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_linux_amd64_static"
+          chmod +x /usr/local/bin/opa
+          npm install -g mongosh
+          curl -fsSL "https://archive.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.13-${KAFKA_VERSION}.tgz" | tar xz -C "$RUNNER_TEMP"
+          echo "KAFKA_HOME=$RUNNER_TEMP/kafka_2.13-${KAFKA_VERSION}" >> "$GITHUB_ENV"
+          curl -fsSL "https://github.com/keycloak/keycloak/releases/download/${KEYCLOAK_VERSION}/keycloak-${KEYCLOAK_VERSION}.tar.gz" | tar xz -C "$RUNNER_TEMP"
+          echo "KEYCLOAK_HOME=$RUNNER_TEMP/keycloak-${KEYCLOAK_VERSION}" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/e2e"
+
+      - name: Build Ernest's backend
+        working-directory: ai-blockchain-provenance
+        run: |
+          npx -y pnpm@11.7.0 install --frozen-lockfile --filter ernest-backend...
+          npx -y pnpm@11.7.0 --filter ernest-backend run build
+
+      - name: Build Prudence
+        working-directory: prudence-governance
+        run: mvn -B -ntp -DskipTests package
+
+      # The script starts and stops everything it needs (Keycloak included) on its own ports.
+      - name: Run the suite
+        env:
+          TMPDIR: ${{ runner.temp }}/e2e
+          KEEP_LOGS: "1"
+        run: prudence-governance/scripts/e2e-suite.sh
+
+      - name: Keep the logs of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-logs
+          path: ${{ runner.temp }}/e2e/
+          retention-days: 7
