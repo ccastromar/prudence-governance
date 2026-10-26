@@ -195,7 +195,9 @@ on a real burn and clears fast after it):
 | ticket (`warning`) | 1 | 3 days and 6 h | 10 % in three days |
 
 F1 and F2 page and ticket; F3 tickets only. The rules are in `observability/rules/slo.yml`
-(the local stack loads them; a deployment adds the file to its Prometheus rules). With little traffic a few failures are a large
+(the local stack loads them; a deployment adds the file to its Prometheus rules). The 6-hour and
+3-day error ratios are recorded every 2 minutes rather than at every evaluation: they change
+slowly and each one reads days of samples. With little traffic a few failures are a large
 ratio: an alert also needs a minimum number of events in its long window (10 for F1 and F2,
 3 for F3).
 

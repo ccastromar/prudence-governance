@@ -26,18 +26,6 @@ groups:
       - record: slo:events:increase1h
         labels: {slo: f1_availability}
         expr: sum(rate(prudence_decision_duration_seconds_count[1h])) * 3600
-      - record: slo:error_ratio:rate6h
-        labels: {slo: f1_availability}
-        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict="ERROR"}[6h]))) / (sum(rate(prudence_decision_duration_seconds_count[6h])))
-      - record: slo:events:increase6h
-        labels: {slo: f1_availability}
-        expr: sum(rate(prudence_decision_duration_seconds_count[6h])) * 21600
-      - record: slo:error_ratio:rate3d
-        labels: {slo: f1_availability}
-        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict="ERROR"}[3d]))) / (sum(rate(prudence_decision_duration_seconds_count[3d])))
-      - record: slo:events:increase3d
-        labels: {slo: f1_availability}
-        expr: sum(rate(prudence_decision_duration_seconds_count[3d])) * 259200
       - record: slo:error_ratio:rate5m
         labels: {slo: f1_latency}
         expr: (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[5m])) - sum(rate(prudence_decision_duration_seconds_bucket{verdict!="ERROR",le="0.25"}[5m]))) / (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[5m])))
@@ -56,18 +44,6 @@ groups:
       - record: slo:events:increase1h
         labels: {slo: f1_latency}
         expr: sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[1h])) * 3600
-      - record: slo:error_ratio:rate6h
-        labels: {slo: f1_latency}
-        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])) - sum(rate(prudence_decision_duration_seconds_bucket{verdict!="ERROR",le="0.25"}[6h]))) / (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])))
-      - record: slo:events:increase6h
-        labels: {slo: f1_latency}
-        expr: sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])) * 21600
-      - record: slo:error_ratio:rate3d
-        labels: {slo: f1_latency}
-        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])) - sum(rate(prudence_decision_duration_seconds_bucket{verdict!="ERROR",le="0.25"}[3d]))) / (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])))
-      - record: slo:events:increase3d
-        labels: {slo: f1_latency}
-        expr: sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])) * 259200
       - record: slo:error_ratio:rate5m
         labels: {slo: f2_completeness}
         expr: (sum(rate(prudence_delivery_records_total{outcome="dead"}[5m]))) / (sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[5m])))
@@ -86,18 +62,6 @@ groups:
       - record: slo:events:increase1h
         labels: {slo: f2_completeness}
         expr: sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[1h])) * 3600
-      - record: slo:error_ratio:rate6h
-        labels: {slo: f2_completeness}
-        expr: (sum(rate(prudence_delivery_records_total{outcome="dead"}[6h]))) / (sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[6h])))
-      - record: slo:events:increase6h
-        labels: {slo: f2_completeness}
-        expr: sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[6h])) * 21600
-      - record: slo:error_ratio:rate3d
-        labels: {slo: f2_completeness}
-        expr: (sum(rate(prudence_delivery_records_total{outcome="dead"}[3d]))) / (sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[3d])))
-      - record: slo:events:increase3d
-        labels: {slo: f2_completeness}
-        expr: sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[3d])) * 259200
       - record: slo:error_ratio:rate5m
         labels: {slo: f2_freshness}
         expr: (sum(rate(ernest_evidence_chaining_delay_seconds_count[5m])) - sum(rate(ernest_evidence_chaining_delay_seconds_bucket{le="900"}[5m]))) / (sum(rate(ernest_evidence_chaining_delay_seconds_count[5m])))
@@ -116,18 +80,6 @@ groups:
       - record: slo:events:increase1h
         labels: {slo: f2_freshness}
         expr: sum(rate(ernest_evidence_chaining_delay_seconds_count[1h])) * 3600
-      - record: slo:error_ratio:rate6h
-        labels: {slo: f2_freshness}
-        expr: (sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])) - sum(rate(ernest_evidence_chaining_delay_seconds_bucket{le="900"}[6h]))) / (sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])))
-      - record: slo:events:increase6h
-        labels: {slo: f2_freshness}
-        expr: sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])) * 21600
-      - record: slo:error_ratio:rate3d
-        labels: {slo: f2_freshness}
-        expr: (sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])) - sum(rate(ernest_evidence_chaining_delay_seconds_bucket{le="900"}[3d]))) / (sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])))
-      - record: slo:events:increase3d
-        labels: {slo: f2_freshness}
-        expr: sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])) * 259200
       - record: slo:error_ratio:rate5m
         labels: {slo: f3_verifiability}
         expr: (sum(rate(ernest_proof_duration_seconds_count{operation="verify",outcome!="success"}[5m]))) / (sum(rate(ernest_proof_duration_seconds_count{operation="verify"}[5m])))
@@ -146,6 +98,61 @@ groups:
       - record: slo:events:increase1h
         labels: {slo: f3_verifiability}
         expr: sum(rate(ernest_proof_duration_seconds_count{operation="verify"}[1h])) * 3600
+
+  # The 6-hour and 3-day windows change slowly and each evaluation reads days of samples: every
+  # 2 minutes is enough. Not 5 or more: an instant query sees a series only if its last sample is
+  # under 5 minutes old (Prometheus's lookback), and the alerts below would then flicker.
+  - name: slo-recording-long
+    interval: 2m
+    rules:
+      - record: slo:error_ratio:rate6h
+        labels: {slo: f1_availability}
+        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict="ERROR"}[6h]))) / (sum(rate(prudence_decision_duration_seconds_count[6h])))
+      - record: slo:events:increase6h
+        labels: {slo: f1_availability}
+        expr: sum(rate(prudence_decision_duration_seconds_count[6h])) * 21600
+      - record: slo:error_ratio:rate3d
+        labels: {slo: f1_availability}
+        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict="ERROR"}[3d]))) / (sum(rate(prudence_decision_duration_seconds_count[3d])))
+      - record: slo:events:increase3d
+        labels: {slo: f1_availability}
+        expr: sum(rate(prudence_decision_duration_seconds_count[3d])) * 259200
+      - record: slo:error_ratio:rate6h
+        labels: {slo: f1_latency}
+        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])) - sum(rate(prudence_decision_duration_seconds_bucket{verdict!="ERROR",le="0.25"}[6h]))) / (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])))
+      - record: slo:events:increase6h
+        labels: {slo: f1_latency}
+        expr: sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[6h])) * 21600
+      - record: slo:error_ratio:rate3d
+        labels: {slo: f1_latency}
+        expr: (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])) - sum(rate(prudence_decision_duration_seconds_bucket{verdict!="ERROR",le="0.25"}[3d]))) / (sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])))
+      - record: slo:events:increase3d
+        labels: {slo: f1_latency}
+        expr: sum(rate(prudence_decision_duration_seconds_count{verdict!="ERROR"}[3d])) * 259200
+      - record: slo:error_ratio:rate6h
+        labels: {slo: f2_completeness}
+        expr: (sum(rate(prudence_delivery_records_total{outcome="dead"}[6h]))) / (sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[6h])))
+      - record: slo:events:increase6h
+        labels: {slo: f2_completeness}
+        expr: sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[6h])) * 21600
+      - record: slo:error_ratio:rate3d
+        labels: {slo: f2_completeness}
+        expr: (sum(rate(prudence_delivery_records_total{outcome="dead"}[3d]))) / (sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[3d])))
+      - record: slo:events:increase3d
+        labels: {slo: f2_completeness}
+        expr: sum(rate(prudence_delivery_records_total{outcome=~"delivered|dead"}[3d])) * 259200
+      - record: slo:error_ratio:rate6h
+        labels: {slo: f2_freshness}
+        expr: (sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])) - sum(rate(ernest_evidence_chaining_delay_seconds_bucket{le="900"}[6h]))) / (sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])))
+      - record: slo:events:increase6h
+        labels: {slo: f2_freshness}
+        expr: sum(rate(ernest_evidence_chaining_delay_seconds_count[6h])) * 21600
+      - record: slo:error_ratio:rate3d
+        labels: {slo: f2_freshness}
+        expr: (sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])) - sum(rate(ernest_evidence_chaining_delay_seconds_bucket{le="900"}[3d]))) / (sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])))
+      - record: slo:events:increase3d
+        labels: {slo: f2_freshness}
+        expr: sum(rate(ernest_evidence_chaining_delay_seconds_count[3d])) * 259200
       - record: slo:error_ratio:rate6h
         labels: {slo: f3_verifiability}
         expr: (sum(rate(ernest_proof_duration_seconds_count{operation="verify",outcome!="success"}[6h]))) / (sum(rate(ernest_proof_duration_seconds_count{operation="verify"}[6h])))
