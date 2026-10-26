@@ -339,7 +339,7 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
   /// The event body Ernest's ingestor receives for a decision, over HTTP or Kafka alike. It
   /// names the AI system and declares Prudence its system of record (ADR-001), so Ernest shows
   /// the system by name and leaves its lifecycle to Prudence.
-  private Map<String, Object> eventBody(
+  private static Map<String, Object> eventBody(
       String inferenceId, DecisionContext ctx, String verdict, String reason) {
     Map<String, Object> body = new LinkedHashMap<>();
     body.put("modelId", ctx.aiSystemId());
@@ -365,7 +365,8 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
   }
 
   /// Kafka record for a decision: keyed by AI system (per-system order), deduped by its id.
-  private ErnestKafkaPublisher.Event kafkaEvent(
+  /// Package-visible for the decision events contract test (contract/decision-events).
+  static ErnestKafkaPublisher.Event kafkaEvent(
       String inferenceId, DecisionContext ctx, String verdict, String reason) {
     return new ErnestKafkaPublisher.Event(
         ctx.aiSystemId(), inferenceId, eventBody(inferenceId, ctx, verdict, reason));

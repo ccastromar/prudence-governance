@@ -27,6 +27,9 @@ conformity.
 - **Evidence contract with Ernest.** `contract/ernest/` lists what Prudence sends to Ernest and
   the fields it reads back; Prudence's adapters run it against a stub and Ernest's backend
   replays it against itself, with batching on as deployed.
+- **Decision events contract.** `contract/decision-events/` pins the Kafka record each PDP
+  decision becomes (key, headers, body) and what Ernest's event-ingestor makes of it
+  (deduplication id, `policy_decision`, the system of record).
 - **Policy control plane.** Policy drafts are validated, simulated, approved by someone other
   than their contributors, and published to managed OPA instances, whose observed state is
   reported.

@@ -22,13 +22,14 @@ WCAG 2.1 AA with axe, in light and dark themes.
 
 ## Contracts with the other apps
 
-Prudence owns three contracts the other apps run as tests:
+Prudence owns four contracts the other apps run as tests:
 
 | Directory | Who else runs it |
 | --- | --- |
 | `contract/governance/` | AOS, Ernest |
 | `contract/decision/` (with `docs/api/decision-api-v1.yaml`) | AOS, `integrations/prudence-core` |
 | `contract/ernest/` | Ernest (Prudence is the consumer there) |
+| `contract/decision-events/` | Ernest's event-ingestor |
 
 Change the contract and its vectors in the same pull request as the code, then run that
 directory's `sync.sh` and open the matching change in the other repositories. A change that
