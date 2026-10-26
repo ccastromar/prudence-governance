@@ -99,6 +99,24 @@ groups:
         labels: {slo: f3_verifiability}
         expr: sum(rate(ernest_proof_duration_seconds_count{operation="verify"}[1h])) * 3600
 
+      - record: slo:error_ratio:rate5m
+        labels: {slo: f4_oversight}
+        expr: (sum(rate(prudence_drift_scans_total{outcome!="complete"}[5m]))) / (sum(rate(prudence_drift_scans_total[5m])))
+      - record: slo:events:increase5m
+        labels: {slo: f4_oversight}
+        expr: sum(rate(prudence_drift_scans_total[5m])) * 300
+      - record: slo:error_ratio:rate30m
+        labels: {slo: f4_oversight}
+        expr: (sum(rate(prudence_drift_scans_total{outcome!="complete"}[30m]))) / (sum(rate(prudence_drift_scans_total[30m])))
+      - record: slo:events:increase30m
+        labels: {slo: f4_oversight}
+        expr: sum(rate(prudence_drift_scans_total[30m])) * 1800
+      - record: slo:error_ratio:rate1h
+        labels: {slo: f4_oversight}
+        expr: (sum(rate(prudence_drift_scans_total{outcome!="complete"}[1h]))) / (sum(rate(prudence_drift_scans_total[1h])))
+      - record: slo:events:increase1h
+        labels: {slo: f4_oversight}
+        expr: sum(rate(prudence_drift_scans_total[1h])) * 3600
   # The 6-hour and 3-day windows change slowly and each evaluation reads days of samples: every
   # 2 minutes is enough. Not 5 or more: an instant query sees a series only if its last sample is
   # under 5 minutes old (Prometheus's lookback), and the alerts below would then flicker.
@@ -165,6 +183,18 @@ groups:
       - record: slo:events:increase3d
         labels: {slo: f3_verifiability}
         expr: sum(rate(ernest_proof_duration_seconds_count{operation="verify"}[3d])) * 259200
+      - record: slo:error_ratio:rate6h
+        labels: {slo: f4_oversight}
+        expr: (sum(rate(prudence_drift_scans_total{outcome!="complete"}[6h]))) / (sum(rate(prudence_drift_scans_total[6h])))
+      - record: slo:events:increase6h
+        labels: {slo: f4_oversight}
+        expr: sum(rate(prudence_drift_scans_total[6h])) * 21600
+      - record: slo:error_ratio:rate3d
+        labels: {slo: f4_oversight}
+        expr: (sum(rate(prudence_drift_scans_total{outcome!="complete"}[3d]))) / (sum(rate(prudence_drift_scans_total[3d])))
+      - record: slo:events:increase3d
+        labels: {slo: f4_oversight}
+        expr: sum(rate(prudence_drift_scans_total[3d])) * 259200
 
   - name: slo-burn-rate
     rules:
@@ -324,3 +354,15 @@ groups:
         annotations:
           summary: "SLO f3_verifiability is burning its error budget ({{ $value | humanizePercentage }} errors over 3d)"
           description: "F3 verifiability: chain checks that did not verify above 1x the 0.5 % budget over 3d and 6h: 10 % of the 28-day budget in three days. Objective 99.5 % over 28 days (contract/observability, section 8)."
+      - alert: SLOSlowBurn
+        expr: |
+          slo:error_ratio:rate3d{slo="f4_oversight"} > 0.005
+            and slo:error_ratio:rate6h{slo="f4_oversight"} > 0.005
+            and slo:events:increase3d{slo="f4_oversight"} >= 3
+        labels:
+          severity: warning
+          slo: f4_oversight
+          service: suite
+        annotations:
+          summary: "SLO f4_oversight is burning its error budget ({{ $value | humanizePercentage }} errors over 3d)"
+          description: "F4 oversight: drift scans that could not read all execution evidence (or failed) above 1x the 0.5 % budget over 3d and 6h: 10 % of the 28-day budget in three days. Objective 99.5 % over 28 days (contract/observability, section 8)."

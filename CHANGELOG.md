@@ -33,6 +33,8 @@ conformity.
   bytes, required outside dev/test), in Ernest and in a CloudEvents store alike: an append-only
   store never holds a name, and its readers cannot confirm a guess. Prudence keeps who did what in
   its own records.
+- **F4 measured: drift scans** (`prudence.drift.scans{outcome}`: complete, incomplete, failed),
+  with its SLO rules (ticket alert) and a row in the flows dashboard.
 - **Services dashboard: resources and delivery delay** (AOS goroutines, CPU and memory; Prudence's
   JVM, CPU and database connections, and its delivery delay with the 15-minute line; Ernest's
   event loop and heap). The conventions name each process's runtime metrics (USE).

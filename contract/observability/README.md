@@ -116,6 +116,7 @@ UCUM annotation (`{record}`, `{decision}`).
 | Prudence | `prudence.policy.evaluation.duration` (s), OPA as a dependency | `outcome` |
 | Prudence | `prudence.delivery.records`, `.send`, `.due`, `.backlog.age` (existing) | `target`, `outcome` |
 | Prudence | `prudence.delivery.delay` (s), written to delivered, retries included | `target` |
+| Prudence | `prudence.drift.scans`, one per scheduled drift scan | `outcome` (`complete`, `incomplete`, `failed`) |
 | AOS | `aos.run.duration` (s), one governed run | `outcome` (`completed`, `blocked`, `error`, `timeout`) |
 | AOS | `aos.step.duration` (s), one tool call | `tool.type` (`http`, `mcp`, `a2a`, `local`), `outcome` |
 | AOS | `aos.gate.duration` (s), the call to Prudence | `verdict` |
@@ -235,7 +236,7 @@ How each indicator is computed in Prometheus (the error ratio is 1 − SLI; `obs
 | F2 completeness | dead-lettered / delivered + dead-lettered (`prudence_delivery_records_total`) |
 | F2 freshness, F3 proof readiness | events chained after 900 s / events chained (`ernest_evidence_chaining_delay_seconds`). It starts when Ernest accepts the event; the wait in Prudence's outbox before that is `prudence_delivery_delay_seconds` (written to delivered, same buckets), on the Services dashboard and behind `EvidenceDeliveryStuck` |
 | F3 verifiability | chain checks not `success` / chain checks (`ernest_proof_duration_seconds_count{operation="verify"}`) |
-| F4 | not measured yet: drift scans export no metric |
+| F4 oversight | scheduled drift scans not `complete` (incomplete or failed) / scheduled drift scans (`prudence_drift_scans_total`, one every 15 minutes) |
 
 Alerting is multi-window, multi-burn-rate (an alert needs both windows burning, so it fires fast
 on a real burn and clears fast after it):
@@ -246,12 +247,12 @@ on a real burn and clears fast after it):
 | page (`critical`) | 6 | 6 h and 30 min | 5 % in six hours |
 | ticket (`warning`) | 1 | 3 days and 6 h | 10 % in three days |
 
-F1 and F2 page and ticket; F3 tickets only. The rules are in `observability/rules/slo.yml`
+F1 and F2 page and ticket; F3 and F4 ticket only. The rules are in `observability/rules/slo.yml`
 (the local stack loads them; a deployment adds the file to its Prometheus rules). The 6-hour and
 3-day error ratios are recorded every 2 minutes rather than at every evaluation: they change
 slowly and each one reads days of samples. With little traffic a few failures are a large
 ratio: an alert also needs a minimum number of events in its long window (10 for F1 and F2,
-3 for F3).
+3 for F3 and F4).
 
 ## 9. Where each app is
 

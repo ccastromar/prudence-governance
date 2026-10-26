@@ -6,6 +6,7 @@ import cc.ccmlab.prudence.alerting.application.port.in.RaiseAlert.Audience;
 import cc.ccmlab.prudence.alerting.domain.AlertKind;
 import cc.ccmlab.prudence.posture.application.port.in.DriftQuery;
 import cc.ccmlab.prudence.posture.domain.Drift;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +24,19 @@ public class DriftAlertScheduler {
 
   private final DriftQuery drift;
   private final RaiseAlert alerts;
+  private final MeterRegistry meters;
 
-  public DriftAlertScheduler(DriftQuery drift, RaiseAlert alerts) {
+  public DriftAlertScheduler(DriftQuery drift, RaiseAlert alerts, MeterRegistry meters) {
     this.drift = drift;
     this.alerts = alerts;
+    this.meters = meters;
+  }
+
+  /// `prudence.drift.scans{outcome}` (contract/observability, F4): complete, incomplete (some
+  /// execution evidence could not be read) or failed. Oversight on complete data is the share of
+  /// complete scans.
+  private void count(String outcome) {
+    meters.counter("prudence.drift.scans", "outcome", outcome).increment();
   }
 
   @Scheduled(
@@ -37,9 +47,11 @@ public class DriftAlertScheduler {
     try {
       report = drift.compute();
     } catch (Exception e) {
+      count("failed");
       log.warn("drift check failed: {}", e.getMessage());
       return;
     }
+    count(report.complete() ? "complete" : "incomplete");
     if (!report.complete()) {
       // A blind drift check must not pass for a clean one: tell operations, once a day.
       String day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).toString();
