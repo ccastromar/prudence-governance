@@ -84,8 +84,7 @@ defensible layer is govern + prove, portable across whatever runtime a team alre
 Set `ERNEST_INGESTOR_URL` (and `ERNEST_INGESTOR_KEY`) and `ErnestEvidence.log_step` queues step
 records on Ernest's event-ingestor instead of appending them directly: requests return 202 once
 queued, and the inference id doubles as the ingestor's dedupe key. Ingestor records carry no
-qualified seal, so a `QtspSealer` with an ingestor URL is rejected. See
-`docs/operations/deployment.md` → "High-volume evidence".
+qualified seal, so a `QtspSealer` with an ingestor URL is rejected.
 
 Note: `log_step` is still synchronous and does not retry; a failed write returns
 `(None, {"error": …})` and is not re-sent.

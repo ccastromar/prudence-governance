@@ -143,4 +143,4 @@ In order of how often an adopter will ask:
 A row changes when the code does: the compliance profiles live in
 `compliance/application/service/ComplianceProfileCatalog.java`, the incident deadlines in
 `incident/domain/Incident.java`, and the transparency kinds in `impact/TransparencyKind.java`.
-Review this matrix with every release, next to `docs/compatibility.md`.
+Review this matrix with every release.

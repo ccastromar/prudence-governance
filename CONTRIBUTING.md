@@ -33,8 +33,7 @@ Prudence owns four contracts the other apps run as tests:
 
 Change the contract and its vectors in the same pull request as the code, then run that
 directory's `sync.sh` and open the matching change in the other repositories. A change that
-alters what an existing vector expects is a new contract version. `docs/compatibility.md`
-lists every contract and what checks it.
+alters what an existing vector expects is a new contract version.
 
 ## Style
 

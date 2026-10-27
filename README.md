@@ -42,17 +42,10 @@ for the founding architecture.
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
 | `docs/adr/` | Architecture decisions |
 | `ui/vendor/` | `@chestertown/design`, the shared design system (tokens and React components), as a pinned tarball released from the `chestertown-design` repository |
-| `docs/operations/` | Deployment and load-test results |
+| `docs/operations/` | Load-test results |
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
 
 **Connect your own orchestrator:** see [docs/integration/README.md](docs/integration/README.md).
-
-**Deploy and run the suite** (identity, secrets and keys, first start, monitoring, backups,
-runbooks, security checklist): [docs/operations/operator-guide.md](docs/operations/operator-guide.md);
-upgrading it: [docs/operations/upgrades.md](docs/operations/upgrades.md).
-
-**What works with what** (app versions, contracts, identity providers, platform):
-[docs/compatibility.md](docs/compatibility.md).
 
 **Which EU AI Act and ISO/IEC 42001 obligations it supports**, how and with what evidence, and
 the gaps: [docs/compliance/traceability.md](docs/compliance/traceability.md).
