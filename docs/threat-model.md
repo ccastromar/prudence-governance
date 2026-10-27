@@ -122,7 +122,7 @@ rather than trusted.
 4. **Keep the bundle key, database and Kafka credentials in a secrets manager.**
 5. **Run Ernest** and watch Prudence's evidence health; back up PostgreSQL.
 6. **Smoke-test after each deploy**: the PDP must allow an approved system and deny a prohibited
-   and an unregistered one (`chestertown-infra/scripts/smoke.sh` on the MVP host).
+   and an unregistered one.
 
 ## Known gaps before enterprise production
 

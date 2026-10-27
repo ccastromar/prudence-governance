@@ -39,8 +39,7 @@ tool and a Microsoft Agent Framework CRM tool (`agent_demos.py`). The last three
 allowed execution in Ernest under the AI system's id. It is internal-only: the browser calls Prudence with an `author`
 session, Prudence relays to the runner using a private token, and the runner uses its own
 least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never receives a PDP
-or Ernest credential. `chestertown-infra/scripts/provision-framework-demo-runner-client.sh`
-creates the runner identity and bridge token on the MVP host.
+or Ernest credential. The deployment creates the runner identity and the bridge token.
 
 By default the runner needs no model: Pydantic AI uses its offline `TestModel`, the LangGraph
 node returns a fixed draft, and the three agent frameworks talk to the conformance run's scripted

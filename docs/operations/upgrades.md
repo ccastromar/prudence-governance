@@ -24,7 +24,7 @@ Within a suite release, any app can be upgraded on its own.
 Upgrade whoever **receives** a contract before whoever **sends** it, so a new field always lands
 on an app that already understands it:
 
-1. **chestertown-infra / your deployment configuration**: new secrets and keys first. An app
+1. **Your deployment configuration**: new secrets and keys first. An app
    that needs one refuses to start without it.
 2. **Ernest**: it receives Prudence's evidence and decisions and AOS's audit events.
 3. **Prudence**: it receives AOS's decision requests and execution reports.

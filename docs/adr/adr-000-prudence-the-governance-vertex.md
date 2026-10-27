@@ -1,119 +1,45 @@
 # ADR-000: Prudence — the governance vertex
 
-**Status:** Founding design (proposed)
+**Status:** Accepted (founding design)
 **Date:** 2026-10-10
-**Deciders:** project maintainers
-**Related:** AOS (agentic orchestration), Ernest (provenance/evidence,
-`ai-blockchain-provenance/docs/regulatory-mapping.md`).
+**Related:** AOS (orchestration), Ernest (evidence).
 
 ## Context
 
-Two vertices exist and work:
-
-- **AOS** — an intent-driven orchestration runtime: YAML pipelines, deterministic
-  execution ("if it isn't declared, it can't run"), tools/agents, **human gates, RBAC,
-  audit log**. The *enforcement/runtime* plane.
-- **Ernest** — a tamper-evident evidence layer: hashchain, anchoring (OTS/EVM), qualified
-  eIDAS seals/timestamps, offline-verifiable receipts, OIDC, CycloneDX AI/ML-BOM. The
-  *evidence* plane.
-
-What is missing is the *control* plane: where the rules are **decided**, AI use is
-**risk-classified and approved**, and the estate's compliance posture is **monitored and
-attested**. That is **Prudence**.
-
-The naming follows a simple pattern (a human name whose meaning is the job): Ernest
-(*earnest* — honest) + Prudence (*prudential* — the regulator's own word for oversight).
+AOS runs governed pipelines (the enforcement plane) and Ernest keeps tamper-evident evidence
+(the evidence plane). What is missing is the control plane: where AI use is classified and
+approved, where policy is decided, and where the estate's posture is overseen.
 
 ## Decision
 
-### The central idea: PDP / PEP, as a closed control loop
+Prudence is the **Policy Decision Point**; AOS is the **Policy Enforcement Point**; Ernest
+records the evidence of both. Together they form one loop:
+`decide → enforce → prove → oversee → decide`.
 
-- **Prudence = Policy Decision Point (PDP).** It holds the policies and answers: *"may actor
-  X run pipeline P with model M in context C?"* → `allow | deny | approval-required | conditions`.
-- **AOS = Policy Enforcement Point (PEP).** AOS already has the hook — its **human gates and
-  intents**. A gate calls out to Prudence instead of embedding policy logic. AOS stays dumb
-  and deterministic; policy lives outside, versioned.
-- **Ernest = evidence of both.** It seals not only the *execution* but the *governance
-  decision* (who approved what, under which policy version).
+Prudence owns:
 
-The loop: policy **decides** (Prudence → AOS), execution **runs** (AOS), it is **proved**
-(Ernest), and Prudence **reads the evidence back** to compute posture and attest —
-`decide → enforce → prove → oversee → decide`. Prudence never duplicates AOS's RBAC/gates
-or Ernest's evidence; it orchestrates them.
+1. **The AI system registry**, the spine every policy, approval and piece of evidence refers to:
+   EU AI Act risk tier, intended purpose and owner.
+2. **Policy as code**, evaluated by OPA/Rego and versioned.
+3. **The decision API** AOS asks before a governed step: allow, deny or approval required.
+4. **Approval and review workflows**, with impact assessments.
+5. **Oversight**: posture, drift (an unapproved system in use, an expired approval), incidents.
+6. **Attestations**, sealed by Ernest so the governance record is itself tamper-evident.
 
-### What Prudence does (scope)
+Integration reuses what exists: an AOS gate that asks Prudence and obeys; evidence delivered
+to Ernest; one identity provider for the three applications.
 
-1. **AI-system inventory + risk classification** — the spine. Every use case registered with
-   an EU AI Act risk tier (prohibited/high/limited/minimal; Annex III mapping), intended
-   purpose and owner. Every policy, approval and evidence stream attaches to it.
-2. **Policy-as-code** — machine-readable rules: approved models, who runs what per tier, data
-   residency, allowed intents/pipelines, required guardrails.
-3. **PDP service** — the endpoint AOS gates consult.
-4. **Approval & lifecycle workflows** — onboarding, change approval, periodic review, sign-offs
-   (model owner / risk / DPO), DPIA & FRIA records.
-5. **Continuous oversight** — ingests Ernest receipts + AOS events; audit-readiness scoring,
-   policy-drift detection (unapproved model in use, missing evidence, expired approval),
-   risk/incident register.
-6. **Reporting & attestation** — AI Act Annex IV technical documentation, ISO 42001 records,
-   NIST RMF profile, board/regulator dashboards — **sealed by Ernest**, so the governance
-   reports are themselves tamper-evident. The loop closes.
-
-### How it integrates (concretely, reusing what exists)
-
-- **AOS hook**: a gate type `policy: prudence` that POSTs to the PDP and honours the verdict
-  (allow/deny/approval). Minimal change — the gate already exists.
-- **Ernest hook**: Prudence is a **consumer of receipts** (reuse Ernest's event/ingestor
-  model) and an **emitter of signed attestations** (reuse the qualified-seal path).
-- **One identity plane**: the OIDC already built in Ernest — AOS (RBAC), Ernest (caller
-  identity) and Prudence (who approves/owns) share the same IdP.
-- **The registry is the spine** every vertex references.
-
-### With what (stack & standards)
-
-- **Policy engine**: **OPA + Rego** (general, de-facto standard) or **AWS Cedar** (cleaner
-  authz). Policy decisions are themselves sealed in Ernest.
-- **Backend**: **Java Spring Boot 4.x on the latest JDK** — greenfield.
-  *Scaffold built on Spring Boot 4.1.1 / JDK 25 LTS.*
-  A credible enterprise/banking choice for a compliance control plane. **Spring Security**
-  gives OIDC/OAuth2 resource-server out of the box (better than a hand-rolled verifier);
-  JPA for the registry, a state-machine/workflow for approvals, and `@Scheduled` for the
-  oversight loop are all mature. The policy engine (OPA/Cedar) is language-agnostic (HTTP
-  sidecar), so it does not tie the language. Integrating Ernest needs no code reuse —
-  consuming receipts is plain HTTP/JSON, and attestations are *sealed by calling Ernest's
-  API*. If Prudence verifies receipts locally, it adds a **Java verifier pinned to the same
-  golden fixtures** as the Node/Go/Rust ones — a solved pattern that even strengthens the
-  "verify in any language" story. (NestJS, to share Ernest's TS directly, is the alternative;
-  it trades the banking-stack credibility and Spring Security for marginal code reuse.)
-- **Standards to encode** (what makes it serious, not a CRUD):
-  - **OSCAL** (NIST) for the controls catalogue, assessment results and system security plan —
-    machine-readable compliance.
-  - **EU AI Act** (Annex III tiers, Annex IV technical documentation), **ISO/IEC 42001** (AIMS),
-    **NIST AI RMF**; for banking **DORA / EBA**. Ernest's `regulatory-mapping.md` is the seed;
-    Prudence operationalizes it from a doc into living controls.
-  - **CycloneDX AI/ML-BOM** (Ernest already exports it) as the model-documentation artifact.
-- **Frontend**: **React** —
-  registry, approvals, posture dashboard, attestations.
-
-### First vertical slice (prove the Chestertown wired, not boil the ocean)
-
-1. **Registry + risk classification** for one use case (e.g. a credit-risk scoring model).
-2. **PDP (OPA/Cedar)** + **one AOS gate** that consults it for that pipeline.
-3. **Posture view** that ingests Ernest's receipts for that model and shows green/red.
-
-Demonstrates the whole loop: policy decides → AOS runs → Ernest proves → Prudence watches.
+Stack: Spring Boot on the current LTS JDK (with Spring Security as an OAuth 2.0 resource
+server), OPA as the policy engine, and a React console.
 
 ## Consequences
 
-**Positive** — completes the Chestertown with zero overlap; a single control loop and one identity
-plane across three planes; governance reports that are themselves tamper-evident.
-
-**Negative / honest** — as with Ernest, **engineering is not the bottleneck**. The policy
-engine is a weekend; the hard part is the *content* (real policies, risk classification,
-approval workflows with real roles) and getting a regulated organization to adopt it. The
-technical layer exists to give that conversation something to stand on.
+- Completes the suite without overlap: Prudence decides and oversees; it never re-runs AOS's
+  enforcement or re-proves Ernest's evidence.
+- Engineering is not the hard part. Real policies, risk classification and approval roles are,
+  and the software exists to give that work a structure.
 
 ## Not doing
-- Duplicating AOS's RBAC/human-gate enforcement or Ernest's evidence — Prudence decides and
-  oversees, it does not re-run or re-prove.
-- Being a model registry/experiment tracker (that's beside MLflow, per Ernest) — Prudence's
-  registry is the *governance* record (risk tier, owner, approvals), not an ML artifact store.
+
+- Duplicating AOS's gates or Ernest's evidence.
+- Being a model registry or experiment tracker: Prudence's registry is the governance record.

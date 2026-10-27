@@ -154,7 +154,7 @@ users (one `prudence-author` and two distinct `prudence-system-approver`), becau
 for high-risk systems.
 
 ```bash
-PRUDENCE_URL=https://prudence.ccmlab.cc \
+PRUDENCE_URL=https://prudence.example.com \
 SEED_AUTHOR_TOKEN='...' \
 SEED_REVIEWER_ONE_TOKEN='...' \
 SEED_REVIEWER_TWO_TOKEN='...' \
