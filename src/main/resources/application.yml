@@ -25,7 +25,7 @@ server:
 logging:
   structured:
     format:
-      # One JSON object per line with the suite's fields (contract/observability, section 5).
+      # One JSON object per line with the suite's fields.
       # The dev profile writes text.
       console: cc.ccmlab.prudence.config.ChestertownLogFormat
 

@@ -51,7 +51,7 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
                         context.policyHash(),
                         system.systemVersion(),
                         system.modelHash(),
-                        // The caller's flow travels with the decision (contract/observability).
+                        // The caller's flow travels with the decision.
                         context.causationId(),
                         context.correlationId(),
                         null,

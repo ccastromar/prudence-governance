@@ -34,7 +34,6 @@ for the founding architecture.
 | `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
 | `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model, test vectors, organization templates and the `ct-model` tool |
 | `contract/decision/` | Decision API v1 as test vectors: when a gate may run a step, what a runtime does with each report answer, what Prudence must answer. Prudence, AOS and prudence-core run them |
-| `contract/observability/` | Observability conventions for the suite: resource attributes, trace versus correlation ids, propagation, log fields, metric names, the critical flows and their indicators |
 | `contract/ernest/` | What Prudence sends to Ernest and reads back, as interactions: Prudence's adapters and Ernest's backend both run them |
 | `contract/decision-events/` | The Kafka record each PDP decision becomes on its way to Ernest's event-ingestor, and what Ernest makes of it |
 | `docs/api/` | Published contracts: Decision API v1 (OpenAPI) and evidence events v1 (AsyncAPI) |

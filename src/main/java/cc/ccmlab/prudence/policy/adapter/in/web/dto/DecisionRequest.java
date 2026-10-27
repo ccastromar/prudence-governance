@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /// `correlationId` (optional) names the caller's business flow, an AOS task for example: it is
-/// recorded with the decision and travels with its evidence (contract/observability, section 3).
+/// recorded with the decision and travels with its evidence.
 public record DecisionRequest(
     @NotBlank String subject,
     @NotBlank String pipeline,

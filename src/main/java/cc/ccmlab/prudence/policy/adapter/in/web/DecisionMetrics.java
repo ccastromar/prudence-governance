@@ -8,7 +8,7 @@ import java.time.Duration;
 import java.util.function.Supplier;
 import org.springframework.stereotype.Component;
 
-/// `prudence.decision.duration{verdict, front_door}` (contract/observability, section 6): the
+/// `prudence.decision.duration{verdict, front_door}` (the suite's observability conventions): the
 /// time to answer one decision, recorded, at either front door. The buckets hold the latency
 /// thresholds the admission objective (section 8, F1) is measured on, up to the gate's 5 s
 /// timeout. A decision that fails before it has a verdict counts as `ERROR`.

@@ -18,7 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /// The decision a caller's flow asked for keeps that flow's correlation id on its way to
-/// Ernest: the outbox must not replace it (contract/observability, section 3).
+/// Ernest: the outbox must not replace it.
 class OutboxEvidenceAdapterTest {
 
   private final EvidenceOutboxJpaRepository outbox = mock(EvidenceOutboxJpaRepository.class);

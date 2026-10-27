@@ -77,7 +77,7 @@ public final class ErnestKafkaPublisher implements AutoCloseable {
             .add(new RecordHeader("source", bytes("prudence-pdp")))
             .add(new RecordHeader("eventType", bytes(ErnestEvidenceAdapter.DECISION_EVENT_TYPE)))
             .add(new RecordHeader("sourceEventId", bytes(event.sourceEventId())));
-        // The business flow, where the decision belongs to one (contract/observability).
+        // The business flow, where the decision belongs to one.
         if (event.body().get("metadata") instanceof Map<?, ?> metadata
             && metadata.get("correlationId") instanceof String correlationId)
           record.headers().add(new RecordHeader("correlationId", bytes(correlationId)));

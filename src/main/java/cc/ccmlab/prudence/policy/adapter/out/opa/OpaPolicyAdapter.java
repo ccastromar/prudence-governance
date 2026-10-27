@@ -122,7 +122,7 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
     }
   }
 
-  /// `prudence.policy.evaluation.duration{outcome}` (contract/observability, section 6): the
+  /// `prudence.policy.evaluation.duration{outcome}` (the suite's observability conventions): the
   /// time OPA takes to evaluate, as a dependency of the decision. `failure` when it could not
   /// decide (unreachable, failing, or a managed check refused): the decision fails closed.
   @Override

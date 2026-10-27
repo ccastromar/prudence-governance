@@ -19,9 +19,9 @@
 # Observability: the apps send traces and metrics to scripts/otlp-sink (:14318), a local OTLP
 # receiver, and AOS logs JSON; the observability cases follow one allowed run from its log line
 # to its trace across AOS and Prudence, the correlation id into Ernest's evidence, and the
-# asynchronous hops (outbox, Kafka) as linked spans (contract/observability).
+# asynchronous hops (outbox, Kafka) as linked spans.
 # Not covered: the consoles (browser sign-in/sign-out), Docker images, a real LLM, the
-# collector/Tempo/Grafana themselves (compose.observability.yaml).
+# collector/Tempo/Grafana themselves.
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -366,7 +366,7 @@ green() { [ "$(posture "[s['status'] for s in d['systems'] if s['id']=='$SUPPORT
 ok=false; wait_for 60 green && ok=true
 record evidence "Prudence posture: support system GREEN" $ok "$(posture "[s['detail'] for s in d['systems'] if s['id']=='$SUPPORT'][0]" | cut -c1-60)"
 
-# Observability (contract/observability): follow the allowed run from its log line to its trace,
+# Observability: follow the allowed run from its log line to its trace,
 # its flow into Ernest's evidence, and its asynchronous hops as linked spans.
 SINK="http://127.0.0.1:$OTLP_PORT"
 # A log line about the run carries the task as correlation_id and the trace it belongs to.

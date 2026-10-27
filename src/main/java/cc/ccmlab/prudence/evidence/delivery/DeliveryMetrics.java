@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /// - `prudence.delivery.backlog.age{target}`: seconds since the target last had nothing due; 0
 ///   when it is keeping up. Grows while delivery is stuck.
 /// - `prudence.delivery.delay{target}`: from a record being written to its delivery, retries
-///   included; the buckets hold the 15-minute freshness threshold (contract/observability, 8).
+///   included; the buckets hold the 15-minute freshness threshold.
 final class DeliveryMetrics {
   private final MeterRegistry registry;
   private final Map<String, AtomicLong> due = new ConcurrentHashMap<>();

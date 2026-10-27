@@ -62,17 +62,12 @@ different principal. A token without the
 
 ## Observability, locally
 
-Two ways to see the suite's traces and metrics (contract/observability):
+`go run ./scripts/otlp-sink -addr 127.0.0.1:4318 -dir /tmp/otlp` is a minimal OTLP/HTTP
+receiver. It writes every span and metric point it receives to `spans.jsonl` and
+`metrics.jsonl` and answers `GET /spans?trace_id=…`, `/spans?linked_trace_id=…`,
+`/spans?name=…` and `/metrics?name=…`. Nothing is kept after it stops.
 
-- **Without Docker:** `go run ./scripts/otlp-sink -addr 127.0.0.1:4318 -dir /tmp/otlp` is a
-  minimal OTLP/HTTP receiver. It writes every span and metric point it receives to
-  `spans.jsonl` and `metrics.jsonl` and answers `GET /spans?trace_id=…`,
-  `/spans?linked_trace_id=…`, `/spans?name=…` and `/metrics?name=…`. Nothing is kept after it
-  stops.
-- **With Docker:** `docker compose -f compose.observability.yaml up -d` runs a collector, Tempo,
-  Prometheus and Grafana (http://localhost:3000) on localhost.
-
-Either way the apps send to `http://localhost:4318`: AOS and Ernest with
+The apps send to `http://localhost:4318`: AOS and Ernest with
 `OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318`, Prudence with `PRUDENCE_OTEL_ENABLED=true
 PRUDENCE_OTEL_ENDPOINT=http://localhost:4318` (and `PRUDENCE_TRACING_SAMPLING=1.0` to keep every
 trace). AOS logs JSON with `LOG_FORMAT=json`; each line about a task carries `correlation_id` and

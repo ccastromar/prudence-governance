@@ -2,7 +2,7 @@ package cc.ccmlab.prudence.config;
 
 import java.time.Duration;
 
-/// Histogram buckets of Prudence's latency metrics (contract/observability, sections 6 and 8):
+/// Histogram buckets of Prudence's latency metrics (the suite's observability conventions):
 /// they hold the thresholds the service-level indicators are measured on, so an indicator is a
 /// bucket over the count rather than a guess between buckets.
 public final class MetricBuckets {

@@ -12,7 +12,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/// The caller's business correlation id (`X-Correlation-Id`, contract/observability section 3)
+/// The caller's business correlation id (`X-Correlation-Id`)
 /// for the duration of a request: in the logging context as `correlation_id`, so every log line
 /// of the request carries it, and readable by the code that records it (a decision's
 /// correlationId). An id that is not a plain token is ignored rather than logged.

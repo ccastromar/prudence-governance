@@ -14,9 +14,9 @@ import org.springframework.boot.logging.structured.StructuredLogFormatter;
 import org.springframework.core.env.Environment;
 import tools.jackson.databind.json.JsonMapper;
 
-/// One JSON object per log line with the suite's field names (contract/observability, section
-/// 5): `timestamp`, `severity`, `service.name`, `service.version`,
-/// `deployment.environment.name`, `message`, `trace_id`, `span_id`, `correlation_id`, and the
+/// One JSON object per log line with the suite's field names: `timestamp`, `severity`,
+/// `service.name`, `service.version`, `deployment.environment.name`, `message`, `trace_id`,
+/// `span_id`, `correlation_id`, and the
 /// key-value pairs a log call adds (`event.name`, `outcome`, `decision_id`…).
 ///
 /// A throwable becomes `error.type` (its class) and `exception.stacktrace` with classes and

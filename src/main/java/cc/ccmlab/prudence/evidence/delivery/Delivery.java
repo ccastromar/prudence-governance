@@ -38,9 +38,9 @@ public class Delivery {
   @Column(length = 2000)
   private String lastError;
 
-  /// The W3C trace context of the work that wrote the record (contract/observability, section
-  /// 4): its delivery, later, is a new span linked to it rather than a span kept open while the
-  /// record waits. Null when the record was written outside a trace.
+  /// The W3C trace context of the work that wrote the record: its delivery, later, is a new
+  /// span linked to it rather than a span kept open while the record waits. Null when the record
+  /// was written outside a trace.
   @Column(length = 55)
   private String traceparent;
 

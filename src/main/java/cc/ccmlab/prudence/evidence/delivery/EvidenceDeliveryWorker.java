@@ -213,7 +213,7 @@ public class EvidenceDeliveryWorker implements DeliverEvidence {
 
   /// Each send is a new span (a new trace: it runs after the work that wrote the records has
   /// ended), linked to the trace context stored with each record, so a decision's trace leads
-  /// to its delivery and every retry of it (contract/observability, section 4).
+  /// to its delivery and every retry of it.
   private <E> void sendChunk(DeliveryTarget<E> target, List<E> chunk) {
     SpanBuilder builder =
         tracer

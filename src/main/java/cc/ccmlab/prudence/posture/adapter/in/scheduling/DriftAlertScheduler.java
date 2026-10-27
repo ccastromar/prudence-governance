@@ -32,7 +32,7 @@ public class DriftAlertScheduler {
     this.meters = meters;
   }
 
-  /// `prudence.drift.scans{outcome}` (contract/observability, F4): complete, incomplete (some
+  /// `prudence.drift.scans{outcome}` (oversight indicator F4): complete, incomplete (some
   /// execution evidence could not be read) or failed. Oversight on complete data is the share of
   /// complete scans.
   private void count(String outcome) {

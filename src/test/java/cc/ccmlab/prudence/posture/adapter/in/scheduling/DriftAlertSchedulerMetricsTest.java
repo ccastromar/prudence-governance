@@ -8,7 +8,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /// Each scheduled drift scan is counted by outcome: the F4 indicator (oversight on complete
-/// data, contract/observability section 8) is the share of complete scans.
+/// data) is the share of complete scans.
 class DriftAlertSchedulerMetricsTest {
 
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
