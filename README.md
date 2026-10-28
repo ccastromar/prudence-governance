@@ -55,3 +55,9 @@ Run locally: see [docs/functional/00-arrancar.md](docs/functional/00-arrancar.md
 ## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+
+## Author
+
+Developed and maintained by Carlos Castro Martos.
+
+This project was developed independently. It is not sponsored, endorsed, or licensed by any employer, organization, or company.
