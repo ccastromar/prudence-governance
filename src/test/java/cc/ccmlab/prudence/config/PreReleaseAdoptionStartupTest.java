@@ -4,7 +4,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.util.List;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -17,8 +16,9 @@ import org.springframework.test.context.DynamicPropertySource;
 
 /// Prudence starting on a database the pre-release migrations built: Spring Boot runs
 /// PreReleaseAdoption before Flyway migrates, so the application starts, Hibernate validates the
-/// schema, and the history is the baseline's. Needs PRUDENCE_TEST_POSTGRES_URL, like
-/// PostgresMigrationsTest; works in the schema `startup_adoption`.
+/// schema, and the history is the baseline's, then the later migrations. Needs
+/// PRUDENCE_TEST_POSTGRES_URL, like PostgresMigrationsTest; works in the schema
+/// `startup_adoption`.
 @SpringBootTest(
     webEnvironment = SpringBootTest.WebEnvironment.MOCK,
     properties = {
@@ -62,9 +62,9 @@ class PreReleaseAdoptionStartupTest {
   @Autowired private JdbcTemplate jdbc;
 
   @Test
-  void prudenceStartsOnAPreReleaseDatabaseWithTheBaselineHistory() {
+  void prudenceStartsOnAPreReleaseDatabaseWithTheBaselineHistory() throws Exception {
     assertEquals(
-        List.of("1"),
+        PreReleaseAdoptionTest.releaseVersions(),
         jdbc.queryForList(
             "select version from " + SCHEMA + ".flyway_schema_history order by installed_rank",
             String.class));

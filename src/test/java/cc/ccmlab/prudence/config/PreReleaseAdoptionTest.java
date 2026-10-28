@@ -5,12 +5,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -33,7 +38,7 @@ class PreReleaseAdoptionTest {
   @Test
   void theBaselineBuildsExactlyTheSchemaOfThePreReleaseMigrations() throws SQLException {
     migrate(fresh("pre_release_schema"), PRE_RELEASE);
-    migrate(fresh("baseline_schema"), RELEASE);
+    configure(fresh("baseline_schema"), RELEASE).target("1").load().migrate();
     assertEquals(catalog("pre_release_schema"), catalog("baseline_schema"));
     assertEquals(
         rows("pre_release_schema", "select id, publication_id from policy_publication_channel"),
@@ -41,7 +46,7 @@ class PreReleaseAdoptionTest {
   }
 
   @Test
-  void aPreReleaseDatabaseIsAdoptedWithItsData() throws SQLException {
+  void aPreReleaseDatabaseIsAdoptedWithItsData() throws Exception {
     String schema = fresh("adopted");
     migrate(schema, PRE_RELEASE);
     sql(
@@ -55,7 +60,7 @@ class PreReleaseAdoptionTest {
     release.validate();
 
     assertEquals(
-        List.of("1"),
+        releaseVersions(),
         rows(schema, "select version from flyway_schema_history order by installed_rank"));
     assertEquals(List.of("Credit"), rows(schema, "select name from ai_system where id = 'sys-1'"));
     assertFalse(
@@ -74,16 +79,33 @@ class PreReleaseAdoptionTest {
   }
 
   private static Flyway flyway(String schema, String location) {
+    return configure(schema, location).load();
+  }
+
+  private static org.flywaydb.core.api.configuration.FluentConfiguration configure(
+      String schema, String location) {
     return Flyway.configure()
         .dataSource(URL, USER, PASSWORD)
         .schemas(schema)
         .defaultSchema(schema)
-        .locations(location)
-        .load();
+        .locations(location);
   }
 
   private static void migrate(String schema, String location) {
     flyway(schema, location).migrate();
+  }
+
+  /// The history an adopted database ends with: the baseline (1), then every later release
+  /// migration in order.
+  static List<String> releaseVersions() throws IOException {
+    try (Stream<Path> files = Files.list(Path.of("src/main/resources/db/migration"))) {
+      return files
+          .map(f -> f.getFileName().toString())
+          .filter(n -> n.matches("V\\d+__.+\\.sql"))
+          .map(n -> n.substring(1, n.indexOf("__")))
+          .sorted(Comparator.comparingInt(Integer::parseInt))
+          .toList();
+    }
   }
 
   private static String fresh(String schema) throws SQLException {
