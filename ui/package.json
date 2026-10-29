@@ -14,16 +14,16 @@
   },
   "dependencies": {
     "@chestertown/design": "file:vendor/chestertown-design-0.3.11.tgz",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.13.0",
-    "@playwright/test": "^1.61.1",
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
-    "prettier": "3.5.3",
+    "prettier": "3.9.10",
     "typescript": "^5.6.3",
     "vite": "^6.0.5"
   }
