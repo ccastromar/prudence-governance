@@ -22,7 +22,8 @@
         { "pipeline": "pipeline_response_drafter", "actions": ["run"] },
         { "pipeline": "pipeline_claims_letter", "actions": ["run"] },
         { "pipeline": "pipeline_refund_check", "actions": ["run"] },
-        { "pipeline": "pipeline_crm_update", "actions": ["run"] }
+        { "pipeline": "pipeline_crm_update", "actions": ["run"] },
+        { "pipeline": "demo_customer_letter", "actions": ["run"] }
       ]
     }
   }

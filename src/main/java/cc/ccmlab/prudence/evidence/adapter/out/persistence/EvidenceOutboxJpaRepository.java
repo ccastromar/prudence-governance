@@ -39,6 +39,11 @@ public interface EvidenceOutboxJpaRepository
           + " e.delivery.deadAt desc")
   List<EvidenceOutboxJpaEntity> deadLettered(Limit limit);
 
+  /// The decisions taken for one system and pipeline between two Delivery stamps, oldest first:
+  /// what a governed demo run was decided.
+  List<EvidenceOutboxJpaEntity> findByAiSystemIdAndPipelineAndCreatedAtBetweenOrderByCreatedAtAsc(
+      String aiSystemId, String pipeline, String from, String to, Limit limit);
+
   /// The systems among `ids` with at least one decision acknowledged by the evidence store.
   @org.springframework.data.jpa.repository.Query(
       "select distinct e.aiSystemId from EvidenceOutboxJpaEntity e"

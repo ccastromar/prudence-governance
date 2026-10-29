@@ -19,50 +19,67 @@ import {
   Select,
 } from "@chestertown/design";
 
-type Demo = GovernedDemo;
+const POLL_MS = 1000;
+const POLL_LIMIT = 240; // a run the runner did not finish in four minutes is reported as such
 
-const demos: Record<
-  Demo,
-  { title: string; framework: string; detail: string }
-> = {
-  "bug-triage": {
-    title: "Bug triage",
-    framework: "Pydantic AI",
-    detail:
-      "A governed tool classifies and routes a synthetic checkout incident.",
-  },
-  "response-drafter": {
-    title: "Response drafter",
-    framework: "LangGraph",
-    detail:
-      "A governed graph node drafts a synthetic customer response; delivery only follows ALLOW.",
-  },
-  "claims-letter": {
-    title: "Claims letter",
-    framework: "Google ADK",
-    detail:
-      "An ADK agent's tool queues a synthetic claim acknowledgement; a runner plugin asks Prudence first.",
-  },
-  "refund-check": {
-    title: "Refund approval",
-    framework: "OpenAI Agents SDK",
-    detail:
-      "An Agents SDK tool approves a small synthetic refund; a tool guardrail asks Prudence first.",
-  },
-  "crm-update": {
-    title: "CRM update",
-    framework: "Microsoft Agent Framework",
-    detail:
-      "An Agent Framework tool logs a synthetic call summary; function middleware asks Prudence first.",
-  },
-};
+const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+
+/// Poll a run until it finishes. An allowed run's execution report can reach Prudence a moment
+/// after the agent ends, so an ALLOW without one is fetched a few more times.
+async function follow(
+  runId: string,
+  onUpdate: (run: GovernedDemoRun) => void,
+): Promise<void> {
+  let settle = 3;
+  for (let i = 0; i < POLL_LIMIT; i++) {
+    const run = await api.demoRun(runId);
+    onUpdate(run);
+    const waitingForReport =
+      run.status === "done" && run.continued && !run.prudence?.execution;
+    if (run.status !== "running" && (!waitingForReport || --settle <= 0))
+      return;
+    await sleep(POLL_MS);
+  }
+  throw new Error("The governed run did not finish in time.");
+}
+
+function PrudenceRecord({ run }: { run: GovernedDemoRun }) {
+  const decision = run.prudence?.decision;
+  const execution = run.prudence?.execution;
+  if (!decision && !execution) {
+    return (
+      <p className="ct-muted">
+        Prudence has no decision for this run (the runtime never reached the
+        PDP).
+      </p>
+    );
+  }
+  return (
+    <div>
+      <p className="ct-muted" style={{ marginBottom: "var(--sp-1)" }}>
+        <b>Recorded by Prudence</b>
+      </p>
+      {decision && (
+        <p className="ct-muted">
+          Decision {decision.verdict} for <code>{decision.subject}</code>
+          {decision.reason ? ` · ${decision.reason}` : ""}
+        </p>
+      )}
+      <p className="ct-muted">
+        {execution
+          ? `Execution reported by ${execution.runtime}, citing the ${execution.decisionStatus} decision`
+          : "No execution reported"}
+      </p>
+    </div>
+  );
+}
 
 function DemoCard({
   demo,
   systems,
   latest,
 }: {
-  demo: Demo;
+  demo: GovernedDemo;
   systems: AiSystem[];
   latest?: GovernedDemoRun;
 }) {
@@ -71,7 +88,6 @@ function DemoCard({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [writeAllowed, setWriteAllowed] = useState(false);
-  const meta = demos[demo];
 
   useEffect(() => setResult(latest ?? null), [latest]);
 
@@ -92,7 +108,9 @@ function DemoCard({
     setError("");
     setResult(null);
     try {
-      setResult(await api.runDemo(demo, systemId));
+      const started = await api.runDemo(demo.id, systemId);
+      setResult(started);
+      await follow(started.runId, setResult);
     } catch (e) {
       setError(
         e instanceof Error
@@ -107,13 +125,16 @@ function DemoCard({
   return (
     <Card>
       <div className="ct-row ct-between">
-        <h3 style={{ margin: 0 }}>{meta.title}</h3>
-        <Badge>{meta.framework}</Badge>
+        <h3 style={{ margin: 0 }}>{demo.title}</h3>
+        <Badge>{demo.framework}</Badge>
       </div>
-      <p className="sub">{meta.detail}</p>
-      <Field label="Registered AI system" htmlFor={`decisions-system-${demo}`}>
+      <p className="sub">{demo.detail}</p>
+      <Field
+        label="Registered AI system"
+        htmlFor={`decisions-system-${demo.id}`}
+      >
         <Select
-          id={`decisions-system-${demo}`}
+          id={`decisions-system-${demo.id}`}
           value={systemId}
           onChange={(e) => setSystemId(e.target.value)}
           disabled={busy}
@@ -148,30 +169,36 @@ function DemoCard({
         <Card
           style={{ marginTop: "var(--sp-4)", background: "var(--bg-subtle)" }}
         >
-          <div className="ct-row ct-between">
-            <DecisionBadge decision={result.decision} />
-            {result.evidence?.status && (
-              <span className="ct-muted">
-                Ernest HTTP {result.evidence.status}
-              </span>
-            )}
-          </div>
-          <p className="ct-muted">
-            {result.reason || "Governance gate completed."}
-          </p>
-          {result.model && (
-            <p className="ct-muted">
-              Model: <b>{result.model}</b>
-            </p>
+          {result.status === "running" && (
+            <p className="ct-muted">The governed agent is running…</p>
           )}
-          {result.output && <pre className="ct-code">{result.output}</pre>}
-          {result.continued !== undefined && (
-            <p className="ct-muted">
-              Downstream delivery:{" "}
-              {result.continued
-                ? "continued"
-                : "stopped at the governance gate"}
-            </p>
+          {result.status === "failed" && (
+            <Alert tone="danger">
+              {result.error || "The governed runtime failed."}
+            </Alert>
+          )}
+          {result.status === "done" && result.decision && (
+            <>
+              <DecisionBadge
+                decision={
+                  result.decision === "ERROR" ? "DENY" : result.decision
+                }
+              />
+              {result.model && (
+                <p className="ct-muted">
+                  Model: <b>{result.model}</b>
+                </p>
+              )}
+              {result.output && <pre className="ct-code">{result.output}</pre>}
+              <p className="ct-muted">
+                The tool{" "}
+                {result.continued
+                  ? "ran"
+                  : "did not run: it stopped at the governance gate"}
+                .
+              </p>
+              <PrudenceRecord run={result} />
+            </>
           )}
         </Card>
       )}
@@ -181,9 +208,8 @@ function DemoCard({
 
 export default function Decisions() {
   const [systems, setSystems] = useState<AiSystem[]>([]);
-  const [latest, setLatest] = useState<Partial<Record<Demo, GovernedDemoRun>>>(
-    {},
-  );
+  const [demos, setDemos] = useState<GovernedDemo[] | null>(null);
+  const [latest, setLatest] = useState<Record<string, GovernedDemoRun>>({});
   const [req, setReq] = useState({
     subject: "alice@bank.eu",
     pipeline: "credit-risk-scoring",
@@ -201,6 +227,10 @@ export default function Decisions() {
         setSystems(items.filter((item) => item.approvalStatus === "APPROVED")),
       )
       .catch(() => undefined);
+    api
+      .demos()
+      .then(setDemos)
+      .catch(() => setDemos([]));
     api
       .demoRuns()
       .then(setLatest)
@@ -230,32 +260,20 @@ export default function Decisions() {
       subtitle="Run a real governed framework hook, then inspect the policy verdict and evidence delivery without introducing another public UI."
     >
       <h2>Governed runs</h2>
+      {demos !== null && demos.length === 0 && (
+        <p className="sub ct-mb-8">
+          No governed demo runner is configured, or none is answering.
+        </p>
+      )}
       <div className="ct-grid-2 ct-mb-8">
-        <DemoCard
-          demo="bug-triage"
-          systems={systems}
-          latest={latest["bug-triage"]}
-        />
-        <DemoCard
-          demo="response-drafter"
-          systems={systems}
-          latest={latest["response-drafter"]}
-        />
-        <DemoCard
-          demo="claims-letter"
-          systems={systems}
-          latest={latest["claims-letter"]}
-        />
-        <DemoCard
-          demo="refund-check"
-          systems={systems}
-          latest={latest["refund-check"]}
-        />
-        <DemoCard
-          demo="crm-update"
-          systems={systems}
-          latest={latest["crm-update"]}
-        />
+        {(demos ?? []).map((demo) => (
+          <DemoCard
+            key={demo.id}
+            demo={demo}
+            systems={systems}
+            latest={latest[demo.id]}
+          />
+        ))}
       </div>
       <h2>Advanced PDP query</h2>
       <p className="sub">

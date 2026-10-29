@@ -15,7 +15,8 @@ target/
 ui/dist
 ui/*.tsbuildinfo
 # The backend image does not need integrations. Keep them out by default, but retain the
-# packages, runner source and scripted model required by integrations/demo-runner/Dockerfile.
+# adapters, the runner and the conformance agents and scripted model the demo runner images run
+# (integrations/demo-runner/Dockerfile).
 integrations/*
 !integrations/prudence-core/
 !integrations/prudence-core/**
@@ -29,12 +30,31 @@ integrations/*
 !integrations/openai-agents/**
 !integrations/agent-framework/
 !integrations/agent-framework/**
+!integrations/langchain/
+!integrations/langchain/**
+!integrations/claude-agent-sdk/
+!integrations/claude-agent-sdk/**
+!integrations/agno/
+!integrations/agno/**
+!integrations/smolagents/
+!integrations/smolagents/**
+!integrations/semantic-kernel/
+!integrations/semantic-kernel/**
+!integrations/strands-agents/
+!integrations/strands-agents/**
+!integrations/crewai/
+!integrations/crewai/**
+!integrations/llamaindex/
+!integrations/llamaindex/**
 !integrations/demo-runner/
 !integrations/demo-runner/**
 !integrations/conformance/
 integrations/conformance/*
 !integrations/conformance/fake_llm.py
+!integrations/conformance/agents/
+!integrations/conformance/agents/**
 integrations/**/.venv/
+integrations/**/.venv-*/
 integrations/**/__pycache__/
 integrations/**/*.pyc
 integrations/**/*.egg-info/

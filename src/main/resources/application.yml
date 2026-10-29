@@ -113,10 +113,15 @@ prudence:
     #     "[send_customer_letter]": 68bf42c1-7b02-46b7-a7d9-68d696620b8a
     tool-systems: {}
   demo-runner:
-    # Internal-only Python runner for the visible Pydantic AI / LangGraph demonstrations. It is
-    # blank unless deployed; browsers only call Prudence and never see its shared token.
-    base-url: ${PRUDENCE_DEMO_RUNNER_URL:}
-    token: ${PRUDENCE_DEMO_RUNNER_TOKEN:}
+    # Internal-only governed demo runners (integrations/demo-runner, protocol v1), one per image:
+    # A holds the openai 3.x frameworks, B the openai 2.x ones. Each is blank unless deployed;
+    # the console shows the demos the configured runners declare. Browsers only call Prudence
+    # and never see a runner's token.
+    runners:
+      - base-url: ${PRUDENCE_DEMO_RUNNER_URL:}
+        token: ${PRUDENCE_DEMO_RUNNER_TOKEN:}
+      - base-url: ${PRUDENCE_DEMO_RUNNER_B_URL:}
+        token: ${PRUDENCE_DEMO_RUNNER_B_TOKEN:}
   opa:
     base-url: http://127.0.0.1:8181
     decision-path: /v1/data/prudence/allow

@@ -198,28 +198,49 @@ export interface Decision {
   approver?: string;
 }
 
-/// The framework demos the private runner executes (one per governed framework adapter).
-export type GovernedDemo =
-  | "bug-triage"
-  | "response-drafter"
-  | "claims-letter"
-  | "refund-check"
-  | "crm-update";
+/// A governed demo a private runner declares (one per framework adapter it holds).
+export interface GovernedDemo {
+  id: string;
+  framework: string;
+  title: string;
+  detail: string;
+  pipeline: string;
+  runner: number;
+}
 
+/// One run of a demo. `decision` and `continued` are the runner's account; `prudence` is what
+/// Prudence itself recorded for the run (its PDP decision and the reported execution).
 export interface GovernedDemoRun {
-  framework: "Pydantic AI" | "LangGraph";
-  step: string;
-  decision: Decision["decision"];
-  reason?: string | null;
-  output?: string | null;
-  aiSystemId?: string;
-  /** Which model answered: an OpenAI-compatible endpoint (e.g. a deterministic mock) or offline. */
-  model?: string;
+  runId: string;
+  demo: string;
+  framework: string;
+  aiSystemId: string;
+  pipeline: string;
+  status: "running" | "done" | "failed";
+  startedAt: string;
+  finishedAt?: string;
+  decision?: Decision["decision"] | "ERROR";
   continued?: boolean;
-  evidence?: {
-    status?: number | null;
-    receipt?: Record<string, unknown> | null;
-  } | null;
+  output?: string | null;
+  /** Which model answered: an OpenAI-compatible endpoint (e.g. a deterministic mock) or the scripted one. */
+  model?: string;
+  error?: string;
+  prudence?: {
+    decision?: {
+      decisionId: string;
+      verdict: string;
+      reason?: string | null;
+      subject: string;
+      at: string;
+    };
+    execution?: {
+      runtime: string;
+      executionId: string;
+      decisionId?: string | null;
+      decisionStatus: string;
+      at: string;
+    };
+  };
 }
 
 /// Where a piece of governance evidence stands on its way to Ernest. `sealed` (qualified QTSP
@@ -777,15 +798,21 @@ export const api = {
       headers: withAuth(json_ct),
       body: JSON.stringify(body),
     }).then(json<Decision>),
-  runDemo: (demo: GovernedDemo, aiSystemId: string) =>
-    fetch(`/api/demos/${demo}/runs`, {
+  demos: () =>
+    fetch("/api/demos", { headers: withAuth() }).then(json<GovernedDemo[]>),
+  runDemo: (demo: string, aiSystemId: string) =>
+    fetch(`/api/demos/${encodeURIComponent(demo)}/runs`, {
       method: "POST",
       headers: withAuth(json_ct),
       body: JSON.stringify({ aiSystemId }),
     }).then(ok<GovernedDemoRun>),
+  demoRun: (runId: string) =>
+    fetch(`/api/demos/runs/${encodeURIComponent(runId)}`, {
+      headers: withAuth(),
+    }).then(ok<GovernedDemoRun>),
   demoRuns: () =>
     fetch("/api/demos/runs", { headers: withAuth() }).then(
-      json<Partial<Record<GovernedDemo, GovernedDemoRun>>>,
+      json<Record<string, GovernedDemoRun>>,
     ),
   approveSystem: (id: string) =>
     fetch(`/api/registry/systems/${id}/approve`, {
