@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conformance with real login: three frameworks, an MCP gateway and Ernest, against Prudence
+"""Conformance with real login: thirteen frameworks, an MCP gateway and Ernest, against Prudence
 secured by Keycloak.
 
 What run.py cannot show, because the dev profile takes the caller from the request: that an
@@ -17,7 +17,7 @@ OPA starts with no grant for any runtime (stack-sso.sh). This run:
 5. with Ernest in the stack: checks the decisions and executions were sealed there, and that
    Prudence's execution-source check flags a runtime that reported without evidence.
 
-Needs scripts/keycloak.sh and stack-sso.sh running, and the three environments (README.md).
+Needs scripts/keycloak.sh and stack-sso.sh running, and the per-framework environments (README.md).
 Uses the dev realm's test credentials only (admin/admin, alice/alice). Exits 1 if any case fails.
 """
 from __future__ import annotations
@@ -44,9 +44,19 @@ REALM = "chestertown"
 TOKEN_URL = f"{KEYCLOAK}/realms/{REALM}/protocol/openid-connect/token"
 STATE = HERE / ".sso"
 FRAMEWORKS = [  # (label, runtime to register, venv, agent script, runtime name the adapter reports)
+    ("Pydantic AI", "conformance-pydantic", ".venv-pydantic", "pydantic_agent.py", "pydantic-ai"),
+    ("LangGraph", "conformance-langgraph", ".venv-langgraph", "langgraph_agent.py", "langgraph"),
     ("Google ADK", "conformance-adk", ".venv-adk", "adk_agent.py", "google-adk"),
     ("OpenAI Agents SDK", "conformance-openai", ".venv-openai", "openai_agent.py", "openai-agents"),
     ("MS Agent Framework", "conformance-maf", ".venv-maf", "maf_agent.py", "agent-framework"),
+    ("Semantic Kernel", "conformance-sk", ".venv-sk", "sk_agent.py", "semantic-kernel"),
+    ("Strands Agents", "conformance-strands", ".venv-strands", "strands_agent.py", "strands-agents"),
+    ("LangChain", "conformance-langchain", ".venv-langchain", "langchain_agent.py", "langchain"),
+    ("Claude Agent SDK", "conformance-claude", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),
+    ("CrewAI", "conformance-crewai", ".venv-crewai", "crewai_agent.py", "crewai"),
+    ("Agno", "conformance-agno", ".venv-agno", "agno_agent.py", "agno"),
+    ("LlamaIndex", "conformance-llamaindex", ".venv-llamaindex", "llamaindex_agent.py", "llamaindex"),
+    ("smolagents", "conformance-smolagents", ".venv-smolagents", "smolagents_agent.py", "smolagents"),
 ]
 MCP_RUNTIME = "conformance-mcp"
 
@@ -203,7 +213,7 @@ def main() -> int:
               f"tool ran: {out.get('toolRan')} (no token, so the gate fails closed)")
 
     # The negative control for step 5: one allowed run that reports to Prudence, seals nothing.
-    label, runtime, venv, script, _ = FRAMEWORKS[2]
+    label, runtime, venv, script, _ = next(f for f in FRAMEWORKS if f[4] == "agent-framework")
     run_agent(venv, script, {"PRUDENCE_URL": PRUDENCE, "LLM_URL": llm_url, "PRUDENCE_PDP_TOKEN_URL": TOKEN_URL,
                              "PRUDENCE_PDP_CLIENT_ID": f"{runtime}-pdp", "PRUDENCE_PDP_CLIENT_SECRET": secrets[runtime],
                              "ERNEST_URL": "", "AI_SYSTEM_ID": unsealed, "PIPELINE": "send_customer_letter"})

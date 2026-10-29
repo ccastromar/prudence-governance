@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Conformance run: do the framework adapters really enforce Prudence's decisions?
 
-For each framework (Google ADK, OpenAI Agents SDK, Microsoft Agent Framework) a real agent of
-that framework, with one tool and a scripted model (fake_llm.py), asks to send a letter. Four
+For each framework in FRAMEWORKS (Pydantic AI, LangGraph, Google ADK, OpenAI Agents SDK, Microsoft Agent Framework,
+Semantic Kernel, Strands, LangChain, Claude Agent SDK, CrewAI, Agno, LlamaIndex, smolagents) a
+real agent of that framework, with one tool and a scripted model (fake_llm.py), asks to send a letter. Four
 cases each:
 
   ALLOW              approved system, granted pipeline  -> the tool runs and the run is reported
@@ -10,7 +11,7 @@ cases each:
   DENY               pipeline the runtime was not granted -> the tool does not run
   PRUDENCE DOWN      Prudence unreachable                -> the tool does not run (fail closed)
 
-Needs the stack from stack.sh (Prudence :18099, OPA :18181) and the three environments
+Needs the stack from stack.sh (Prudence :18099, OPA :18181) and the per-framework environments
 (setup in README.md). Standard library only; exits 1 if any case fails.
 
     integrations/conformance/run.py
@@ -31,9 +32,19 @@ sys.path.insert(0, str(HERE))
 from fake_llm import serve  # noqa: E402
 PRUDENCE = os.getenv("PRUDENCE_URL", "http://127.0.0.1:18099")
 FRAMEWORKS = [  # (label, venv, agent script, runtime name the adapter reports)
+    ("Pydantic AI", ".venv-pydantic", "pydantic_agent.py", "pydantic-ai"),
+    ("LangGraph", ".venv-langgraph", "langgraph_agent.py", "langgraph"),
     ("Google ADK", ".venv-adk", "adk_agent.py", "google-adk"),
     ("OpenAI Agents SDK", ".venv-openai", "openai_agent.py", "openai-agents"),
     ("MS Agent Framework", ".venv-maf", "maf_agent.py", "agent-framework"),
+    ("Semantic Kernel", ".venv-sk", "sk_agent.py", "semantic-kernel"),
+    ("Strands Agents", ".venv-strands", "strands_agent.py", "strands-agents"),
+    ("LangChain", ".venv-langchain", "langchain_agent.py", "langchain"),
+    ("Claude Agent SDK", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),
+    ("CrewAI", ".venv-crewai", "crewai_agent.py", "crewai"),
+    ("Agno", ".venv-agno", "agno_agent.py", "agno"),
+    ("LlamaIndex", ".venv-llamaindex", "llamaindex_agent.py", "llamaindex"),
+    ("smolagents", ".venv-smolagents", "smolagents_agent.py", "smolagents"),
 ]
 
 

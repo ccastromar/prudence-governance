@@ -1,6 +1,7 @@
 """An OpenAI Agents SDK agent with one governed tool, as a company using the SDK would write it.
 
-Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL; prints one JSON line:
+Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL, LLM_MODEL and
+LLM_API_KEY; prints one JSON line:
 {"toolRan": bool, "answer": str}.
 """
 import asyncio
@@ -33,8 +34,8 @@ def send_customer_letter(customer_id: str) -> str:
 
 async def main() -> None:
     model = OpenAIChatCompletionsModel(
-        model="conformance-scripted",
-        openai_client=AsyncOpenAI(base_url=os.environ["LLM_URL"], api_key="none"),
+        model=os.environ.get("LLM_MODEL", "conformance-scripted"),
+        openai_client=AsyncOpenAI(base_url=os.environ["LLM_URL"], api_key=os.environ.get("LLM_API_KEY", "none")),
     )
     agent = Agent(name="claims_assistant", instructions="Use your tools to do what the user asks.",
                   tools=[send_customer_letter], model=model)

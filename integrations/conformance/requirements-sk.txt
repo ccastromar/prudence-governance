@@ -1,0 +1,3 @@
+semantic-kernel>=1.46
+-e ../prudence-core
+-e ../semantic-kernel

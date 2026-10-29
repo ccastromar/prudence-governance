@@ -1,0 +1,4 @@
+llama-index-core>=0.14
+llama-index-llms-openai-like
+-e ../prudence-core
+-e ../llamaindex

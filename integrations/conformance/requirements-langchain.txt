@@ -1,0 +1,4 @@
+langchain>=1.4
+langchain-openai
+-e ../prudence-core
+-e ../langchain

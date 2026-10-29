@@ -1,9 +1,19 @@
 {
   "prudence": {
     "roles_of": {
+      "pydantic-ai": ["conformance-runtime"],
+      "langgraph": ["conformance-runtime"],
       "google-adk": ["conformance-runtime"],
       "openai-agents": ["conformance-runtime"],
-      "agent-framework": ["conformance-runtime"]
+      "agent-framework": ["conformance-runtime"],
+      "semantic-kernel": ["conformance-runtime"],
+      "strands-agents": ["conformance-runtime"],
+      "langchain": ["conformance-runtime"],
+      "claude-agent-sdk": ["conformance-runtime"],
+      "crewai": ["conformance-runtime"],
+      "agno": ["conformance-runtime"],
+      "llamaindex": ["conformance-runtime"],
+      "smolagents": ["conformance-runtime"]
     },
     "role_permissions": {
       "conformance-runtime": [

@@ -1,6 +1,7 @@
 """A Microsoft Agent Framework agent with one governed tool, as a company using it would write it.
 
-Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL; prints one JSON line:
+Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL, LLM_MODEL and
+LLM_API_KEY; prints one JSON line:
 {"toolRan": bool, "answer": str}.
 """
 import asyncio
@@ -24,7 +25,7 @@ def send_customer_letter(customer_id: str) -> str:
 
 
 async def main() -> None:
-    client = OpenAIChatCompletionClient(model="conformance-scripted", base_url=os.environ["LLM_URL"], api_key="none")
+    client = OpenAIChatCompletionClient(model=os.environ.get("LLM_MODEL", "conformance-scripted"), base_url=os.environ["LLM_URL"], api_key=os.environ.get("LLM_API_KEY", "none"))
     governance = PrudenceMiddleware(
         os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),

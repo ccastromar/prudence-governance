@@ -1,0 +1,3 @@
+pydantic-ai-slim[openai]>=2
+-e ../prudence-core
+-e ../pydantic-ai

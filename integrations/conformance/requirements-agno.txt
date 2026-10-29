@@ -1,0 +1,4 @@
+agno>=3.1
+openai
+-e ../prudence-core
+-e ../agno

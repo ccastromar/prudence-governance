@@ -1,0 +1,3 @@
+claude-agent-sdk>=0.2
+-e ../prudence-core
+-e ../claude-agent-sdk
