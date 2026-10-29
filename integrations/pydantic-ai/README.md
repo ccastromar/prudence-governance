@@ -16,7 +16,8 @@ def score_credit_risk(ctx, applicant_id: str, amount: float) -> str:
 ```
 
 Before the tool runs, the Prudence PDP is consulted (`allow | deny | approval-required`).
-After it runs, the step is sealed in Ernest's hashchain. The agent framework never sees
+When it is allowed, the execution is reported to Prudence and sealed in Ernest's hashchain
+under the AI system's registry id. The agent framework never sees
 the policy. The governed subject, the registry system id and the evidence clients travel in
 the agent's dependencies, so one tool can run under different identities and policies
 without changing its code.
@@ -24,12 +25,15 @@ without changing its code.
 ## What gets sealed
 
 Per governed call, Ernest records:
-- an **execution** block (when the call was allowed).
+- an **execution** block under the AI system's registry id (when the call was allowed), the
+  same record every other adapter writes, so Prudence can compare it with the runtime's report.
+  If Ernest does not know the system yet (Prudence registers it with its first decision), the
+  seal is retried for a few seconds.
 
 The governance decision itself is recorded by Prudence, which seals every decision it makes
 under the AI system's registry id — the tool does not record it a second time.
 
-Only SHA-256 hashes of inputs/outputs are sent — raw data never leaves the process.
+Only a SHA-256 hash of the inputs is sent — raw data never leaves the process.
 
 ## Run the demo
 

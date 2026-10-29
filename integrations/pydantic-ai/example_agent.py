@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import uuid
 
 import httpx
 from pydantic_ai import Agent, RunContext
@@ -50,9 +49,9 @@ def score_credit_risk(ctx: RunContext[GovDeps], applicant_id: str = "A-1001", am
     return f"applicant={applicant_id} amount={amount} score={score} decision={band}"
 
 
-def run_once(label: str, subject: str, ai_system_id: str, model_id: str,
+def run_once(label: str, subject: str, ai_system_id: str,
              gate: PrudenceGate, evidence: ErnestEvidence) -> None:
-    deps = GovDeps(subject=subject, ai_system_id=ai_system_id, model_id=model_id, gate=gate, evidence=evidence)
+    deps = GovDeps(subject=subject, ai_system_id=ai_system_id, gate=gate, evidence=evidence)
     result = agent.run_sync("Score applicant A-1001 requesting 15000", deps=deps, model=TestModel())
     output = getattr(result, "output", None) or getattr(result, "data", None)
     print(f"[{label:>8}] subject={subject:<18} -> {output}")
@@ -67,10 +66,6 @@ def main() -> None:
 
     approved = register_system("HIGH", approve=True)
     pending = register_system("HIGH", approve=False)
-    run = uuid.uuid4().hex[:8]
-    model_id = f"credit-risk-scoring-agent-{run}"
-    evidence.ensure_model(model_id, f"Credit risk scoring agent (Pydantic AI) {run}", "1.0.0",
-                          metadata={"framework": "pydantic-ai", "aiSystemId": approved})
 
     v = evidence.verify()
     before = v.get("chainLength", v.get("blocksVerified"))  # chainLength on Ernest with incremental verify
@@ -79,11 +74,11 @@ def main() -> None:
     print(f"Ernest chain before: {before} blocks\n")
 
     # ALLOW — approved system + a subject OPA authorizes (alice has model-operator/run).
-    run_once("ALLOW", "alice@bank.eu", approved, model_id, gate, evidence)
+    run_once("ALLOW", "alice@bank.eu", approved, gate, evidence)
     # DENY — approved system, but OPA grants the subject no role on this pipeline.
-    run_once("DENY", "mallory@bank.eu", approved, model_id, gate, evidence)
+    run_once("DENY", "mallory@bank.eu", approved, gate, evidence)
     # APPROVAL — a registered-but-unapproved system: the gate pauses before any run.
-    run_once("APPROVAL", "alice@bank.eu", pending, model_id, gate, evidence)
+    run_once("APPROVAL", "alice@bank.eu", pending, gate, evidence)
 
     after = evidence.verify()
     print(f"\nErnest chain after:  {after.get('chainLength', after.get('blocksVerified'))} blocks  (valid={after.get('isValid')})")

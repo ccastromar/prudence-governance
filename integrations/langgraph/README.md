@@ -11,9 +11,10 @@ b.add_node("score", governed_node(score_node, pipeline="credit-risk-scoring",
 b.add_conditional_edges("score", gate_route, {"allow": "disburse", "stop": END})
 ```
 
-Before a governed node runs, the Prudence PDP is consulted; after it runs, the step is sealed
-in Ernest. Governance context (subject, registry system id, Ernest model id) travels in the
-graph state, so the same node runs under different identities and policies unchanged.
+Before a governed node runs, the Prudence PDP is consulted; when it is allowed, the execution
+is reported to Prudence and sealed in Ernest under the AI system's registry id (where Prudence
+compares the two). Governance context (subject, registry system id) travels in the graph
+state, so the same node runs under different identities and policies unchanged.
 
 ## Run the demo
 

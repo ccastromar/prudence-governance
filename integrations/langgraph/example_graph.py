@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import hashlib
 import os
-import uuid
 from typing import TypedDict
 
 import httpx
@@ -26,7 +25,6 @@ PRUDENCE = os.getenv("PRUDENCE_URL", "http://127.0.0.1:8099")
 class CreditState(TypedDict, total=False):
     subject: str          # governance context
     ai_system_id: str
-    model_id: str
     applicant_id: str     # tool io
     amount: float
     gate: str
@@ -73,8 +71,8 @@ def build_graph(gate: PrudenceGate, evidence: ErnestEvidence):
     return b.compile()
 
 
-def run_once(graph, label: str, subject: str, ai_system_id: str, model_id: str) -> None:
-    out = graph.invoke({"subject": subject, "ai_system_id": ai_system_id, "model_id": model_id,
+def run_once(graph, label: str, subject: str, ai_system_id: str) -> None:
+    out = graph.invoke({"subject": subject, "ai_system_id": ai_system_id,
                         "applicant_id": "A-1001", "amount": 15000.0})
     print(f"[{label:>8}] subject={subject:<18} gate={out.get('gate',''):<16} "
           f"disbursed={out.get('disbursed', False)!s:<5} -> {out.get('output')}")
@@ -89,11 +87,6 @@ def main() -> None:
 
     approved = register_system("HIGH", approve=True)
     pending = register_system("HIGH", approve=False)
-    run = uuid.uuid4().hex[:8]
-    model_id = f"credit-risk-scoring-langgraph-{run}"
-    ms, _ = evidence.ensure_model(model_id, f"Credit risk scoring graph (LangGraph) {run}", "1.0.0",
-                                  metadata={"framework": "langgraph", "aiSystemId": approved})
-    print(f"model registration: HTTP {ms}")
 
     graph = build_graph(gate, evidence)
     v = evidence.verify()
@@ -102,9 +95,9 @@ def main() -> None:
     print(f"pending  system: {pending}")
     print(f"Ernest chain before: {before} blocks\n")
 
-    run_once(graph, "ALLOW", "alice@bank.eu", approved, model_id)      # authorized -> disburses
-    run_once(graph, "DENY", "mallory@bank.eu", approved, model_id)     # no OPA role -> stops at gate
-    run_once(graph, "APPROVAL", "alice@bank.eu", pending, model_id)    # unapproved system -> stops at gate
+    run_once(graph, "ALLOW", "alice@bank.eu", approved)      # authorized -> disburses
+    run_once(graph, "DENY", "mallory@bank.eu", approved)     # no OPA role -> stops at gate
+    run_once(graph, "APPROVAL", "alice@bank.eu", pending)    # unapproved system -> stops at gate
 
     after = evidence.verify()
     print(f"\nErnest chain after:  {after.get('chainLength', after.get('blocksVerified'))} blocks  (valid={after.get('isValid')})")
