@@ -1,6 +1,6 @@
 # Console image. Build from the repository root (compose does). The design system is a vendored
 # package in ui/vendor, so nothing outside ui/ is needed.
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 WORKDIR /workspace/ui
 # Vite substitutes only VITE_* variables at build time. These optional arguments let a deployer
 # enable OIDC without baking a particular issuer or deployment topology into the public image.
