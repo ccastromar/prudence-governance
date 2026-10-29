@@ -11,11 +11,19 @@ prudence-core/        prudence_governance — the shared core
 
 pydantic-ai/          prudence_pydantic — @governed decorator for a Pydantic AI tool
 langgraph/            prudence_langgraph — governed_node + gate_route for a LangGraph graph
+langchain/            prudence_langchain — create_agent middleware (LangChain agents)
 google-adk/           prudence_adk — a runner plugin that gates every tool call (Google ADK)
 openai-agents/        prudence_openai_agents — a tool input guardrail (OpenAI Agents SDK)
 agent-framework/      prudence_agent_framework — function middleware (Microsoft Agent Framework)
-conformance/          real agents of ADK, the Agents SDK and Agent Framework, run against a real
-                        Prudence: do the adapters enforce ALLOW / APPROVAL_REQUIRED / DENY / down?
+semantic-kernel/      prudence_semantic_kernel — a function invocation filter (Semantic Kernel)
+strands-agents/       prudence_strands — a hook provider that gates every tool call (Strands Agents)
+crewai/               prudence_crewai — tool call hooks for every crew in the process (CrewAI)
+agno/                 prudence_agno — a tool hook (Agno)
+llamaindex/           prudence_llamaindex — a governed tool wrapper (LlamaIndex)
+smolagents/           prudence_smolagents — a governed tool wrapper (smolagents)
+claude-agent-sdk/     prudence_claude_agent — a PreToolUse hook (Claude Agent SDK)
+conformance/          real agents of every framework above, run against a real Prudence: do the
+                        adapters enforce ALLOW / APPROVAL_REQUIRED / DENY / down?
 demo-runner/          internal HTTP runner used by Prudence's visible framework demos
 ```
 
@@ -27,29 +35,23 @@ Every adapter does the same two things at its framework's natural hook point: co
 PDP before a step runs (allow / deny / approval-required), and seal the execution in Ernest
 afterwards. The decision is sealed by Prudence itself (the PDP records every decision it
 makes), so adapters never record it twice: per governed call that is one PDP call and one
-Ernest write from the agent. Adding a runtime (CrewAI, …) is a new
+Ernest write from the agent. Adding a runtime is a new
 thin adapter, not a new core.
 
 ## Console demonstrations
 
-The optional `demo-runner` executes the deterministic examples exposed in Prudence's **Policy
-decisions → Governed runs** panel, one per framework adapter: a Pydantic AI bug-triage tool, a
-LangGraph response-drafting node, a Google ADK claims-letter tool, an OpenAI Agents SDK refund
-tool and a Microsoft Agent Framework CRM tool (`agent_demos.py`). The last three seal each
-allowed execution in Ernest under the AI system's id. It is internal-only: the browser calls Prudence with an `author`
-session, Prudence relays to the runner using a private token, and the runner uses its own
-least-privilege M2M identity (`pdp.decide`) to call the PDP. The browser never receives a PDP
-or Ernest credential. The deployment creates the runner identity and the bridge token.
+Prudence's **Policy decisions → Governed runs** panel runs a real agent of each framework, one
+card per adapter. The agents are the conformance agents above, so what the console shows is what
+conformance tests. They run in [`demo-runner`](demo-runner) — internal-only runners that speak
+one small protocol (manifest, start a run, read a run) and come in two images, because the
+frameworks do not fit one environment: image A holds the `openai` 3.x family, image B the 2.x one
+(CrewAI, Strands, LlamaIndex, Semantic Kernel). Prudence lists whatever the configured runners
+declare, starts a run on the runner that holds the demo, and shows the run next to what Prudence
+itself recorded for it: its PDP decision and the execution the runtime reported.
 
-By default the runner needs no model: Pydantic AI uses its offline `TestModel`, the LangGraph
-node returns a fixed draft, and the three agent frameworks talk to the conformance run's scripted
-endpoint (`fake_llm.py`), started in-process. Set `PRUDENCE_DEMO_LLM_BASE_URL` to an OpenAI-compatible `/v1`
-endpoint (optionally `PRUDENCE_DEMO_LLM_MODEL`, default `aos-deterministic-mock`, and
-`PRUDENCE_DEMO_LLM_API_KEY`) and both frameworks make a real model call over HTTP instead: the
-Pydantic AI agent lets the model choose the governed tool, and the LangGraph node asks it for
-the draft. AOS's deterministic mock LLM (`aos-mock-llm`) is such an endpoint — it is not a
-language model, and each run reports which model answered (`model`), shown in the panel. When
-the PDP denies, the LangGraph node does not call the model at all.
+The browser calls Prudence with an `author` session; Prudence calls a runner with that runner's
+private token; the runner's agents call the PDP with their framework's M2M identity. The browser
+never receives a PDP or Ernest credential. See [`demo-runner/README.md`](demo-runner/README.md).
 
 `pydantic-ai` and `langgraph` are installable packages (`pip install -e ./pydantic-ai`), each
 next to `prudence-core`.

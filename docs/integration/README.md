@@ -1,8 +1,10 @@
 # Connect your orchestrator to Prudence
 
 Prudence decides whether a governed AI system may run. Your orchestrator, whether that is
-LangGraph, Google ADK, the OpenAI Agents SDK, Microsoft Agent Framework, an MCP gateway or
-something in-house, keeps running the work. It asks Prudence first and obeys the answer.
+LangChain, LangGraph, Google ADK, the OpenAI Agents SDK, Microsoft Agent Framework, Semantic
+Kernel, Strands Agents, CrewAI, Agno, LlamaIndex, smolagents, the Claude Agent SDK, an MCP
+gateway or something in-house, keeps running the work. It asks Prudence first and obeys the
+answer.
 
 This guide takes a runtime from nothing to governed in five steps. AOS, the Chestertown
 reference runtime, does exactly this; nothing here is AOS-specific.
@@ -195,10 +197,18 @@ external store; not independently verifiable"), and never claims a seal it does 
 |---|---|---|
 | Any Python code | [`integrations/prudence-core`](../../integrations/prudence-core) | `PrudenceGate.decide()` and `report_execution()` |
 | LangGraph | [`integrations/langgraph`](../../integrations/langgraph) | a governed node and a routing gate |
+| LangChain agents (`create_agent`) | [`integrations/langchain`](../../integrations/langchain) | agent middleware: every tool call |
 | Pydantic AI | [`integrations/pydantic-ai`](../../integrations/pydantic-ai) | a `@governed` decorator for a tool |
 | Google ADK | [`integrations/google-adk`](../../integrations/google-adk) | a runner plugin: every tool of every agent |
 | OpenAI Agents SDK | [`integrations/openai-agents`](../../integrations/openai-agents) | a tool input guardrail |
 | Microsoft Agent Framework | [`integrations/agent-framework`](../../integrations/agent-framework) | function middleware |
+| Semantic Kernel | [`integrations/semantic-kernel`](../../integrations/semantic-kernel) | a function invocation filter |
+| Strands Agents | [`integrations/strands-agents`](../../integrations/strands-agents) | a hook provider: every tool call |
+| CrewAI | [`integrations/crewai`](../../integrations/crewai) | tool call hooks: every crew in the process |
+| Agno | [`integrations/agno`](../../integrations/agno) | a tool hook |
+| LlamaIndex | [`integrations/llamaindex`](../../integrations/llamaindex) | a wrapper per tool |
+| smolagents | [`integrations/smolagents`](../../integrations/smolagents) | a wrapper per tool |
+| Claude Agent SDK | [`integrations/claude-agent-sdk`](../../integrations/claude-agent-sdk) | a PreToolUse hook: built-in and MCP tools |
 | Go | AOS `internal/governance` | the reference implementation |
 | MCP gateway (AuthZEN) | none needed | `resource.type: tool`, see step 3 |
 

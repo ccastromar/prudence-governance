@@ -19,7 +19,7 @@ Who runs the vectors:
 | --- | --- | --- |
 | Provider | Prudence (`PolicyController`, `ExecutionReportController`) | `DecisionApiContractTest` |
 | Gate | AOS (`internal/governance`) | `decision_contract_test.go`, on a copy made by `sync.sh` |
-| Gate | `integrations/prudence-core` (Pydantic AI, LangGraph, ADK, OpenAI Agents, Agent Framework) | `tests/test_decision_contract.py` |
+| Gate | `integrations/prudence-core` (Pydantic AI, LangChain, LangGraph, ADK, OpenAI Agents, Agent Framework, Semantic Kernel, Strands, CrewAI, Agno, LlamaIndex, smolagents, Claude Agent SDK) | `tests/test_decision_contract.py` |
 
 An implementation conforms when it agrees with every case. A new gate (another orchestrator)
 should run `vectors/gate.json` and `vectors/report.json` before it calls a real Prudence.
