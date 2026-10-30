@@ -25,6 +25,12 @@ from prudence_governance import ErnestEvidence
 
 ran: list[str] = []
 
+# The story this run tells: a demo's, set by the demo runner, or conformance's own by default.
+TOOL = os.environ.get("DEMO_TOOL", "send_customer_letter")
+DESCRIPTION = os.environ.get("DEMO_TOOL_DESCRIPTION", "Send the standard claims letter to a customer.")
+TASK = os.environ.get("DEMO_TASK", "Send the letter to customer C-1")
+RESULT = os.environ.get("DEMO_RESULT", "sent to {reference}")
+
 
 def _json_schema(schema: Any) -> dict:
     """A google.genai Schema (uppercase types) as plain JSON Schema."""
@@ -95,10 +101,13 @@ class ChatCompletionsLlm(BaseLlm):
         yield LlmResponse(content=types.Content(role="model", parts=parts))
 
 
-def send_customer_letter(customer_id: str) -> dict:
-    """Send the standard claims letter to a customer."""
-    ran.append(customer_id)
-    return {"status": "sent", "customer": customer_id}
+def run_tool(reference: str) -> dict:
+    ran.append(reference)
+    return {"status": "done", "result": RESULT.format(reference=reference)}
+
+
+run_tool.__name__ = TOOL
+run_tool.__doc__ = DESCRIPTION
 
 
 async def main() -> None:
@@ -107,18 +116,18 @@ async def main() -> None:
         model=ChatCompletionsLlm(model=os.environ.get("LLM_MODEL", "conformance-scripted"),
                                  base_url=os.environ["LLM_URL"], api_key=os.environ.get("LLM_API_KEY", "none")),
         instruction="Use your tools to do what the user asks.",
-        tools=[send_customer_letter],
+        tools=[run_tool],
     )
     governance = PrudencePlugin(
         os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-        pipelines={"send_customer_letter": os.environ.get("PIPELINE", "send_customer_letter")},
+        pipelines={TOOL: os.environ.get("PIPELINE", "send_customer_letter")},
         evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
     )
     runner = InMemoryRunner(agent=agent, app_name="conformance", plugins=[governance])
     session = await runner.session_service.create_session(app_name="conformance", user_id="tester")
     answer = ""
-    message = types.Content(role="user", parts=[types.Part(text="Send the letter to customer C-1")])
+    message = types.Content(role="user", parts=[types.Part(text=TASK)])
     async for event in runner.run_async(user_id="tester", session_id=session.id, new_message=message):
         for part in (event.content.parts if event.content and event.content.parts else []):
             if part.text:

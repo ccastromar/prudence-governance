@@ -8,6 +8,7 @@ LLM_API_KEY; prints one JSON line: {"toolRan": bool, "answer": str}.
 """
 import json
 import os
+import re
 from typing import TypedDict
 
 import httpx
@@ -18,11 +19,15 @@ from prudence_langgraph import gate_route, governed_node
 
 ran: list[str] = []
 
+# The story this run tells: a demo's, set by the demo runner, or conformance's own by default.
+TASK = os.environ.get("DEMO_TASK", "Send the letter to customer C-1")
+RESULT = os.environ.get("DEMO_RESULT", "sent to {reference}")
+
 
 class LetterState(TypedDict, total=False):
     subject: str
     ai_system_id: str
-    customer_id: str
+    reference: str
     gate: str
     reason: str
     output: str
@@ -32,11 +37,11 @@ def send(state: LetterState) -> dict:
     r = httpx.post(f"{os.environ['LLM_URL']}/chat/completions", timeout=20,
                    headers={"Authorization": f"Bearer {os.environ.get('LLM_API_KEY', 'none')}"},
                    json={"model": os.environ.get("LLM_MODEL", "conformance-scripted"),
-                         "messages": [{"role": "user", "content": "Draft the standard claims letter."}]})
+                         "messages": [{"role": "user", "content": TASK}]})
     r.raise_for_status()
     draft = r.json()["choices"][0]["message"]["content"]
-    ran.append(state["customer_id"])
-    return {"output": f"sent to {state['customer_id']} ({draft})"}
+    ran.append(state["reference"])
+    return {"output": f"{RESULT.format(reference=state['reference'])} ({draft})"}
 
 
 graph = StateGraph(LetterState)
@@ -53,6 +58,6 @@ system = os.environ["AI_SYSTEM_ID"]
 out = graph.compile().invoke({
     "subject": "langgraph",  # the dev profile's caller; a secured PDP takes it from the token
     "ai_system_id": system,
-    "customer_id": "C-1",
+    "reference": re.search(r"[A-Z]+-\d+", TASK).group(0),
 })
 print(json.dumps({"toolRan": bool(ran), "answer": out.get("output", "")}))

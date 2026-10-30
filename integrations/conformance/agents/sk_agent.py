@@ -20,13 +20,18 @@ from prudence_semantic_kernel import PrudenceFilter, PrudenceGate
 
 ran: list[str] = []
 
+# The story this run tells: a demo's, set by the demo runner, or conformance's own by default.
+TOOL = os.environ.get("DEMO_TOOL", "send_customer_letter")
+DESCRIPTION = os.environ.get("DEMO_TOOL_DESCRIPTION", "Send the standard claims letter to a customer.")
+TASK = os.environ.get("DEMO_TASK", "Send the letter to customer C-1")
+RESULT = os.environ.get("DEMO_RESULT", "sent to {reference}")
+
 
 class Claims:
-    @kernel_function
-    def send_customer_letter(self, customer_id: str) -> str:
-        """Send the standard claims letter to a customer."""
-        ran.append(customer_id)
-        return f"sent to {customer_id}"
+    @kernel_function(name=TOOL, description=DESCRIPTION)
+    def run_tool(self, reference: str) -> str:
+        ran.append(reference)
+        return RESULT.format(reference=reference)
 
 
 async def main() -> None:
@@ -38,12 +43,12 @@ async def main() -> None:
     kernel.add_filter(FilterTypes.FUNCTION_INVOCATION, PrudenceFilter(
         os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-        pipelines={"send_customer_letter": os.environ.get("PIPELINE", "send_customer_letter")},
+        pipelines={TOOL: os.environ.get("PIPELINE", "send_customer_letter")},
         evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
     ))
     agent = ChatCompletionAgent(kernel=kernel, name="claims_assistant",
                                 instructions="Use your tools to do what the user asks.")
-    response = await agent.get_response(messages="Send the letter to customer C-1")
+    response = await agent.get_response(messages=TASK)
     await asyncio.sleep(0.5)  # the adapter reports in the background
     print(json.dumps({"toolRan": bool(ran), "answer": str(response.content)}))
 

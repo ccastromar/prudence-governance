@@ -134,7 +134,7 @@ class Runs:
                 model_env, label = model_for(demo)
                 creds = clients().get(demo.id, {})
                 env = {
-                    **os.environ, **model_env,
+                    **os.environ, **model_env, **demo.environment(),
                     "AI_SYSTEM_ID": run["aiSystemId"], "PIPELINE": PIPELINE,
                     "PRUDENCE_PDP_CLIENT_ID": creds.get("clientId", os.getenv("PRUDENCE_PDP_CLIENT_ID", "")),
                     "PRUDENCE_PDP_CLIENT_SECRET": creds.get("clientSecret", os.getenv("PRUDENCE_PDP_CLIENT_SECRET", "")),

@@ -20,25 +20,31 @@ from prudence_governance import ErnestEvidence
 
 ran: list[str] = []
 
+# The story this run tells: a demo's, set by the demo runner, or conformance's own by default.
+TOOL = os.environ.get("DEMO_TOOL", "send_customer_letter")
+DESCRIPTION = os.environ.get("DEMO_TOOL_DESCRIPTION", "Send the standard claims letter to a customer.")
+TASK = os.environ.get("DEMO_TASK", "Send the letter to customer C-1")
+RESULT = os.environ.get("DEMO_RESULT", "sent to {reference}")
 
-@tool("send_customer_letter", "Send the standard claims letter to a customer.", {"customer_id": str})
-async def send_customer_letter(args: dict) -> dict:
-    ran.append(args["customer_id"])
-    return {"content": [{"type": "text", "text": f"sent to {args['customer_id']}"}]}
+
+@tool(TOOL, DESCRIPTION, {"reference": str})
+async def run_tool(args: dict) -> dict:
+    ran.append(args["reference"])
+    return {"content": [{"type": "text", "text": RESULT.format(reference=args["reference"])}]}
 
 
 async def main() -> None:
     governance = PrudenceHook(
         os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-        pipelines={"mcp__claims__send_customer_letter": os.environ.get("PIPELINE", "send_customer_letter")},
+        pipelines={f"mcp__claims__{TOOL}": os.environ.get("PIPELINE", "send_customer_letter")},
         evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
     )
     with tempfile.TemporaryDirectory() as home:
         options = ClaudeAgentOptions(
             model="conformance-scripted", tools=[], setting_sources=[], max_turns=3, cwd=home,
-            mcp_servers={"claims": create_sdk_mcp_server("claims", tools=[send_customer_letter])},
-            allowed_tools=["mcp__claims__send_customer_letter"],
+            mcp_servers={"claims": create_sdk_mcp_server("claims", tools=[run_tool])},
+            allowed_tools=[f"mcp__claims__{TOOL}"],
             hooks={"PreToolUse": [governance.matcher()]},
             env={"ANTHROPIC_BASE_URL": os.environ["LLM_URL"].removesuffix("/v1"),
                  "ANTHROPIC_API_KEY": "none", "CLAUDE_CONFIG_DIR": home, "ENABLE_TOOL_SEARCH": "false",
@@ -46,7 +52,7 @@ async def main() -> None:
                  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"},
         )
         answer = ""
-        async for message in query(prompt="Send the letter to customer C-1", options=options):
+        async for message in query(prompt=TASK, options=options):
             if isinstance(message, AssistantMessage):
                 answer += "".join(b.text for b in message.content if isinstance(b, TextBlock))
             elif isinstance(message, ResultMessage) and message.result:

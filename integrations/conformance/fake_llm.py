@@ -41,8 +41,8 @@ def _argument(schema: dict, text_default: str = "C-1"):
 def _user_id(messages: list) -> str:
     """The first id-like word (ORD-7731, CL-2041) the user wrote, so the call reads naturally."""
     for m in messages:
-        if m.get("role") == "user" and isinstance(m.get("content"), str):
-            found = re.search(r"\b[A-Z]{1,5}-\d+\b", m["content"])
+        if m.get("role") == "user":
+            found = re.search(r"\b[A-Z]{1,5}-\d+\b", _text(m.get("content")))
             if found:
                 return found.group(0)
     return "C-1"
