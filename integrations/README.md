@@ -40,7 +40,7 @@ thin adapter, not a new core.
 
 ## Console demonstrations
 
-Prudence's **Policy decisions → Governed runs** panel runs a real agent of each framework, one
+Prudence's **Integrations → Governed runs** panel runs a real agent of each framework, one
 card per adapter. The agents are the conformance agents above, so what the console shows is what
 conformance tests. They run in [`demo-runner`](demo-runner) — internal-only runners that speak
 one small protocol (manifest, start a run, read a run) and come in two images, because the

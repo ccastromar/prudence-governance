@@ -28,7 +28,7 @@ agent = create_agent(
 - **Execution id:** the model's tool call id, so the report and the transcript point at the
   same call.
 - **Sync and async:** `invoke` and `ainvoke` are both governed.
-- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+- **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,

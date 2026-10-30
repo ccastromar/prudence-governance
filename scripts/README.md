@@ -73,7 +73,7 @@ PRUDENCE_OTEL_ENDPOINT=http://localhost:4318` (and `PRUDENCE_TRACING_SAMPLING=1.
 trace). AOS logs JSON with `LOG_FORMAT=json`; each line about a task carries `correlation_id` and
 `trace_id`.
 
-## Whole suite, end to end
+## All three together, end to end
 
 `./scripts/e2e-suite.sh` runs AOS, Prudence (secured) and Ernest together against the local
 Keycloak and checks the loop and its failure modes, in about three minutes. Kafka comes from

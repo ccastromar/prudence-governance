@@ -25,7 +25,7 @@ kernel.add_filter(FilterTypes.FUNCTION_INVOCATION,
   changes arguments, so it decides on the arguments the function will get.
 - **Agents:** a `ChatCompletionAgent` calls its plugins through its kernel, so put the filter on
   that kernel.
-- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+- **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,

@@ -25,7 +25,7 @@ agent = Agent(
 - **Sync hook:** Agno skips async hooks in `agent.run`, so this one is synchronous and works in
   `run` and `arun` alike; in `arun` the PDP call holds the event loop for its duration.
 - **Teams:** pass it as `tool_hooks` on each member agent (or on the team).
-- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+- **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,

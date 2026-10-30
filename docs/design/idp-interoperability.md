@@ -1,6 +1,6 @@
 # Identity provider interoperability
 
-The suite authorizes by governance functions (`contract/governance/README.md`). An identity
+Chestertown authorizes by governance functions (`contract/governance/README.md`). An identity
 provider only has to put the organization's roles or groups in a claim; the governance model maps
 them to functions, and every app (AOS, Prudence, Ernest) resolves the same token the same way. So
 validating a provider means: its tokens are accepted (issuer, audience, signature), and the model
@@ -56,7 +56,7 @@ the templates expect (`identity: {people: {claim: roles}, machines: {claim: role
 avoids group overage: app roles are emitted in full even when assigned through groups, where a
 `groups` claim would be cut off at 200 groups.
 
-### 1. One app registration for the suite
+### 1. One app registration for Chestertown
 
 Create an app registration, for example **Chestertown**, in a development tenant:
 

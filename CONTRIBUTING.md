@@ -1,7 +1,7 @@
 # Contributing to Prudence
 
-Thank you for helping. Prudence is the governance vertex of the Chestertown suite (AOS
-orchestrates, Ernest proves, Prudence governs); a change here can change what the other two
+Thank you for helping. Prudence implements Decide and Oversee in the Chestertown reference architecture
+(AOS runs, Ernest proves, Prudence decides and oversees); a change here can change what the other two
 see, so the contracts below matter as much as the code.
 
 ## Before you open a pull request

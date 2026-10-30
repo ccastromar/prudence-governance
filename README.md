@@ -1,6 +1,6 @@
 # Prudence
 
-**The governance vertex of the Chestertown trio: Orchestrate (AOS) · Prove (Ernest) · Govern (Prudence).**
+**The reference implementation of Decide and Oversee in the [Chestertown](https://ccmlab.cc/architecture) reference architecture: Decide · Run · Prove · Oversee.**
 
 Prudence is the **control plane** for AI systems. Where [AOS](https://github.com/ccastromar/aos-agentic-orchestration-system)
 runs intent-driven pipelines under control and [Ernest](https://github.com/ccastromar/ai-blockchain-provenance) proves

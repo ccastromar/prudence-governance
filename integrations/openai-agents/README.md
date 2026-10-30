@@ -21,7 +21,7 @@ agent = Agent(name="claims", tools=[send_customer_letter, govern(other_tool, gua
 - **Pipeline per tool:** `pipelines[tool name]`, or the tool's name.
 - **AI system:** one id for the agent, or a mapping per tool name.
 - **`govern(tool, guard)`** puts the guardrail in front of a tool you did not define.
-- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+- **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,

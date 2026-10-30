@@ -1,7 +1,7 @@
 # Regulatory traceability · Chestertown 0.1.0
 
 Which obligations of the **EU AI Act** (Regulation (EU) 2024/1689) and which controls of
-**ISO/IEC 42001:2023** (Annex A) the suite supports, how, and with what evidence; and what it does
+**ISO/IEC 42001:2023** (Annex A) Chestertown supports, how, and with what evidence; and what it does
 not cover. For an auditor, a DPO or a compliance team deciding what Chestertown takes off their
 hands and what stays with them.
 
@@ -13,10 +13,10 @@ analysis, write the technical documentation or carry out a conformity assessment
 
 | Mark | Meaning |
 | --- | --- |
-| **Enforced** | The suite makes it happen: a gate refuses, a deadline alerts, a rule blocks |
-| **Recorded** | The suite holds the process and its evidence (status, owner, expiry, proof); the organization does the work |
+| **Enforced** | Chestertown makes it happen: a gate refuses, a deadline alerts, a rule blocks |
+| **Recorded** | Chestertown holds the process and its evidence (status, owner, expiry, proof); the organization does the work |
 | **Partial** | Part of the obligation is supported; the rest is named in the row |
-| **Not covered** | Outside the suite today |
+| **Not covered** | Outside Chestertown today |
 
 **Evidence** names where the proof lives:
 
@@ -30,7 +30,7 @@ analysis, write the technical documentation or carry out a conformity assessment
 
 ### Scope and classification
 
-| Article | Obligation | Support | How, in the suite | Evidence |
+| Article | Obligation | Support | How, in Chestertown | Evidence |
 | --- | --- | --- | --- | --- |
 | Art. 3, 16, 23, 24, 26 | Know your role for each system | Recorded | Registry dossier: regulatory role (provider, deployer, importer, distributor) per system; the role selects its compliance profile | Prudence registry; reviews in Ernest |
 | Art. 5 | No prohibited practices | Enforced | A system classified `PROHIBITED` is `BLOCKED`; the PDP denies every run of it and AOS stops before any step | Decisions (DENY) in Ernest; AOS journal |
@@ -44,20 +44,20 @@ The provider profile (`EU_AI_ACT_PROVIDER_HIGH_RISK_V1`) opens one control per r
 control is **Recorded**: it tracks the evidence the provider produces (status, owner, expiry,
 failure), and a system cannot be submitted for review while its controls are not satisfied.
 
-| Article | Requirement | Support | How, in the suite | Evidence |
+| Article | Requirement | Support | How, in Chestertown | Evidence |
 | --- | --- | --- | --- | --- |
 | Art. 9 | Risk management system | Recorded | Control `RISK_MANAGEMENT`; monitoring signals and CAPA feed it | Control evidence; signals; CAPA |
 | Art. 10 | Data and data governance | Recorded | Control `DATA_GOVERNANCE`; Ernest can record dataset lineage (`dataset.linked` events) | Control evidence; Ernest provenance |
-| Art. 11, Annex IV | Technical documentation | Partial | Control `TECHNICAL_DOCUMENTATION` tracks the dossier; compliance snapshots freeze the system's state. The suite does not produce the Annex IV document | Control evidence; snapshots |
-| Art. 12 | Record-keeping (automatic logs) | Enforced (suite) / Recorded (system) | Every governed run is logged by AOS and decided by Prudence, both proved in Ernest. The system's own internal logging is control `LOGGING_TRACEABILITY` | AOS journal; Ernest |
+| Art. 11, Annex IV | Technical documentation | Partial | Control `TECHNICAL_DOCUMENTATION` tracks the dossier; compliance snapshots freeze the system's state. Chestertown does not produce the Annex IV document | Control evidence; snapshots |
+| Art. 12 | Record-keeping (automatic logs) | Enforced (Chestertown) / Recorded (system) | Every governed run is logged by AOS and decided by Prudence, both proved in Ernest. The system's own internal logging is control `LOGGING_TRACEABILITY` | AOS journal; Ernest |
 | Art. 13 | Transparency and instructions for use | Recorded | Instructions are part of control `TECHNICAL_DOCUMENTATION`; the deployer's acceptance is `INSTRUCTIONS_OF_USE` | Control evidence |
-| Art. 14 | Human oversight | Enforced (suite) / Recorded (design) | Named supervisors with override and stop authority and current training. AOS human-approval steps. **Suspend** in Prudence stops every run through the PDP (14(4)(e)). Overrides are logged and reviewed. Oversight design is control `HUMAN_OVERSIGHT` | Oversight assignments; overrides; decisions in Ernest |
+| Art. 14 | Human oversight | Enforced (Chestertown) / Recorded (design) | Named supervisors with override and stop authority and current training. AOS human-approval steps. **Suspend** in Prudence stops every run through the PDP (14(4)(e)). Overrides are logged and reviewed. Oversight design is control `HUMAN_OVERSIGHT` | Oversight assignments; overrides; decisions in Ernest |
 | Art. 15 | Accuracy, robustness, cybersecurity | Recorded | Control `ROBUSTNESS_SECURITY`; `PERFORMANCE_DEGRADATION` monitoring signal | Control evidence; signals |
 | Art. 17 | Quality management system | Partial | Control `QUALITY_MANAGEMENT`; policies are changed through drafts, validation, simulation and four-eyes approval, published with an audit trail | Control evidence; policy administration in Ernest |
 | Art. 18 | Keep documentation for 10 years | Partial | Snapshots and Ernest records are immutable and kept; there is no retention schedule or 10-year archive policy | Snapshots; Ernest |
 | Art. 19, 26(6) | Keep automatically generated logs (≥ 6 months) | Enforced | Ernest is append-only and keeps decision and execution evidence with no expiry | Ernest |
 | Art. 20 | Corrective actions | Recorded | CAPA (open → implemented → effectiveness verified → closed) per system | CAPA |
-| Art. 43, 47, 48 | Conformity assessment, declaration, CE marking | Recorded | Control `CONFORMITY_ASSESSMENT` tracks the evidence; the assessment itself is outside the suite | Control evidence |
+| Art. 43, 47, 48 | Conformity assessment, declaration, CE marking | Recorded | Control `CONFORMITY_ASSESSMENT` tracks the evidence; the assessment itself is outside Chestertown | Control evidence |
 | Art. 49, 71 | Registration in the EU database | Not covered | No registration record or export to the EU database | — |
 | Art. 72 | Post-market monitoring | Recorded | Control `POST_MARKET_MONITORING`; monitoring signals (incident, override and complaint rates, performance degradation) with thresholds; posture | Signals; posture; Ernest |
 
@@ -66,12 +66,12 @@ failure), and a system cannot be submitted for review while its controls are not
 The deployer profile (`EU_AI_ACT_DEPLOYER_HIGH_RISK_V1`) opens these controls. Beyond the
 controls, AOS and Prudence enforce what the deployer runs.
 
-| Article | Obligation | Support | How, in the suite | Evidence |
+| Article | Obligation | Support | How, in Chestertown | Evidence |
 | --- | --- | --- | --- | --- |
 | Art. 26(1) | Use in accordance with the instructions | Enforced (use) / Recorded (instructions) | Only approved systems run, only through granted pipelines (PDP); approvals expire and need renewal. Control `INSTRUCTIONS_OF_USE` | Decisions; execution reports; Ernest |
 | Art. 26(2) | Assign oversight to competent people | Enforced | The accountabilities the governance model requires (owner, supervisor, compliance, DPO, security) must be assigned before review; named supervisors with training and authority. Control `HUMAN_OVERSIGHT_ASSIGNMENT`. Separation of duties: whoever declares a system cannot approve it | Oversight; reviews in Ernest |
 | Art. 26(4) | Relevant, representative input data | Recorded | Control `INPUT_DATA_RELEVANCE` | Control evidence |
-| Art. 26(5) | Monitor, suspend, inform the provider | Enforced (suspend, drift) / Recorded (rest) | Monitoring signals; **drift** flags runs of systems that are not approved; runtime reports are compared with Ernest's evidence; suspension stops runs. Control `OPERATION_MONITORING` | Drift alerts; signals; Ernest |
+| Art. 26(5) | Monitor, suspend, inform the provider | Enforced (suspend, drift) / Recorded (rest) | Monitoring signals; **drift** flags runs of systems that are not approved and reported runs no ALLOW decision covers; runtime reports are compared with Ernest's evidence; suspension stops runs. Control `OPERATION_MONITORING` | Drift alerts; signals; Ernest |
 | Art. 26(5), 73 | Report serious incidents | Enforced (deadlines) | Incident register by category with the Art. 73 deadline (15 days; 10 for a death; 2 for widespread infringement or critical infrastructure), an alert 24 hours before it falls due and again when overdue, initial and final report status. Control `INCIDENT_ESCALATION` | Incidents in Ernest |
 | Art. 26(7) | Inform workers' representatives | Not covered | — | — |
 | Art. 26(8), 49(3) | Public-body deployers register their use | Not covered | — | — |
@@ -105,7 +105,7 @@ storage, withholding non-compliant systems). All **Recorded**.
 Control numbers as in Annex A of the 2023 edition. The standard is not freely available: check
 the numbering against your licensed copy before relying on it in an audit.
 
-| Control | Topic | Support | How, in the suite |
+| Control | Topic | Support | How, in Chestertown |
 | --- | --- | --- | --- |
 | A.2 | AI policy | Partial | Policies as code: drafted, validated, simulated, approved by someone other than their authors, published and enforced by the PDP. The organization's AI policy document itself is its own |
 | A.3.2 | Roles and responsibilities | Enforced | Governance functions and the governance model; per-system accountabilities; separation of duties |

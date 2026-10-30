@@ -24,7 +24,7 @@ agent = FunctionAgent(tools=tools, llm=llm)
   wrapped as always denied.
 - **`ungoverned`:** tool names that need no decision (read-only helpers), returned unwrapped.
 - **One tool:** `GovernedTool(tool, ai_system_id, pipeline=…)`.
-- **With Ernest in the suite:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
+- **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
 - **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,
