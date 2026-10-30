@@ -25,7 +25,7 @@ def resolve(image: Path) -> tuple[bool, str]:
         proc = subprocess.run(
             [sys.executable, "-m", "pip", "install", "--dry-run", "--quiet", "--ignore-installed",
              "--no-cache-dir", "--report", str(report), "-r", str(image / "requirements.txt")],
-            cwd=HERE, capture_output=True, text=True)
+            cwd=image, capture_output=True, text=True)
         if proc.returncode:
             lines = [l for l in proc.stderr.splitlines() if l.startswith("ERROR")]
             return False, "\n    ".join(lines[:3]) or proc.stderr[-400:]

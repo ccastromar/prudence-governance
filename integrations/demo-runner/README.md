@@ -1,6 +1,6 @@
 # demo-runner — the governed demos behind the console
 
-Internal-only runners for Prudence's **Policy decisions → Governed runs** panel. A demo is a
+Internal-only runners for Prudence's **Integrations → Governed runs** panel. A demo is a
 framework's conformance agent ([`../conformance/agents`](../conformance/agents)): an agent with
 one tool, governed by that framework's Prudence adapter. Each run starts the agent in a fresh
 process.
@@ -66,10 +66,11 @@ Prudence's side: `PRUDENCE_DEMO_RUNNER_URL` / `_TOKEN` (runner A) and
 
 ## Run it locally
 
-From this folder, in an environment with an image's requirements installed:
+From this folder, in an environment with an image's requirements installed (its adapter paths are
+relative to the image's folder):
 
 ```bash
-pip install -r images/a/requirements.txt
+(cd images/a && pip install -r requirements.txt)
 PRUDENCE_DEMO_RUNNER_TOKEN=local-a PRUDENCE_URL=http://127.0.0.1:8099 PORT=9101 python runner.py
 ```
 
