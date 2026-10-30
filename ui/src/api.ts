@@ -18,10 +18,7 @@ function withAuth(
 
 export type RiskTier = "PROHIBITED" | "HIGH" | "LIMITED" | "MINIMAL";
 export type RegulatoryRole =
-  | "PROVIDER"
-  | "DEPLOYER"
-  | "IMPORTER"
-  | "DISTRIBUTOR";
+  "PROVIDER" | "DEPLOYER" | "IMPORTER" | "DISTRIBUTOR";
 
 export interface AiSystem {
   id: string;
@@ -329,11 +326,7 @@ export type IncidentCategory =
   | "NOT_SERIOUS";
 export type CausalLink = "SUSPECTED" | "ESTABLISHED" | "RULED_OUT";
 export type ReportingState =
-  | "NOT_REQUIRED"
-  | "DUE"
-  | "OVERDUE"
-  | "REPORTED_ON_TIME"
-  | "REPORTED_LATE";
+  "NOT_REQUIRED" | "DUE" | "OVERDUE" | "REPORTED_ON_TIME" | "REPORTED_LATE";
 export interface IncidentReport {
   recipient: string;
   reference: string;
@@ -366,10 +359,7 @@ export interface Incident {
   widespreadInfringement: boolean;
   causalLink: CausalLink;
   status:
-    | "OPEN"
-    | "INITIAL_REPORT_SUBMITTED"
-    | "FINAL_REPORT_SUBMITTED"
-    | "CLOSED";
+    "OPEN" | "INITIAL_REPORT_SUBMITTED" | "FINAL_REPORT_SUBMITTED" | "CLOSED";
   reportable: boolean;
   reportingDeadline: string | null;
   reportingState: ReportingState;
@@ -398,10 +388,7 @@ export interface OpenIncidentInput {
 }
 
 export type GovernanceCaseType =
-  | "ASSESSMENT"
-  | "CHANGE"
-  | "EXCEPTION"
-  | "CORRECTIVE_ACTION";
+  "ASSESSMENT" | "CHANGE" | "EXCEPTION" | "CORRECTIVE_ACTION";
 export type GovernanceCaseStatus = "OPEN" | "IN_REVIEW" | "CLOSED";
 export interface GovernanceEvidence {
   id: string;
@@ -508,12 +495,7 @@ export interface Capa {
   effectivenessEvidence: string | null;
 }
 export type OversightRole =
-  | "OWNER"
-  | "SUPERVISOR"
-  | "COMPLIANCE"
-  | "DPO"
-  | "SECURITY"
-  | "PROVIDER";
+  "OWNER" | "SUPERVISOR" | "COMPLIANCE" | "DPO" | "SECURITY" | "PROVIDER";
 export interface HumanAssignment {
   id: string;
   aiSystemId: string;
@@ -544,10 +526,7 @@ export interface ComplianceSnapshot {
   manifest: Record<string, unknown>;
 }
 export type ChangeOutcome =
-  | "MINOR"
-  | "CONTROL_REVIEW"
-  | "SUBSTANTIAL"
-  | "PROHIBITED";
+  "MINOR" | "CONTROL_REVIEW" | "SUBSTANTIAL" | "PROHIBITED";
 export interface ChangeAssessment {
   id: string;
   aiSystemId: string;
@@ -565,12 +544,7 @@ export interface ChangeAssessment {
 /// that never reached Ernest, or an alert email that never went out.
 export interface DeadLetter {
   target:
-    | "decisions"
-    | "reviews"
-    | "attestations"
-    | "incidents"
-    | "alerts"
-    | string;
+    "decisions" | "reviews" | "attestations" | "incidents" | "alerts" | string;
   id: string;
   aiSystemId: string | null;
   attempts: number;

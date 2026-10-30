@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Registry from "./pages/Registry";
 import Decisions from "./pages/Decisions";
+import Integrations from "./pages/Integrations";
 import Policies from "./pages/Policies";
 import Approvals from "./pages/Approvals";
 import Posture from "./pages/Posture";
@@ -42,6 +43,7 @@ type Tab =
   | "registry"
   | "approvals"
   | "decisions"
+  | "integrations"
   | "posture"
   | "incidents"
   | "cases"
@@ -57,6 +59,7 @@ const TAB_ITEMS: TabItem<Tab>[] = [
   { id: "policies", label: "Policy drafts" },
   { id: "approvals", label: "Approvals" },
   { id: "decisions", label: "Policy decisions" },
+  { id: "integrations", label: "Integrations" },
   { id: "posture", label: "Posture" },
   { id: "incidents", label: "Incidents" },
   { id: "cases", label: "Governance cases" },
@@ -266,6 +269,7 @@ export default function App() {
         {tab === "registry" && <Registry focusSystem={link.system} />}
         {tab === "approvals" && <Approvals />}
         {tab === "decisions" && <Decisions />}
+        {tab === "integrations" && <Integrations />}
         {tab === "posture" && <Posture />}
         {tab === "incidents" && <Incidents />}
         {tab === "cases" && <GovernanceCases />}
