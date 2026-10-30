@@ -12,17 +12,13 @@
         { "pipeline": "credit-risk-scoring", "actions": ["run"] },
         { "pipeline": "pipeline_aos_support_lookup", "actions": ["run"] },
         { "pipeline": "pipeline_aos_credit_pre_screening", "actions": ["run"] },
-        { "pipeline": "pipeline_aos_translate_message", "actions": ["run"] }
+        { "pipeline": "pipeline_aos_translate_message", "actions": ["run"] },
+        { "pipeline": "pipeline_aos_spam_check", "actions": ["run"] }
       ],
       "risk-officer": [
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
       ],
       "framework-demo-runner": [
-        { "pipeline": "pipeline_bug_triage", "actions": ["run"] },
-        { "pipeline": "pipeline_response_drafter", "actions": ["run"] },
-        { "pipeline": "pipeline_claims_letter", "actions": ["run"] },
-        { "pipeline": "pipeline_refund_check", "actions": ["run"] },
-        { "pipeline": "pipeline_crm_update", "actions": ["run"] },
         { "pipeline": "demo_customer_letter", "actions": ["run"] }
       ]
     }

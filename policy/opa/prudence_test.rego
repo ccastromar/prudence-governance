@@ -7,14 +7,14 @@ test_operator_can_run if {
 	allow with input as {"subject": "alice@bank.eu", "pipeline": "credit-risk-scoring", "aiSystemId": "sys-1", "action": "run"}
 }
 
-# The private framework demo runner may execute exactly its visible demonstrations.
-test_framework_demo_runner_can_run_bug_triage if {
-	allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": "pipeline_bug_triage", "aiSystemId": "sys-1", "action": "run"}
+# The private framework demo runner may execute exactly its visible demonstration pipeline.
+test_framework_demo_runner_can_run_the_demo_pipeline if {
+	allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": "demo_customer_letter", "aiSystemId": "sys-1", "action": "run"}
 }
 
-test_framework_demo_runner_can_run_the_agent_framework_demos if {
-	every pipeline in ["pipeline_claims_letter", "pipeline_refund_check", "pipeline_crm_update"] {
-		allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": pipeline, "aiSystemId": "sys-1", "action": "run"}
+test_framework_demo_runner_cannot_run_retired_demo_pipelines if {
+	every pipeline in ["pipeline_bug_triage", "pipeline_response_drafter", "pipeline_claims_letter", "pipeline_refund_check", "pipeline_crm_update"] {
+		not allow with input as {"subject": "service-account-prudence-demo-runner", "pipeline": pipeline, "aiSystemId": "sys-1", "action": "run"}
 	}
 }
 

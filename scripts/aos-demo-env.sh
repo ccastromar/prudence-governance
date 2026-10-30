@@ -35,6 +35,7 @@ import json, os, sys, urllib.request
 
 # (env var read by AOS, seeded system name, demo case)
 CASES = [
+    ("AOS_PRUDENCE_SPAM_SYSTEM_ID", "MVP · Filtro de correo no deseado", "spam check"),
     ("AOS_PRUDENCE_DEMO_SYSTEM_ID", "MVP · Asistente de soporte al cliente", "support lookup"),
     ("AOS_PRUDENCE_CREDIT_SYSTEM_ID", "MVP · Preselección de crédito al consumo", "credit pre-screening"),
     ("AOS_PRUDENCE_SOCIAL_SCORING_SYSTEM_ID", "MVP · Puntuación social de ciudadanos", "social scoring"),
