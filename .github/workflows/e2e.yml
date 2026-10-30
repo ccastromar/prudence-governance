@@ -60,20 +60,20 @@ jobs:
       OPA_VERSION: 1.21.2
     steps:
       - name: Checkout Prudence
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: prudence-governance
 
       # The script finds the other apps next to this repository, as on a developer's disk.
       - name: Checkout AOS
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ccastromar/aos-agentic-orchestration-system
           ref: ${{ inputs.aos_ref || 'main' }}
           path: aos-agentic-orchestration-system
 
       - name: Checkout Ernest
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: ccastromar/ai-blockchain-provenance
           ref: ${{ inputs.ernest_ref || 'main' }}
