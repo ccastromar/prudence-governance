@@ -225,7 +225,7 @@ checks that they do, with real agents of each framework against a real Prudence.
 | 401 | No token, an expired token, or a token from another realm | Check the token URL and realm |
 | `APPROVAL_REQUIRED` | The AI system is not approved yet, or its approval expired | Approve it in Prudence (two reviewers for high risk) |
 | `DENY`, "prohibited AI system" | The system is classified as a prohibited practice | By design; it never runs |
-| A run you reported shows as a drift **VIOLATION** | It ran while the system had no approval in force | Investigate: this is the alarm working |
+| A run you reported shows as a drift **VIOLATION** | It ran while the system had no approval in force, or no `ALLOW` covers it: it cites no decision, an unknown one, one about another system, or a verdict other than `ALLOW` | Investigate: this is the alarm working |
 
 ---
 

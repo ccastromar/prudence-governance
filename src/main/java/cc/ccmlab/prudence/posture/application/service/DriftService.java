@@ -13,11 +13,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /// Joins the registry with the evidence plane to catch ungoverned runs: an execution tagged
 /// with a system that is not registered, was never approved, or ran after its approval ended
-/// is a policy-drift violation. Executions from while it was approved stay legitimate history.
+/// is a policy-drift violation. So is a reported execution no ALLOW decision covers, even of an
+/// approved system: approval lets a system be asked about, not run without asking. Executions
+/// from while it was approved, under an ALLOW, stay legitimate history.
 @Service
 public class DriftService implements DriftQuery {
 
@@ -40,7 +43,12 @@ public class DriftService implements DriftQuery {
       known.add(s.id());
       long n = counts.getOrDefault(s.id(), 0L);
       if (n == 0) continue; // only systems with runtime evidence are drift-relevant
+      Map<String, Long> outside = scan.outsideDecision().getOrDefault(s.id(), Map.of());
       if (s.approvalStatus() == ApprovalStatus.APPROVED) {
+        if (!outside.isEmpty()) {
+          findings.add(outsideDecision(s, n, outside));
+          continue;
+        }
         findings.add(
             new Finding(
                 s.id(),
@@ -56,6 +64,10 @@ public class DriftService implements DriftQuery {
       Instant ended = parse(s.approvalEndedAt());
       Instant last = parse(scan.lastExecutionAt().get(s.id()));
       if (ended != null && last != null && !last.isAfter(ended)) {
+        if (!outside.isEmpty()) {
+          findings.add(outsideDecision(s, n, outside));
+          continue;
+        }
         findings.add(
             new Finding(
                 s.id(),
@@ -90,7 +102,13 @@ public class DriftService implements DriftQuery {
               s.approvalStatus().name(),
               n,
               "VIOLATION",
-              n + " execution(s) " + why + " — now " + s.approvalStatus() + ", ungoverned run."));
+              n
+                  + " execution(s) "
+                  + why
+                  + " — now "
+                  + s.approvalStatus()
+                  + ", ungoverned run."
+                  + (outside.isEmpty() ? "" : " " + describe(outside) + ".")));
     }
 
     // Executions tagged with an id not in the registry at all: fully ungoverned.
@@ -110,6 +128,33 @@ public class DriftService implements DriftQuery {
     boolean hasViolations = findings.stream().anyMatch(f -> "VIOLATION".equals(f.severity()));
     return new Drift(
         Instant.now().toString(), hasViolations, scan.complete(), scan.detail(), findings);
+  }
+
+  private static Finding outsideDecision(
+      SystemInventoryPort.GovernedSystem s, long executions, Map<String, Long> outside) {
+    return new Finding(
+        s.id(),
+        s.name(),
+        s.approvalStatus().name(),
+        executions,
+        "VIOLATION",
+        executions + " execution(s) on record: " + describe(outside) + ", ungoverned run.");
+  }
+
+  /// e.g. "1 ran after a DENY decision, 2 ran with no decision".
+  private static String describe(Map<String, Long> outside) {
+    return outside.entrySet().stream()
+        .map(e -> e.getValue() + " ran " + statusPhrase(e.getKey()))
+        .collect(Collectors.joining(", "));
+  }
+
+  private static String statusPhrase(String decisionStatus) {
+    return switch (decisionStatus) {
+      case "NONE" -> "with no decision";
+      case "UNKNOWN" -> "citing a decision Prudence never recorded";
+      case "OTHER_SYSTEM" -> "citing a decision about another system";
+      default -> "after a " + decisionStatus + " decision";
+    };
   }
 
   private static Instant parse(String iso) {

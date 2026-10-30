@@ -21,11 +21,26 @@ public interface ExecutionReportRepository extends JpaRepository<ExecutionReport
           + " from ExecutionReportJpaEntity r group by r.aiSystemId")
   List<SystemExecutions> perSystem();
 
+  /// Per system and decision status: the reported executions no ALLOW decision covers.
+  @Query(
+      "select r.aiSystemId as aiSystemId, r.decisionStatus as decisionStatus,"
+          + " count(r) as executions from ExecutionReportJpaEntity r"
+          + " where r.decisionStatus <> 'ALLOW' group by r.aiSystemId, r.decisionStatus")
+  List<ExecutionsOutsideDecision> outsideDecision();
+
   interface SystemExecutions {
     String getAiSystemId();
 
     long getExecutions();
 
     String getLastStartedAt();
+  }
+
+  interface ExecutionsOutsideDecision {
+    String getAiSystemId();
+
+    String getDecisionStatus();
+
+    long getExecutions();
   }
 }

@@ -4,7 +4,8 @@ import java.util.List;
 
 /// Policy-drift report: executions observed in the evidence plane that diverge from the
 /// governance record. The sharp signal is an execution tagged with a system that is **not
-/// approved** (or not even registered) — an ungoverned run.
+/// approved** (or not even registered), or a reported one no ALLOW decision covers — an
+/// ungoverned run.
 /// `complete` is false when the evidence scan could not read everything: the findings are then
 /// a lower bound, and the absence of violations proves nothing.
 public record Drift(

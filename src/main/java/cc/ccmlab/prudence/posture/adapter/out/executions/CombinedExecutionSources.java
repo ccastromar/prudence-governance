@@ -6,6 +6,7 @@ import cc.ccmlab.prudence.posture.application.port.out.ExecutionEvidencePort;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 /// Drift's execution source: Ernest's execution evidence plus the executions runtimes reported
 /// to Prudence (ADR-001). Either source showing an execution counts. Both usually see the same
 /// runs, so per system the larger count is taken (not the sum) and the latest time of either.
+/// Only runtime reports cite a decision, so they alone say which runs no ALLOW covered.
 /// The scan is only as complete as Ernest's: an incomplete evidence scan still says so. With a
 /// custody-only evidence store (no Ernest, ADR-001 C1) the runtime reports are the only source.
 @Component
@@ -47,11 +49,17 @@ public class CombinedExecutionSources implements ExecutionEvidencePort {
       counts.merge(row.getAiSystemId(), row.getExecutions(), Math::max);
       last.merge(row.getAiSystemId(), row.getLastStartedAt(), CombinedExecutionSources::later);
     }
+    Map<String, Map<String, Long>> outsideDecision = new HashMap<>();
+    for (var row : reports.outsideDecision()) {
+      outsideDecision
+          .computeIfAbsent(row.getAiSystemId(), id -> new TreeMap<>())
+          .put(row.getDecisionStatus(), row.getExecutions());
+    }
     String detail =
         (evidence.detail() == null || evidence.detail().isBlank() ? "" : evidence.detail() + " · ")
             + reported
             + " execution(s) reported by runtimes";
-    return new ExecutionScan(counts, last, evidence.complete(), detail);
+    return new ExecutionScan(counts, last, evidence.complete(), detail, outsideDecision);
   }
 
   /// The later of two ISO-8601 times; an unparsable one never wins over a known time.

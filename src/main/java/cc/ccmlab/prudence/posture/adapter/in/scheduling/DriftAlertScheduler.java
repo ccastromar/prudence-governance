@@ -94,8 +94,9 @@ public class DriftAlertScheduler {
                     + "): "
                     + f.detail()
                     + "\n\n"
-                    + "Executions are being recorded for a system that is not approved to run."
-                    + " Investigate which runtime bypassed or ignored the PDP and stop it."));
+                    + "Executions are being recorded with no approval in force or no ALLOW"
+                    + " decision behind them. Investigate which runtime bypassed or ignored the"
+                    + " PDP and stop it."));
       } catch (Exception e) {
         log.warn("could not raise drift alert for {}: {}", f.aiSystemId(), e.getMessage());
       }

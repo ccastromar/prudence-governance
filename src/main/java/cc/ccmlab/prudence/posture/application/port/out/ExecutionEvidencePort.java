@@ -12,12 +12,22 @@ public interface ExecutionEvidencePort {
 
   /// `counts`: aiSystemId -> execution-stage blocks seen. `lastExecutionAt`: aiSystemId -> ISO
   /// time of its latest execution, when the evidence plane can tell (absent = unknown).
-  /// `complete` is false when the scan stopped early; `detail` explains why.
+  /// `complete` is false when the scan stopped early; `detail` explains why. `outsideDecision`:
+  /// aiSystemId -> decision status -> executions known to have run without an ALLOW decision.
   record ExecutionScan(
       Map<String, Long> counts,
       Map<String, String> lastExecutionAt,
       boolean complete,
-      String detail) {
+      String detail,
+      Map<String, Map<String, Long>> outsideDecision) {
+
+    public ExecutionScan(
+        Map<String, Long> counts,
+        Map<String, String> lastExecutionAt,
+        boolean complete,
+        String detail) {
+      this(counts, lastExecutionAt, complete, detail, Map.of());
+    }
 
     public ExecutionScan(Map<String, Long> counts, boolean complete, String detail) {
       this(counts, Map.of(), complete, detail);
