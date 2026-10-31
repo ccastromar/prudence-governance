@@ -18,7 +18,8 @@ systems_api, incidents_api = f"{base}/api/registry/systems", f"{base}/api/incide
 tokens = {"author": os.environ["SEED_AUTHOR_TOKEN"], "reviewer_one": os.environ["SEED_REVIEWER_ONE_TOKEN"], "reviewer_two": os.environ["SEED_REVIEWER_TWO_TOKEN"]}
 
 def request(method, url, actor=None, body=None):
-    headers = {"Accept": "application/json"}
+    # Cloudflare refuses Python's default User-Agent (error 1010).
+    headers = {"Accept": "application/json", "User-Agent": "prudence-seed/1.0"}
     if actor and tokens[actor]: headers["Authorization"] = f"Bearer {tokens[actor]}"
     data = None
     if body is not None:
