@@ -1,7 +1,7 @@
 # Image A — the openai 3.x family. The adapters are in adapters.pip, installed from this folder
 # with this file: Dependabot cannot follow editable paths. Check that both
 # images still resolve: check-images.py
-pydantic-ai-slim[openai]>=2
+pydantic-ai-slim[openai]>=2.63.0
 langgraph>=0.2
 google-adk>=2.12
 openai-agents>=0.24
