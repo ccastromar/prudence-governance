@@ -9,7 +9,7 @@ agent-framework-core>=1.22
 agent-framework-openai
 langchain>=1.4
 langchain-openai
-claude-agent-sdk>=0.2
+claude-agent-sdk>=0.2.174
 agno>=3.1
 openai>=3
 smolagents[openai]>=1.26
