@@ -22,10 +22,24 @@ updates:
       minor-and-patch:
         update-types: [minor, patch]
 
-  # Python adapters and conformance runners
+  # Python adapters and runner images. Listed one by one: conformance repeats the adapters' limits
+  # with editable paths, which Dependabot cannot follow, and one such path fails the whole job.
   - package-ecosystem: pip
     directories:
-      - "/integrations/*"
+      - "/integrations/agent-framework"
+      - "/integrations/agno"
+      - "/integrations/claude-agent-sdk"
+      - "/integrations/crewai"
+      - "/integrations/google-adk"
+      - "/integrations/langchain"
+      - "/integrations/langgraph"
+      - "/integrations/llamaindex"
+      - "/integrations/openai-agents"
+      - "/integrations/prudence-core"
+      - "/integrations/pydantic-ai"
+      - "/integrations/semantic-kernel"
+      - "/integrations/smolagents"
+      - "/integrations/strands-agents"
       - "/integrations/demo-runner/images/*"
     schedule:
       interval: weekly

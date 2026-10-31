@@ -1,0 +1,5 @@
+-e ../../../prudence-core
+-e ../../../crewai
+-e ../../../strands-agents
+-e ../../../llamaindex
+-e ../../../semantic-kernel

@@ -11,8 +11,8 @@ FROM python:3.13-slim
 ARG IMAGE=a
 WORKDIR /app/integrations/demo-runner
 COPY integrations/ /app/integrations/
-# From the image's folder: its requirements name the adapters relative to it.
-RUN cd images/${IMAGE} && pip install --no-cache-dir -r requirements.txt
+# From the image's folder: adapters.pip names the adapters relative to it.
+RUN cd images/${IMAGE} && pip install --no-cache-dir -r requirements.txt -r adapters.pip
 
 ENV PYTHONUNBUFFERED=1
 # pydantic-ai prints an observability banner on every agent run; keep container logs clean.

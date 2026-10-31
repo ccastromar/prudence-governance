@@ -22,7 +22,7 @@ Needs the local stack up (Prudence :8099 + OPA :8181 + Ernest :3001).
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt            # installs the shared core (editable) + langgraph
+pip install -e ../prudence-core -e .       # the shared core (editable) + langgraph
 export ERNEST_API_KEY=<ernest write key>
 python example_graph.py
 ```

@@ -1,0 +1,10 @@
+-e ../../../prudence-core
+-e ../../../pydantic-ai
+-e ../../../langgraph
+-e ../../../google-adk
+-e ../../../openai-agents
+-e ../../../agent-framework
+-e ../../../langchain
+-e ../../../claude-agent-sdk
+-e ../../../agno
+-e ../../../smolagents

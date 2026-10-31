@@ -42,7 +42,7 @@ Needs the local stack up (Prudence :8099 + OPA :8181 + Ernest :3001) and
 
 ```bash
 python -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ../prudence-core -e .
 export ERNEST_API_KEY=<ernest write key>
 python example_agent.py
 ```

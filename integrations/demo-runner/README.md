@@ -66,11 +66,11 @@ Prudence's side: `PRUDENCE_DEMO_RUNNER_URL` / `_TOKEN` (runner A) and
 
 ## Run it locally
 
-From this folder, in an environment with an image's requirements installed (its adapter paths are
-relative to the image's folder):
+From this folder, in an environment with an image's requirements and adapters installed (the
+adapter paths are relative to the image's folder):
 
 ```bash
-(cd images/a && pip install -r requirements.txt)
+(cd images/a && pip install -r requirements.txt -r adapters.pip)
 PRUDENCE_DEMO_RUNNER_TOKEN=local-a PRUDENCE_URL=http://127.0.0.1:8099 PORT=9101 python runner.py
 ```
 

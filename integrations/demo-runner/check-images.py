@@ -24,7 +24,7 @@ def resolve(image: Path) -> tuple[bool, str]:
         report = Path(tmp) / "report.json"
         proc = subprocess.run(
             [sys.executable, "-m", "pip", "install", "--dry-run", "--quiet", "--ignore-installed",
-             "--no-cache-dir", "--report", str(report), "-r", str(image / "requirements.txt")],
+             "--no-cache-dir", "--report", str(report), "-r", "requirements.txt", "-r", "adapters.pip"],
             cwd=image, capture_output=True, text=True)
         if proc.returncode:
             lines = [l for l in proc.stderr.splitlines() if l.startswith("ERROR")]
