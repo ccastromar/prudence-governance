@@ -97,7 +97,7 @@ jobs:
             prudence-governance/scripts/otlp-sink/go.sum
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
