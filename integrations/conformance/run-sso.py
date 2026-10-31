@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Conformance with real login: thirteen frameworks, an MCP gateway and Ernest, against Prudence
+"""Conformance with real login: every framework, an MCP gateway and Ernest, against Prudence
 secured by Keycloak.
 
 What run.py cannot show, because the dev profile takes the caller from the request: that an
@@ -49,7 +49,6 @@ FRAMEWORKS = [  # (label, runtime to register, venv, agent script, runtime name 
     ("Google ADK", "conformance-adk", ".venv-adk", "adk_agent.py", "google-adk"),
     ("OpenAI Agents SDK", "conformance-openai", ".venv-openai", "openai_agent.py", "openai-agents"),
     ("MS Agent Framework", "conformance-maf", ".venv-maf", "maf_agent.py", "agent-framework"),
-    ("Semantic Kernel", "conformance-sk", ".venv-sk", "sk_agent.py", "semantic-kernel"),
     ("Strands Agents", "conformance-strands", ".venv-strands", "strands_agent.py", "strands-agents"),
     ("LangChain", "conformance-langchain", ".venv-langchain", "langchain_agent.py", "langchain"),
     ("Claude Agent SDK", "conformance-claude", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),

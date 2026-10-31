@@ -36,7 +36,7 @@ docker build -f integrations/demo-runner/Dockerfile --build-arg IMAGE=b -t prude
 | Image | Frameworks | Why |
 |---|---|---|
 | [`a`](images/a/requirements.txt) | Pydantic AI, LangGraph, Google ADK, OpenAI Agents SDK, MS Agent Framework, LangChain, Claude Agent SDK, Agno, smolagents | `openai` 3.x, current `mcp` and `pydantic` |
-| [`b`](images/b/requirements.txt) | CrewAI, Strands Agents, LlamaIndex, Semantic Kernel | CrewAI pins `openai<3`, `mcp<2`, `pydantic<2.13`; Strands' OpenAI provider and LlamaIndex's OpenAI LLMs pin `openai<3`; Semantic Kernel fits either and sits here so A keeps the current `mcp` and `pydantic` |
+| [`b`](images/b/requirements.txt) | CrewAI, Strands Agents, LlamaIndex | CrewAI pins `openai<3`, `mcp<2`, `pydantic<2.13`; Strands' OpenAI provider and LlamaIndex's OpenAI LLMs pin `openai<3` |
 
 Moving a framework to the other image is a requirements change. Releases move these limits, so
 check that both images still resolve against the live index:

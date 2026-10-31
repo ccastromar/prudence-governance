@@ -2,7 +2,7 @@
 """Conformance run: do the framework adapters really enforce Prudence's decisions?
 
 For each framework in FRAMEWORKS (Pydantic AI, LangGraph, Google ADK, OpenAI Agents SDK, Microsoft Agent Framework,
-Semantic Kernel, Strands, LangChain, Claude Agent SDK, CrewAI, Agno, LlamaIndex, smolagents) a
+Strands, LangChain, Claude Agent SDK, CrewAI, Agno, LlamaIndex, smolagents) a
 real agent of that framework, with one tool and a scripted model (fake_llm.py), asks to send a letter. Four
 cases each:
 
@@ -37,7 +37,6 @@ FRAMEWORKS = [  # (label, venv, agent script, runtime name the adapter reports)
     ("Google ADK", ".venv-adk", "adk_agent.py", "google-adk"),
     ("OpenAI Agents SDK", ".venv-openai", "openai_agent.py", "openai-agents"),
     ("MS Agent Framework", ".venv-maf", "maf_agent.py", "agent-framework"),
-    ("Semantic Kernel", ".venv-sk", "sk_agent.py", "semantic-kernel"),
     ("Strands Agents", ".venv-strands", "strands_agent.py", "strands-agents"),
     ("LangChain", ".venv-langchain", "langchain_agent.py", "langchain"),
     ("Claude Agent SDK", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),

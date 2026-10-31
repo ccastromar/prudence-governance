@@ -38,8 +38,6 @@ integrations/*
 !integrations/agno/**
 !integrations/smolagents/
 !integrations/smolagents/**
-!integrations/semantic-kernel/
-!integrations/semantic-kernel/**
 !integrations/strands-agents/
 !integrations/strands-agents/**
 !integrations/crewai/

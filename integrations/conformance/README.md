@@ -1,6 +1,6 @@
 # Conformance: do the adapters really enforce Prudence?
 
-Real agents of thirteen frameworks, each with one tool, each governed by its Prudence adapter,
+Real agents of every supported framework, each with one tool, each governed by its Prudence adapter,
 run against a real Prudence and OPA. The model is scripted (`fake_llm.py`): it always calls
 the tool, so whether the tool runs depends only on governance. No model, no API key.
 
@@ -11,7 +11,6 @@ the tool, so whether the tool runs depends only on governance. No model, no API 
 | Google ADK | `agents/adk_agent.py` (a small Chat Completions model class, not LiteLLM) | `prudence_adk.PrudencePlugin` |
 | OpenAI Agents SDK | `agents/openai_agent.py` (Chat Completions) | `prudence_openai_agents.prudence_guardrail` |
 | Microsoft Agent Framework | `agents/maf_agent.py` | `prudence_agent_framework.PrudenceMiddleware` |
-| Semantic Kernel | `agents/sk_agent.py` (`ChatCompletionAgent`) | `prudence_semantic_kernel.PrudenceFilter` |
 | Strands Agents | `agents/strands_agent.py` (OpenAI model provider) | `prudence_strands.PrudenceHooks` |
 | LangChain | `agents/langchain_agent.py` (`create_agent`, `ChatOpenAI`) | `prudence_langchain.PrudenceMiddleware` |
 | Claude Agent SDK | `agents/claude_agent.py` (the SDK's bundled CLI, an in-process MCP tool) | `prudence_claude_agent.PrudenceHook` |
@@ -42,7 +41,7 @@ same agents are the console's demos ([`../demo-runner`](../demo-runner)); they r
 
 ```bash
 cd integrations/conformance
-for f in pydantic langgraph adk openai maf sk strands langchain claude crewai agno llamaindex smolagents; do
+for f in pydantic langgraph adk openai maf strands langchain claude crewai agno llamaindex smolagents; do
   python3.13 -m venv .venv-$f && .venv-$f/bin/pip install -r requirements-$f.txt
 done
 ```
@@ -51,7 +50,7 @@ Then, in two terminals:
 
 ```bash
 ./stack.sh     # OPA :18181 with opa-data.json, Prudence :18099 (dev, throw-away H2)
-./run.py       # registers two AI systems, runs the 52 cases, prints the table
+./run.py       # registers two AI systems, runs the 48 cases, prints the table
 ```
 
 `stack.sh` leaves your own dev Prudence (:8099), its database and `policy/opa/data.json`
@@ -64,7 +63,7 @@ The second run covers the tokens.
 
 ## With real login, an MCP gateway and Ernest
 
-`run-sso.py` takes each of the thirteen frameworks through what an adopter does, against Prudence in its secured
+`run-sso.py` takes each framework through what an adopter does, against Prudence in its secured
 configuration (Keycloak JWTs, PostgreSQL, the production start checks), with Ernest in the loop:
 
 1. `scripts/provision-runtime.py` registers one runtime per framework and one MCP gateway

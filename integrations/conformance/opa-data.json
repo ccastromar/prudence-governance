@@ -6,7 +6,6 @@
       "google-adk": ["conformance-runtime"],
       "openai-agents": ["conformance-runtime"],
       "agent-framework": ["conformance-runtime"],
-      "semantic-kernel": ["conformance-runtime"],
       "strands-agents": ["conformance-runtime"],
       "langchain": ["conformance-runtime"],
       "claude-agent-sdk": ["conformance-runtime"],

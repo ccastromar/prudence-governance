@@ -202,7 +202,6 @@ external store; not independently verifiable"), and never claims a seal it does 
 | Google ADK | [`integrations/google-adk`](../../integrations/google-adk) | a runner plugin: every tool of every agent |
 | OpenAI Agents SDK | [`integrations/openai-agents`](../../integrations/openai-agents) | a tool input guardrail |
 | Microsoft Agent Framework | [`integrations/agent-framework`](../../integrations/agent-framework) | function middleware |
-| Semantic Kernel | [`integrations/semantic-kernel`](../../integrations/semantic-kernel) | a function invocation filter |
 | Strands Agents | [`integrations/strands-agents`](../../integrations/strands-agents) | a hook provider: every tool call |
 | CrewAI | [`integrations/crewai`](../../integrations/crewai) | tool call hooks: every crew in the process |
 | Agno | [`integrations/agno`](../../integrations/agno) | a tool hook |

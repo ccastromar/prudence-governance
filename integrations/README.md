@@ -15,7 +15,6 @@ langchain/            prudence_langchain — create_agent middleware (LangChain 
 google-adk/           prudence_adk — a runner plugin that gates every tool call (Google ADK)
 openai-agents/        prudence_openai_agents — a tool input guardrail (OpenAI Agents SDK)
 agent-framework/      prudence_agent_framework — function middleware (Microsoft Agent Framework)
-semantic-kernel/      prudence_semantic_kernel — a function invocation filter (Semantic Kernel)
 strands-agents/       prudence_strands — a hook provider that gates every tool call (Strands Agents)
 crewai/               prudence_crewai — tool call hooks for every crew in the process (CrewAI)
 agno/                 prudence_agno — a tool hook (Agno)
@@ -45,7 +44,7 @@ card per adapter. The agents are the conformance agents above, so what the conso
 conformance tests. They run in [`demo-runner`](demo-runner) — internal-only runners that speak
 one small protocol (manifest, start a run, read a run) and come in two images, because the
 frameworks do not fit one environment: image A holds the `openai` 3.x family, image B the 2.x one
-(CrewAI, Strands, LlamaIndex, Semantic Kernel). Prudence lists whatever the configured runners
+(CrewAI, Strands, LlamaIndex). Prudence lists whatever the configured runners
 declare, starts a run on the runner that holds the demo, and shows the run next to what Prudence
 itself recorded for it: its PDP decision and the execution the runtime reported.
 
