@@ -40,7 +40,7 @@ for the founding architecture.
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
 | `docs/adr/` | Architecture decisions |
-| `ui/vendor/` | `@chestertown/design`, the shared design system (tokens and React components), as a pinned tarball released from the `chestertown-design` repository |
+| `ui/vendor/` | `@chestertown/design`, the shared design system (tokens and React components), as a pinned tarball released from a separate repository |
 | `docs/operations/` | Load-test results |
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |
 
