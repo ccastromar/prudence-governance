@@ -133,6 +133,9 @@ class ErnestEvidenceContractTest {
     var scan = health.scan();
     assertTrue(scan.complete());
     assertEquals(Map.of("sys-credit", 1L), scan.counts());
+    var ids = health.executionIdsSince(java.time.Instant.parse("2026-01-01T00:00:00Z"));
+    assertTrue(ids.available(), ids.detail());
+    assertEquals(Map.of("sys-credit", java.util.Set.of("exec-1")), ids.ids());
 
     assertEquals(List.of(), List.copyOf(problems));
     assertEquals(script.size(), next, "every interaction was used");
@@ -189,6 +192,9 @@ class ErnestEvidenceContractTest {
     var scan = health.scan();
     assertTrue(scan.complete());
     assertEquals(Map.of("sys-credit", 1L), scan.counts());
+    var ids = health.executionIdsSince(java.time.Instant.parse("2026-01-01T00:00:00Z"));
+    assertTrue(ids.available(), ids.detail());
+    assertEquals(Map.of("sys-credit", java.util.Set.of("exec-1")), ids.ids());
 
     assertEquals(List.of(), List.copyOf(problems));
     assertEquals(script.size(), next, "every interaction was used");
@@ -240,6 +246,9 @@ class ErnestEvidenceContractTest {
     var scan = health.scan();
     assertTrue(scan.complete());
     assertEquals(Map.of("sys-credit", 1L), scan.counts());
+    var ids = health.executionIdsSince(java.time.Instant.parse("2026-01-01T00:00:00Z"));
+    assertTrue(ids.available(), ids.detail());
+    assertEquals(Map.of("sys-credit", java.util.Set.of("exec-1")), ids.ids());
 
     assertEquals(List.of(), List.copyOf(problems));
     assertEquals(script.size(), next, "every interaction was used");

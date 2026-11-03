@@ -202,6 +202,88 @@ public class ErnestEvidenceHealthAdapter implements EvidenceHealthPort, Executio
     return new ExecutionScan(counts, isoTimes(latest), true, null);
   }
 
+  /// Per AI system, the correlationIds of the execution evidence Ernest holds from `since` on.
+  /// `available` false (with why) when Ernest cannot list them in full: an older Ernest without
+  /// the list, a capped list, or an unreachable one; callers then keep comparing latest times.
+  public record ExecutionIds(boolean available, Map<String, Set<String>> ids, String detail) {
+    static ExecutionIds unavailable(String detail) {
+      return new ExecutionIds(false, Map.of(), detail);
+    }
+  }
+
+  public ExecutionIds executionIdsSince(java.time.Instant since) {
+    try {
+      Map<?, ?> body =
+          client
+              .get()
+              .uri("/api/stats/executions?idsSince={since}", since.toString())
+              .retrieve()
+              .body(Map.class);
+      if (body == null || !(body.get("executionIds") instanceof Map<?, ?> listed)) {
+        return ExecutionIds.unavailable("this Ernest does not list execution ids");
+      }
+      if (Boolean.TRUE.equals(body.get("executionIdsTruncated"))) {
+        return ExecutionIds.unavailable("Ernest capped its list of execution ids");
+      }
+      Map<String, Set<String>> ids = new HashMap<>();
+      listed.forEach(
+          (k, v) -> {
+            if (k instanceof String sid && v instanceof Collection<?> c) {
+              for (Object id : c) {
+                if (id instanceof String s) ids.computeIfAbsent(sid, x -> new HashSet<>()).add(s);
+              }
+            }
+          });
+      return new ExecutionIds(true, ids, null);
+    } catch (RestClientResponseException e) {
+      if (e.getStatusCode().value() != 404) {
+        log.warn("could not read execution ids from Ernest: {}", e.getMessage());
+        return ExecutionIds.unavailable("Execution ids unavailable: " + e.getMessage());
+      }
+    } catch (Exception e) {
+      log.warn("could not read execution ids from Ernest: {}", e.getMessage());
+      return ExecutionIds.unavailable("Execution ids unavailable: " + e.getMessage());
+    }
+    return executionIdsByPaging(since);
+  }
+
+  /// Fallback for Ernest versions without /api/stats/executions: the same blocks scanByPaging
+  /// reads, keeping each execution's correlationId.
+  private ExecutionIds executionIdsByPaging(java.time.Instant since) {
+    Map<String, Set<String>> ids = new HashMap<>();
+    try {
+      int page = 1, totalPages = 1;
+      do {
+        Map<?, ?> body =
+            client.get().uri("/api/blocks?page={p}&limit=200", page).retrieve().body(Map.class);
+        if (body == null) break;
+        if (body.get("totalPages") instanceof Number n) totalPages = n.intValue();
+        if (body.get("items") instanceof List<?> items) {
+          for (Object it : items) {
+            if (it instanceof Map<?, ?> blk
+                && blk.get("data") instanceof Map<?, ?> data
+                && data.get("metadata") instanceof Map<?, ?> md
+                && "execution".equals(md.get("stage"))
+                && md.get("aiSystemId") instanceof String sid
+                && !sid.isBlank()
+                && md.get("correlationId") instanceof String cid
+                && !cid.isBlank()) {
+              java.time.Instant at = executionTime(data.get("occurredAt"), blk.get("timestamp"));
+              if (at != null && !at.isBefore(since)) {
+                ids.computeIfAbsent(sid, x -> new HashSet<>()).add(cid);
+              }
+            }
+          }
+        }
+        page++;
+      } while (page <= totalPages);
+    } catch (Exception e) {
+      log.warn("could not scan execution ids from Ernest: {}", e.getMessage());
+      return ExecutionIds.unavailable("Evidence scan stopped early: " + e.getMessage());
+    }
+    return new ExecutionIds(true, ids, null);
+  }
+
   /// The event's stated time when it parses, else the block's own time (epoch millis).
   private static java.time.Instant executionTime(Object occurredAt, Object blockTimestamp) {
     if (occurredAt instanceof String s && !s.isBlank()) {

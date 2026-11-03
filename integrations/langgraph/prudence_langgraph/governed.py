@@ -12,6 +12,7 @@ runs under different identities and policies unchanged.
 """
 from __future__ import annotations
 
+import uuid
 from typing import Callable
 
 from prudence_governance import ErnestEvidence, PrudenceGate
@@ -38,10 +39,13 @@ def governed_node(fn: Callable[[dict], dict], *, pipeline: str, action: str = "r
 
         # Best effort: both calls swallow their own errors. The seal retries while Ernest does
         # not know the system yet (Prudence registers it with its first decision).
-        gate.report_execution(decision, ai_system, pipeline, runtime="langgraph")
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = str(uuid.uuid4())
+        gate.report_execution(decision, ai_system, pipeline, runtime="langgraph", execution_id=execution_id)
         if evidence is not None:
             evidence.log_execution(ai_system, pipeline=pipeline, runtime="langgraph",
-                                   decision_id=decision.decision_id, inputs={"input": _tool_io(state)})
+                                   decision_id=decision.decision_id, inputs={"input": _tool_io(state)},
+                                   execution_id=execution_id)
         updates = fn(state) or {}
         return {"gate": "ALLOW", **updates}
 

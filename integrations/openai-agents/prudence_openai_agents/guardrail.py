@@ -10,6 +10,7 @@ name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Literal, Mapping
 
 from agents import FunctionTool, ToolGuardrailFunctionOutput, ToolInputGuardrail, ToolInputGuardrailData
@@ -47,12 +48,14 @@ def prudence_guardrail(
             if decision.allowed:
                 # Best effort, never blocks or fails the tool.
                 loop = asyncio.get_running_loop()
+                # One id for the report and the evidence, so Prudence can match them.
+                execution_id = ctx.tool_call_id or str(uuid.uuid4())
                 loop.run_in_executor(None, lambda: gate.report_execution(
-                    decision, system, pipeline, runtime=runtime, execution_id=ctx.tool_call_id or None))
+                    decision, system, pipeline, runtime=runtime, execution_id=execution_id))
                 if evidence is not None:
                     loop.run_in_executor(None, lambda: evidence.log_execution(
                         system, pipeline=pipeline, runtime=runtime, decision_id=decision.decision_id,
-                        inputs=ctx.tool_arguments))
+                        inputs=ctx.tool_arguments, execution_id=execution_id))
                 return ToolGuardrailFunctionOutput.allow(output_info=info)
             message = decision.refusal()
         if on_deny == "raise":

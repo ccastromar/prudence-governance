@@ -15,6 +15,7 @@ nobody granted is denied.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Any, Awaitable, Callable, Mapping
 
 from langchain.agents.middleware import AgentMiddleware
@@ -85,12 +86,15 @@ class PrudenceMiddleware(AgentMiddleware):
             return self._refusal(call, decision.refusal())
 
         # Best effort: both calls swallow their own errors.
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = call.get("id") or str(uuid.uuid4())
         self.gate.report_execution(decision, system, pipeline, runtime=self.runtime,
-                                   execution_id=call.get("id"))
+                                   execution_id=execution_id)
         if self.evidence is not None:
             self.evidence.log_execution(system, pipeline=pipeline, runtime=self.runtime,
                                         decision_id=decision.decision_id,
-                                        inputs=dict(call.get("args") or {}))
+                                        inputs=dict(call.get("args") or {}),
+                                        execution_id=execution_id)
         return None
 
     @staticmethod

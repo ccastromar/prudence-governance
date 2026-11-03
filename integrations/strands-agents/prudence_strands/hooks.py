@@ -69,4 +69,4 @@ class PrudenceHooks(HookProvider):
             inputs = event.tool_use.get("input") or {}
             loop.run_in_executor(None, lambda: self.evidence.log_execution(
                 system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
-                inputs=inputs))
+                inputs=inputs, execution_id=execution_id))

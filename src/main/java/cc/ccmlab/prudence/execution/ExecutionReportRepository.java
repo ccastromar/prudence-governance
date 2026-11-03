@@ -14,6 +14,10 @@ public interface ExecutionReportRepository extends JpaRepository<ExecutionReport
   List<ExecutionReportJpaEntity> findByAiSystemIdOrderByStartedAtDesc(
       String aiSystemId, Limit limit);
 
+  /// The executions reported as started in [from, to] (ISO-8601 UTC strings compare in time
+  /// order), for the per-execution cross-check with Ernest.
+  List<ExecutionReportJpaEntity> findByStartedAtBetween(String from, String to);
+
   /// Per system: how many executions were reported and the latest start (ISO-8601 UTC, so
   /// the string maximum is the latest instant).
   @Query(

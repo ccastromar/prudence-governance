@@ -65,13 +65,15 @@ class GovernedTool(AsyncBaseTool):
             return self._refusal(decision.refusal(), args, kwargs)
 
         # Best effort: both calls swallow their own errors.
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = str(uuid.uuid4())
         self.gate.report_execution(decision, self.ai_system_id, self.pipeline, runtime=self.runtime,
-                                   execution_id=str(uuid.uuid4()))
+                                   execution_id=execution_id)
         if self.evidence is not None:
             inputs = dict(kwargs) if kwargs or not args else {"input": args[0]}
             self.evidence.log_execution(self.ai_system_id, pipeline=self.pipeline,
                                         runtime=self.runtime, decision_id=decision.decision_id,
-                                        inputs=inputs)
+                                        inputs=inputs, execution_id=execution_id)
         return None
 
     def _refusal(self, message: str, args: tuple, kwargs: dict[str, Any]) -> ToolOutput:

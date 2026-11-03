@@ -20,6 +20,9 @@
     { "name": "roles", "protocol": "openid-connect" },
     { "name": "pdp.decide", "protocol": "openid-connect",
       "description": "Permission to call the Prudence PDP (/api/policy/decisions).",
+      "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } },
+    { "name": "execution.report", "protocol": "openid-connect",
+      "description": "Permission to report executions to Prudence (/api/executions).",
       "attributes": { "include.in.token.scope": "true", "display.on.consent.screen": "false" } }
   ],
   "clients": [
@@ -27,7 +30,7 @@
       "standardFlowEnabled": false, "directAccessGrantsEnabled": false,
       "description": "Machine-to-machine caller of the Prudence PDP (client_credentials).",
       "secret": "pdp-dev-secret",
-      "defaultClientScopes": ["basic", "roles", "pdp.decide"], "optionalClientScopes": [],
+      "defaultClientScopes": ["basic", "roles", "pdp.decide", "execution.report"], "optionalClientScopes": [],
       "protocolMappers": [
         { "name": "realm-roles-to-roles", "protocol": "openid-connect", "protocolMapper": "oidc-usermodel-realm-role-mapper", "consentRequired": false,
           "config": { "claim.name": "roles", "jsonType.label": "String", "multivalued": "true", "access.token.claim": "true" } },

@@ -14,6 +14,7 @@ the matcher pattern.
 from __future__ import annotations
 
 import asyncio
+import uuid
 from typing import Any, Mapping
 
 from claude_agent_sdk import HookContext, HookMatcher
@@ -66,7 +67,8 @@ class PrudenceHook:
             return self._deny(decision.refusal())
 
         # Best effort, never blocks or fails the tool.
-        execution_id = tool_use_id or input_data.get("tool_use_id")
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = tool_use_id or input_data.get("tool_use_id") or str(uuid.uuid4())
         loop = asyncio.get_running_loop()
         loop.run_in_executor(None, lambda: self.gate.report_execution(
             decision, system, pipeline, runtime=self.runtime, execution_id=execution_id))
@@ -74,7 +76,7 @@ class PrudenceHook:
             inputs = dict(input_data.get("tool_input") or {})
             loop.run_in_executor(None, lambda: self.evidence.log_execution(
                 system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
-                inputs=inputs))
+                inputs=inputs, execution_id=execution_id))
         return {}
 
     @staticmethod

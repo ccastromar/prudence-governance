@@ -56,9 +56,12 @@ class PrudenceToolHook:
             return decision.refusal()
 
         # Best effort: both calls swallow their own errors.
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = str(uuid.uuid4())
         self.gate.report_execution(decision, system, pipeline, runtime=self.runtime,
-                                   execution_id=str(uuid.uuid4()))
+                                   execution_id=execution_id)
         if self.evidence is not None:
             self.evidence.log_execution(system, pipeline=pipeline, runtime=self.runtime,
-                                        decision_id=decision.decision_id, inputs=dict(arguments))
+                                        decision_id=decision.decision_id, inputs=dict(arguments),
+                                        execution_id=execution_id)
         return function_call(**arguments)

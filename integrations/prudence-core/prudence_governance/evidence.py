@@ -114,16 +114,22 @@ class ErnestEvidence:
             return None, {"error": str(e)}
 
     def log_execution(self, ai_system_id: str, *, pipeline: str, runtime: str,
-                      decision_id: str | None, inputs=None):
+                      decision_id: str | None, inputs=None, execution_id: str | None = None):
         """Seal that a governed execution started, under the AI system's id: the execution
         evidence Ernest counts per system (`stage: execution`), which Prudence compares with
         the runtime's own report. Only a hash of `inputs` travels. Best effort: never raises.
+
+        Pass the same `execution_id` given to `PolicyGate.report_execution`: it travels as the
+        evidence's `correlationId`, so Prudence can match the report and the evidence one by one
+        rather than only comparing the latest times.
 
         Prudence registers the system in Ernest when it delivers the system's first decision,
         which can land a moment after the run started. Ernest then answers 404 or 409 ("not yet
         committed"); the seal is retried for a few seconds, so call this off the hot path."""
         metadata = {"stage": "execution", "aiSystemId": ai_system_id, "pipeline": pipeline,
                     "runtime": runtime, "decisionId": decision_id}
+        if execution_id:
+            metadata["correlationId"] = execution_id
         result = (None, {"error": "not attempted"})
         for delay in (0.5, 1, 2, 2, 3, 0):
             try:

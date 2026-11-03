@@ -69,6 +69,7 @@ class PrudencePlugin(BasePlugin):
                     "message": decision.refusal()}
 
         # Best effort, never blocks or fails the tool.
+        # One id for the report and the evidence, so Prudence can match them.
         execution_id = f"{tool_context.invocation_id}:{tool_context.function_call_id}"
         loop = asyncio.get_running_loop()
         loop.run_in_executor(None, lambda: self.gate.report_execution(
@@ -76,5 +77,5 @@ class PrudencePlugin(BasePlugin):
         if self.evidence is not None:
             loop.run_in_executor(None, lambda: self.evidence.log_execution(
                 system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
-                inputs=tool_args))
+                inputs=tool_args, execution_id=execution_id))
         return None

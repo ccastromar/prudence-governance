@@ -15,6 +15,7 @@ different identities and policies without changing its code.
 from __future__ import annotations
 
 import functools
+import uuid
 from dataclasses import dataclass
 from typing import Callable
 
@@ -53,11 +54,15 @@ def governed(pipeline: str, action: str = "run", *, raise_on_deny: bool = False)
 
             # Best effort: both calls swallow their own errors. The seal retries while Ernest
             # does not know the system yet (Prudence registers it with its first decision).
-            deps.gate.report_execution(decision, deps.ai_system_id, pipeline, runtime="pydantic-ai")
+            # One id for the report and the evidence, so Prudence can match them.
+            execution_id = str(uuid.uuid4())
+            deps.gate.report_execution(decision, deps.ai_system_id, pipeline, runtime="pydantic-ai",
+                                       execution_id=execution_id)
             if deps.evidence is not None:
                 deps.evidence.log_execution(deps.ai_system_id, pipeline=pipeline, runtime="pydantic-ai",
                                             decision_id=decision.decision_id,
-                                            inputs={"args": args, "kwargs": kwargs})
+                                            inputs={"args": args, "kwargs": kwargs},
+                                            execution_id=execution_id)
             return fn(ctx, *args, **kwargs)
 
         return wrapper

@@ -66,14 +66,16 @@ class PrudenceMiddleware(FunctionMiddleware):
 
         # Best effort, never blocks or fails the tool.
         loop = asyncio.get_running_loop()
+        # One id for the report and the evidence, so Prudence can match them.
+        execution_id = str(uuid.uuid4())
         loop.run_in_executor(None, lambda: self.gate.report_execution(
-            decision, system, pipeline, runtime=self.runtime, execution_id=str(uuid.uuid4())))
+            decision, system, pipeline, runtime=self.runtime, execution_id=execution_id))
         if self.evidence is not None:
             arguments = context.arguments
             inputs = arguments.model_dump() if hasattr(arguments, "model_dump") else dict(arguments or {})
             loop.run_in_executor(None, lambda: self.evidence.log_execution(
                 system, pipeline=pipeline, runtime=self.runtime, decision_id=decision.decision_id,
-                inputs=inputs))
+                inputs=inputs, execution_id=execution_id))
         await call_next()
 
     def _refuse(self, context: FunctionInvocationContext, message: str) -> None:
