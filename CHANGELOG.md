@@ -22,7 +22,14 @@ not a legal declaration of EU AI Act conformity.
   with its evidence in Ernest, so a missing one is not hidden by a later run.
 - Python adapters for twelve agent frameworks (LangGraph, LangChain, CrewAI, OpenAI Agents,
   Claude Agent SDK and more) on a shared core, each tested against a real agent.
-- Governed framework demos, run from the console's Integrations tab.
+- An AI gateway as the policy enforcement point: a LiteLLM guardrail asks Prudence before each
+  model call and tool call, with the agent's own token, and reports the tools that ran. The twelve
+  example agents also run behind it, with no adapter.
+- Who asked, which agent acted and for which person: a gateway may speak only for the agents
+  it is allowed to, each AI system declares its agents, and a high-risk system behind a gateway
+  needs a verified agent. Decisions and evidence record all three.
+- Governed framework demos, run from the console's Integrations tab, governed either by the
+  framework adapter or by the AI gateway.
 - Evidence: decisions and reviews are sent to Ernest, with people's identities pseudonymized.
 - Governance functions: twelve fixed functions mapped to each organization's identity provider,
   with templates for a small organization, a bank and a public body.
