@@ -1,8 +1,10 @@
 package cc.ccmlab.prudence.execution;
 
 import cc.ccmlab.prudence.evidence.adapter.out.persistence.EvidenceOutboxJpaRepository;
+import cc.ccmlab.prudence.policy.application.port.out.PolicyEnginePort;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -31,11 +33,15 @@ public class ExecutionReportController {
 
   private final ExecutionReportRepository reports;
   private final EvidenceOutboxJpaRepository decisions;
+  private final PolicyEnginePort policy;
 
   public ExecutionReportController(
-      ExecutionReportRepository reports, EvidenceOutboxJpaRepository decisions) {
+      ExecutionReportRepository reports,
+      EvidenceOutboxJpaRepository decisions,
+      PolicyEnginePort policy) {
     this.reports = reports;
     this.decisions = decisions;
+    this.policy = policy;
   }
 
   /// 201 for a new report; 200 when the same execution was already reported identically
@@ -46,6 +52,7 @@ public class ExecutionReportController {
       @Valid @RequestBody ExecutionReportRequest request, Authentication authentication) {
     String startedAt = normalizedStart(request.startedAt());
     String reportedBy = authentication != null ? authentication.getName() : "anonymous-dev";
+    String agent = agentOf(request.agent(), reportedBy);
 
     var existing = reports.findByRuntimeAndExecutionId(request.runtime(), request.executionId());
     if (existing.isPresent()) {
@@ -54,7 +61,8 @@ public class ExecutionReportController {
           r.getAiSystemId().equals(request.aiSystemId())
               && r.getPipeline().equals(request.pipeline())
               && r.getStartedAt().equals(startedAt)
-              && Objects.equals(r.getDecisionId(), blankToNull(request.decisionId()));
+              && Objects.equals(r.getDecisionId(), blankToNull(request.decisionId()))
+              && Objects.equals(r.getAgent(), agent);
       if (!same) {
         throw new ResponseStatusException(
             HttpStatus.CONFLICT,
@@ -68,20 +76,40 @@ public class ExecutionReportController {
     }
 
     String decisionId = blankToNull(request.decisionId());
-    var saved =
-        reports.save(
-            new ExecutionReportJpaEntity(
-                UUID.randomUUID().toString(),
-                request.runtime(),
-                request.executionId(),
-                decisionId,
-                decisionStatus(decisionId, request.aiSystemId()),
-                request.aiSystemId(),
-                request.pipeline(),
-                startedAt,
-                reportedBy,
-                Instant.now().toString()));
-    return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    var report =
+        new ExecutionReportJpaEntity(
+            UUID.randomUUID().toString(),
+            request.runtime(),
+            request.executionId(),
+            decisionId,
+            decisionStatus(decisionId, request.aiSystemId(), agent),
+            request.aiSystemId(),
+            request.pipeline(),
+            startedAt,
+            reportedBy,
+            Instant.now().toString());
+    report.setAgent(agent);
+    return ResponseEntity.status(HttpStatus.CREATED).body(reports.save(report));
+  }
+
+  /// The agent a report names, when it is not the reporting workload itself; null otherwise.
+  /// A workload reports for another agent only if the policy lets it speak for that agent
+  /// (`contract/identity/` section 9), so drift cannot be fed executions under someone else's name.
+  private String agentOf(String named, String reportedBy) {
+    String agent = blankToNull(named);
+    if (agent == null || agent.strip().equals(reportedBy)) return null;
+    agent = agent.strip();
+    switch (policy.delegation(reportedBy, agent)) {
+      case ALLOWED -> {
+        return agent;
+      }
+      case DENIED ->
+          throw new ResponseStatusException(
+              HttpStatus.FORBIDDEN, reportedBy + " may not report for agent " + agent);
+      default ->
+          throw new ResponseStatusException(
+              HttpStatus.SERVICE_UNAVAILABLE, "the policy engine could not check the agent");
+    }
   }
 
   /// The latest reported executions of one AI system.
@@ -92,11 +120,17 @@ public class ExecutionReportController {
         aiSystemId, Limit.of(Math.max(1, Math.min(limit, 500))));
   }
 
-  private String decisionStatus(String decisionId, String aiSystemId) {
+  /// With a named agent, the cited decision must also be about that agent (its subject).
+  private String decisionStatus(String decisionId, String aiSystemId, String agent) {
     if (decisionId == null) return "NONE";
     return decisions
         .findById(decisionId)
-        .map(d -> d.getAiSystemId().equals(aiSystemId) ? d.getVerdict() : "OTHER_SYSTEM")
+        .map(
+            d -> {
+              if (!d.getAiSystemId().equals(aiSystemId)) return "OTHER_SYSTEM";
+              if (agent != null && !agent.equals(d.getSubject())) return "OTHER_AGENT";
+              return d.getVerdict();
+            })
         .orElse("UNKNOWN");
   }
 
@@ -127,5 +161,17 @@ public class ExecutionReportController {
       String decisionId,
       @NotBlank String aiSystemId,
       @NotBlank String pipeline,
-      @NotBlank String startedAt) {}
+      @NotBlank String startedAt,
+      @Size(max = 512) String agent) {
+
+    public ExecutionReportRequest(
+        String runtime,
+        String executionId,
+        String decisionId,
+        String aiSystemId,
+        String pipeline,
+        String startedAt) {
+      this(runtime, executionId, decisionId, aiSystemId, pipeline, startedAt, null);
+    }
+  }
 }

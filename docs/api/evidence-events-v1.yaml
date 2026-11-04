@@ -241,7 +241,18 @@ components:
             modelHash: { type: [string, 'null'] }
         subjectHash:
           type: string
-          description: Keyed pseudonym (hex HMAC-SHA256 under the installation's pseudonym key) of the workload identity that asked.
+          description: Keyed pseudonym (hex HMAC-SHA256 under the installation's pseudonym key) of the agent the decision was about (the workload that asked, unless it asked for another agent).
+        identity:
+          type: object
+          description: |
+            Present only when the caller asked for another agent, or named a person
+            (`contract/identity/`). Absent: the subject asked for itself, for no one in particular.
+          required: [callerHash, agentAssurance]
+          properties:
+            callerHash: { type: string, description: Keyed pseudonym of the workload that asked. }
+            agentAssurance: { type: string, enum: [self, delegated, verified] }
+            onBehalfOfHash: { type: string, description: Keyed pseudonym of the person the agent acted for. }
+            onBehalfOfAssurance: { type: string, enum: [verified, asserted] }
         correlationId: { type: string, description: Ties the events of one governed flow together. }
         causationId: { type: string, description: The event that caused this one. }
 

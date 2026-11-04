@@ -5,7 +5,9 @@ import cc.ccmlab.prudence.evidence.adapter.out.persistence.EvidenceOutboxJpaRepo
 import cc.ccmlab.prudence.evidence.delivery.DecisionPublisher;
 import cc.ccmlab.prudence.evidence.delivery.Delivery;
 import cc.ccmlab.prudence.evidence.delivery.DeliveryTarget;
+import cc.ccmlab.prudence.evidence.EvidencePseudonyms;
 import cc.ccmlab.prudence.policy.domain.DecisionContext;
+import cc.ccmlab.prudence.policy.domain.DecisionIdentity;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +23,17 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
   private final EvidenceOutboxJpaRepository outbox;
   private final DecisionPublisher ernest;
   private final int batchSize;
+  private final EvidencePseudonyms pseudonyms;
 
   public DecisionDeliveryTarget(
       EvidenceOutboxJpaRepository outbox,
       DecisionPublisher ernest,
-      @Value("${prudence.ernest.batch-size:200}") int batchSize) {
+      @Value("${prudence.ernest.batch-size:200}") int batchSize,
+      EvidencePseudonyms pseudonyms) {
     this.outbox = outbox;
     this.ernest = ernest;
     this.batchSize = Math.max(1, Math.min(batchSize, 500)); // Ernest accepts up to 500
+    this.pseudonyms = pseudonyms;
   }
 
   @Override
@@ -99,7 +104,21 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
         .toList();
   }
 
-  private static DecisionContext context(EvidenceOutboxJpaEntity e) {
+  /// The decision as it leaves Prudence: the person it was taken for is replaced by their
+  /// pseudonym here, so no publisher can send the name (`contract/identity/` section 11).
+  private DecisionContext context(EvidenceOutboxJpaEntity e) {
+    DecisionIdentity identity =
+        e.getCaller() == null
+            ? null
+            : new DecisionIdentity(
+                e.getCaller(),
+                e.getSubject(),
+                DecisionIdentity.AgentAssurance.valueOf(e.getAgentAssurance()),
+                e.getOnBehalfOf() == null
+                    ? null
+                    : new DecisionIdentity.Person(
+                        pseudonyms.of(e.getOnBehalfOf()),
+                        DecisionIdentity.PersonAssurance.valueOf(e.getOnBehalfOfAssurance())));
     return new DecisionContext(
         e.getSubject(),
         e.getPipeline(),
@@ -114,7 +133,8 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
         e.getSystemSequence(),
         e.getAiSystemName(),
         e.getRiskTier(),
-        e.getId());
+        e.getId(),
+        identity);
   }
 
   @Override
@@ -128,7 +148,7 @@ public class DecisionDeliveryTarget implements DeliveryTarget<EvidenceOutboxJpaE
       case "ALLOW" -> PolicyDecision.allow();
       case "APPROVAL_REQUIRED" -> PolicyDecision.approval("risk-officer", e.getReason());
       case "ERROR" -> PolicyDecision.error(e.getReason());
-      default -> PolicyDecision.deny(e.getReason());
+      default -> PolicyDecision.deny(e.getReason(), e.getReasonCode());
     };
   }
 }

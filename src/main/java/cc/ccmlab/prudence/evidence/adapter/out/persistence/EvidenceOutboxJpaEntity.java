@@ -36,6 +36,22 @@ public class EvidenceOutboxJpaEntity {
   private String causationId;
   private String correlationId;
   private Long systemSequence;
+
+  @Column(length = 512)
+  private String caller;
+
+  @Column(length = 32)
+  private String agentAssurance;
+
+  @Column(length = 512)
+  private String onBehalfOf;
+
+  @Column(length = 32)
+  private String onBehalfOfAssurance;
+
+  @Column(length = 64)
+  private String reasonCode;
+
   @Embedded private Delivery delivery;
 
   protected EvidenceOutboxJpaEntity() {}
@@ -131,6 +147,40 @@ public class EvidenceOutboxJpaEntity {
   public void setSystemIdentity(String aiSystemName, String riskTier) {
     this.aiSystemName = aiSystemName;
     this.riskTier = riskTier;
+  }
+
+  /// Who asked, how the agent (`subject`) is known, and the person it acted for, in clear:
+  /// these are Prudence's own records. Null on rows written before V5 (the subject asked).
+  public void setIdentity(
+      String caller, String agentAssurance, String onBehalfOf, String onBehalfOfAssurance) {
+    this.caller = caller;
+    this.agentAssurance = agentAssurance;
+    this.onBehalfOf = onBehalfOf;
+    this.onBehalfOfAssurance = onBehalfOfAssurance;
+  }
+
+  public void setReasonCode(String reasonCode) {
+    this.reasonCode = reasonCode;
+  }
+
+  public String getCaller() {
+    return caller;
+  }
+
+  public String getAgentAssurance() {
+    return agentAssurance;
+  }
+
+  public String getOnBehalfOf() {
+    return onBehalfOf;
+  }
+
+  public String getOnBehalfOfAssurance() {
+    return onBehalfOfAssurance;
+  }
+
+  public String getReasonCode() {
+    return reasonCode;
   }
 
   public String getCausationId() {

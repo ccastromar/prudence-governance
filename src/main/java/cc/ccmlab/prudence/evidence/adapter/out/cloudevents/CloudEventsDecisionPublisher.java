@@ -86,6 +86,19 @@ public class CloudEventsDecisionPublisher implements DecisionPublisher {
     data.put("aiSystem", aiSystem);
     data.put("decision", outcome);
     data.put("subjectHash", pseudonyms.of(ctx.subject()));
+    // Who asked and for whom (contract/identity/), when it is more than the subject acting
+    // for itself. Hashed like the subject; the person arrives already as a pseudonym.
+    var identity = ctx.identity();
+    if (identity.delegated() || identity.onBehalfOf() != null) {
+      Map<String, Object> asked = new LinkedHashMap<>();
+      asked.put("callerHash", pseudonyms.of(identity.caller()));
+      asked.put("agentAssurance", identity.agentAssurance().name().toLowerCase());
+      if (identity.onBehalfOf() != null) {
+        asked.put("onBehalfOfHash", identity.onBehalfOf().id());
+        asked.put("onBehalfOfAssurance", identity.onBehalfOf().assurance().name().toLowerCase());
+      }
+      data.put("identity", asked);
+    }
     if (ctx.correlationId() != null) data.put("correlationId", ctx.correlationId());
     if (ctx.causationId() != null) data.put("causationId", ctx.causationId());
     return new CloudEvent(decisionId, TYPE, ctx.aiSystemId(), Instant.now(), data);

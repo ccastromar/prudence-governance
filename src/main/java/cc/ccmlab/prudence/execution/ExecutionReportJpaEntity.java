@@ -5,7 +5,8 @@ import jakarta.persistence.*;
 /// One execution a runtime reported: what ran, when, and under which recorded decision.
 /// `decisionStatus` is what Prudence found for the cited decision when the report arrived:
 /// the verdict (ALLOW, DENY, APPROVAL_REQUIRED), NONE when no decision was cited, UNKNOWN
-/// when the id matches no recorded decision, OTHER_SYSTEM when it was about another system.
+/// when the id matches no recorded decision, OTHER_SYSTEM when it was about another system,
+/// OTHER_AGENT when the report names an agent the decision was not about.
 @Entity
 @Table(name = "execution_report")
 public class ExecutionReportJpaEntity {
@@ -19,6 +20,18 @@ public class ExecutionReportJpaEntity {
   private String startedAt;
   private String reportedBy;
   private String receivedAt;
+
+  /// The agent that ran it when a gateway reports for it; null when `reportedBy` ran it.
+  @Column(length = 512)
+  private String agent;
+
+  public String getAgent() {
+    return agent;
+  }
+
+  public void setAgent(String agent) {
+    this.agent = agent;
+  }
 
   protected ExecutionReportJpaEntity() {}
 

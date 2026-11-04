@@ -49,6 +49,13 @@ public class OutboxEvidenceAdapter implements EvidencePort {
             verdict,
             reason);
     record.setSystemIdentity(context.aiSystemName(), context.riskTier());
+    var identity = context.identity();
+    record.setIdentity(
+        identity.caller(),
+        identity.agentAssurance().name(),
+        identity.onBehalfOf() == null ? null : identity.onBehalfOf().id(),
+        identity.onBehalfOf() == null ? null : identity.onBehalfOf().assurance().name());
+    if (decision instanceof PolicyDecision.Deny d) record.setReasonCode(d.reasonCode());
     if (context.riskTier() == null) {
       // The PDP stamps the registered risk tier, so none means the registry does not know this
       // system. Its fail-closed DENY is still evidence, but an unregistered id has no event

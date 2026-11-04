@@ -431,7 +431,23 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
     if (ctx.systemSequence() != null) metadata.put("systemSequence", ctx.systemSequence());
     metadata.put("decision", verdict);
     if (reason != null) metadata.put("reason", reason);
+    putIdentity(metadata, ctx);
     return metadata;
+  }
+
+  /// Who asked and for whom (`contract/identity/` section 11), only when it is more than the
+  /// subject acting for itself, so those records stay as they were. `subject` is the agent; the
+  /// person is already a pseudonym here.
+  private static void putIdentity(Map<String, Object> metadata, DecisionContext ctx) {
+    var identity = ctx.identity();
+    if (!identity.delegated() && identity.onBehalfOf() == null) return;
+    metadata.put("caller", identity.caller());
+    metadata.put("agentAssurance", identity.agentAssurance().name().toLowerCase());
+    if (identity.onBehalfOf() != null) {
+      metadata.put("onBehalfOf", identity.onBehalfOf().id());
+      metadata.put(
+          "onBehalfOfAssurance", identity.onBehalfOf().assurance().name().toLowerCase());
+    }
   }
 
   private static String sha256Hex(String s) {
