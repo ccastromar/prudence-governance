@@ -77,8 +77,7 @@ class AuthZenEvaluationTest {
   @Test
   void modelIsGovernedAsModelPipeline() {
     Evaluation e =
-        Evaluation.parse(
-            request(Map.of("type", "model", "id", "gpt-x")), Map.of(), TOOLS);
+        Evaluation.parse(request(Map.of("type", "model", "id", "gpt-x")), Map.of(), TOOLS);
 
     assertEquals("model:gpt-x", e.pipeline());
     assertNull(e.aiSystemId());

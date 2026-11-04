@@ -788,7 +788,11 @@ export const api = {
     }).then(json<Decision>),
   demos: () =>
     fetch("/api/demos", { headers: withAuth() }).then(json<GovernedDemo[]>),
-  runDemo: (demo: string, aiSystemId: string, mode: GovernedDemoMode = "adapter") =>
+  runDemo: (
+    demo: string,
+    aiSystemId: string,
+    mode: GovernedDemoMode = "adapter",
+  ) =>
     fetch(`/api/demos/${encodeURIComponent(demo)}/runs`, {
       method: "POST",
       headers: withAuth(json_ct),

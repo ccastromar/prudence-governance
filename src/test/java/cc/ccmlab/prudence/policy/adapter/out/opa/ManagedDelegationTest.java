@@ -43,9 +43,12 @@ class ManagedDelegationTest {
     opa.createContext(
         "/v1/data/prudence_managed/result",
         exchange -> {
-          sentToOpa.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+          sentToOpa.set(
+              new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
           byte[] body =
-              ("{\"result\":{\"decision\":\"ALLOW\",\"version\":\"pub-1\",\"digest\":\"" + DIGEST + "\"}}")
+              ("{\"result\":{\"decision\":\"ALLOW\",\"version\":\"pub-1\",\"digest\":\""
+                      + DIGEST
+                      + "\"}}")
                   .getBytes(StandardCharsets.UTF_8);
           exchange.getResponseHeaders().add("Content-Type", "application/json");
           exchange.sendResponseHeaders(200, body.length);
@@ -60,7 +63,10 @@ class ManagedDelegationTest {
         new OpaPolicyAdapter(
             new IntegrationProperties(
                 new IntegrationProperties.Opa(
-                    "http://127.0.0.1:" + opa.getAddress().getPort(), "/v1/data/prudence/allow", "v", "h"),
+                    "http://127.0.0.1:" + opa.getAddress().getPort(),
+                    "/v1/data/prudence/allow",
+                    "v",
+                    "h"),
                 new IntegrationProperties.Ernest("http://ernest", "key"),
                 new IntegrationProperties.Qtsp("")),
             ObservationRegistry.NOOP,
@@ -85,14 +91,29 @@ class ManagedDelegationTest {
         .setAuthentication(
             new JwtAuthenticationToken(
                 jwt,
-                java.util.Arrays.stream(roles).map(r -> new SimpleGrantedAuthority("ROLE_" + r)).toList(),
+                java.util.Arrays.stream(roles)
+                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                    .toList(),
                 name));
   }
 
   private static DecisionContext context(String action, DecisionIdentity identity) {
     return new DecisionContext(
-        identity.agent(), "tool:approve_refund", "system-1", action, "v", "h", "1", "m", null, null,
-        null, null, null, "d-1", identity);
+        identity.agent(),
+        "tool:approve_refund",
+        "system-1",
+        action,
+        "v",
+        "h",
+        "1",
+        "m",
+        null,
+        null,
+        null,
+        null,
+        null,
+        "d-1",
+        identity);
   }
 
   @Test
@@ -108,14 +129,21 @@ class ManagedDelegationTest {
     authenticatedAs("ai-gateway", "gateway-role");
     var identity =
         new DecisionIdentity(
-            "ai-gateway", "demo-runner", DecisionIdentity.AgentAssurance.VERIFIED, null, null,
+            "ai-gateway",
+            "demo-runner",
+            DecisionIdentity.AgentAssurance.VERIFIED,
+            null,
+            null,
             List.of("framework-demo-runner"));
 
     var evaluation = adapter.evaluate(context("tools/call", identity));
 
     assertEquals(Outcome.ALLOW, evaluation.outcome());
-    var input = (java.util.Map<?, ?>) new tools.jackson.databind.ObjectMapper()
-        .readValue(sentToOpa.get(), java.util.Map.class).get("input");
+    var input =
+        (java.util.Map<?, ?>)
+            new tools.jackson.databind.ObjectMapper()
+                .readValue(sentToOpa.get(), java.util.Map.class)
+                .get("input");
     assertEquals(List.of("framework-demo-runner"), input.get("roles"));
     assertEquals("pipeline.run", input.get("action"));
     assertEquals("tool:approve_refund", input.get("pipeline"));
@@ -125,7 +153,8 @@ class ManagedDelegationTest {
   void aMerelyNamedAgentCannotBeGrantedByRoleRules() {
     authenticatedAs("ai-gateway", "framework-demo-runner");
     var identity =
-        new DecisionIdentity("ai-gateway", "demo-runner", DecisionIdentity.AgentAssurance.DELEGATED, null);
+        new DecisionIdentity(
+            "ai-gateway", "demo-runner", DecisionIdentity.AgentAssurance.DELEGATED, null);
 
     assertEquals(Outcome.DENY, adapter.evaluate(context("tools/call", identity)).outcome());
     assertNull(sentToOpa.get(), "OPA is not even asked");
@@ -136,7 +165,11 @@ class ManagedDelegationTest {
     authenticatedAs("someone-else", "framework-demo-runner");
     var identity =
         new DecisionIdentity(
-            "ai-gateway", "demo-runner", DecisionIdentity.AgentAssurance.VERIFIED, null, null,
+            "ai-gateway",
+            "demo-runner",
+            DecisionIdentity.AgentAssurance.VERIFIED,
+            null,
+            null,
             List.of("framework-demo-runner"));
 
     assertEquals(Outcome.ERROR, adapter.evaluate(context("invoke", identity)).outcome());
@@ -153,6 +186,7 @@ class ManagedDelegationTest {
 
   @Test
   void aMalformedSpeaksForIsRefusedAtStart() {
-    assertThrows(IllegalArgumentException.class, () -> OpaPolicyAdapter.parseSpeaksFor("ai-gateway"));
+    assertThrows(
+        IllegalArgumentException.class, () -> OpaPolicyAdapter.parseSpeaksFor("ai-gateway"));
   }
 }

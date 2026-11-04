@@ -294,7 +294,8 @@ public class AuthZenController {
           // acts for: the one sent, else the one system its agent acts for. Never guessed.
           pipeline = "tool:" + resourceId;
           Object sent = properties.get("aiSystemId");
-          aiSystemId = sent != null && !String.valueOf(sent).isBlank() ? String.valueOf(sent) : null;
+          aiSystemId =
+              sent != null && !String.valueOf(sent).isBlank() ? String.valueOf(sent) : null;
           mappedSystem = toolSystems.get(resourceId);
         }
         case "model" -> {
@@ -303,7 +304,8 @@ public class AuthZenController {
           // model either, and the policy says which models an agent may use.
           pipeline = "model:" + resourceId;
           Object sent = properties.get("aiSystemId");
-          aiSystemId = sent != null && !String.valueOf(sent).isBlank() ? String.valueOf(sent) : null;
+          aiSystemId =
+              sent != null && !String.valueOf(sent).isBlank() ? String.valueOf(sent) : null;
         }
         default ->
             throw new IllegalArgumentException(

@@ -199,7 +199,8 @@ public class DemoRunController {
       // Behind the gateway the model is asked for first: a run it stopped there has no decision
       // on the tool, only one on the model.
       if (!seen.containsKey("decision") && out.get("gatewayModel") instanceof String model) {
-        Object onModel = records.forRun(system, "model:" + model, runtime, from, to).get("decision");
+        Object onModel =
+            records.forRun(system, "model:" + model, runtime, from, to).get("decision");
         if (onModel != null) {
           seen = new LinkedHashMap<>(seen);
           seen.put("decision", onModel);

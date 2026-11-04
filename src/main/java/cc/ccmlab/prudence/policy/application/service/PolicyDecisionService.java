@@ -50,8 +50,10 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
     // A decision about no system still is evidence, under a marker that names no system.
     DecisionContext context =
         requested.withAiSystemId(aiSystemId == null ? UNRESOLVED_SYSTEM : aiSystemId);
-    var view = aiSystemId == null ? Optional.<RegisteredSystemLookup.SystemRiskView>empty()
-        : registry.find(aiSystemId);
+    var view =
+        aiSystemId == null
+            ? Optional.<RegisteredSystemLookup.SystemRiskView>empty()
+            : registry.find(aiSystemId);
     // Evidence carries the registered system version/model hash, so the decision can be
     // reproduced against the exact build it governed (not the caller's "unknown"), and the
     // system's name and risk tier as they stood at decision time (its identity in Ernest).
@@ -152,8 +154,7 @@ public class PolicyDecisionService implements DecidePolicyUseCase {
       return new ResolvedSystem(
           sent,
           PolicyDecision.deny(
-              "agent " + agent + " is not declared for AI system " + sent,
-              "agent_not_in_system"));
+              "agent " + agent + " is not declared for AI system " + sent, "agent_not_in_system"));
     return new ResolvedSystem(sent, null);
   }
 

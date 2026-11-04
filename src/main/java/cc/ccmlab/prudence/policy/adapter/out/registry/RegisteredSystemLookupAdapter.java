@@ -1,11 +1,11 @@
 package cc.ccmlab.prudence.policy.adapter.out.registry;
 
 import cc.ccmlab.prudence.policy.application.port.out.RegisteredSystemLookup;
+import cc.ccmlab.prudence.registry.agents.SystemAgentJpaEntity;
+import cc.ccmlab.prudence.registry.agents.SystemAgentRepository;
 import cc.ccmlab.prudence.registry.application.port.out.AiSystemRepository;
 import cc.ccmlab.prudence.registry.domain.AiSystemId;
 import cc.ccmlab.prudence.registry.domain.ApprovalStatus;
-import cc.ccmlab.prudence.registry.agents.SystemAgentJpaEntity;
-import cc.ccmlab.prudence.registry.agents.SystemAgentRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

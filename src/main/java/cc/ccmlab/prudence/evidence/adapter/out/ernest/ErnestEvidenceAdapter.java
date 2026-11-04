@@ -445,8 +445,7 @@ public class ErnestEvidenceAdapter implements DecisionPublisher {
     metadata.put("agentAssurance", identity.agentAssurance().name().toLowerCase());
     if (identity.onBehalfOf() != null) {
       metadata.put("onBehalfOf", identity.onBehalfOf().id());
-      metadata.put(
-          "onBehalfOfAssurance", identity.onBehalfOf().assurance().name().toLowerCase());
+      metadata.put("onBehalfOfAssurance", identity.onBehalfOf().assurance().name().toLowerCase());
     }
   }
 

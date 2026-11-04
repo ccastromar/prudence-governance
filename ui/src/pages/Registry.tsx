@@ -526,10 +526,7 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
                   />
                 </Field>
                 <div style={{ marginBottom: "var(--sp-4)" }}>
-                  <Button
-                    disabled={agentsBusy || !agents}
-                    onClick={saveAgents}
-                  >
+                  <Button disabled={agentsBusy || !agents} onClick={saveAgents}>
                     {agentsBusy ? "Saving…" : "Save agents"}
                   </Button>
                 </div>

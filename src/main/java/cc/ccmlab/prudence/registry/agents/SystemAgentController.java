@@ -23,7 +23,9 @@ public class SystemAgentController {
   public SystemAgentService.Declaration declare(
       @PathVariable String id, @RequestBody Body body, Principal principal) {
     return service.declare(
-        id, body == null ? List.of() : body.agentIds(), principal == null ? null : principal.getName());
+        id,
+        body == null ? List.of() : body.agentIds(),
+        principal == null ? null : principal.getName());
   }
 
   public record Body(List<String> agentIds) {}

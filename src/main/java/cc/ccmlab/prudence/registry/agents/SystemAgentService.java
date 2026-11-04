@@ -72,8 +72,7 @@ public class SystemAgentService {
             agents.save(
                 new SystemAgentJpaEntity(UUID.randomUUID().toString(), aiSystemId, a, actor, now)));
 
-    boolean suspend =
-        !added.isEmpty() && system.riskTier() == RiskTier.HIGH && system.isApproved();
+    boolean suspend = !added.isEmpty() && system.riskTier() == RiskTier.HIGH && system.isApproved();
     if (suspend)
       reviews.suspend(
           id,

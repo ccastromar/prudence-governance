@@ -50,7 +50,8 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
   private final MeterRegistry meters;
   private final Map<String, Set<String>> speaksFor;
 
-  private static final Set<String> MANAGED_ACTIONS = Set.of("run", "pipeline.run", "tools/call", "invoke");
+  private static final Set<String> MANAGED_ACTIONS =
+      Set.of("run", "pipeline.run", "tools/call", "invoke");
 
   public OpaPolicyAdapter(
       IntegrationProperties props,
@@ -243,7 +244,8 @@ public class OpaPolicyAdapter implements PolicyEnginePort {
       return new Evaluation(Outcome.ERROR, null, null);
     // Managed rules speak of running a pipeline; a gateway's tool call or model call is running
     // the pipeline `tool:<name>` or `model:<name>`.
-    if (!MANAGED_ACTIONS.contains(context.action())) return new Evaluation(Outcome.DENY, null, null);
+    if (!MANAGED_ACTIONS.contains(context.action()))
+      return new Evaluation(Outcome.DENY, null, null);
     List<String> roles;
     if (!identity.delegated()) {
       roles =
