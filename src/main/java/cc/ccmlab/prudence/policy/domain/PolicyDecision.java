@@ -10,7 +10,12 @@ public sealed interface PolicyDecision
 
   record Allow() implements PolicyDecision {}
 
-  record Deny(String reason) implements PolicyDecision {}
+  /// `reasonCode` is a stable code a gate may act on (`contract/identity/` section 10), or null.
+  record Deny(String reason, String reasonCode) implements PolicyDecision {
+    public Deny(String reason) {
+      this(reason, null);
+    }
+  }
 
   record Error(String reason) implements PolicyDecision {}
 
@@ -22,6 +27,10 @@ public sealed interface PolicyDecision
 
   static PolicyDecision deny(String reason) {
     return new Deny(reason);
+  }
+
+  static PolicyDecision deny(String reason, String reasonCode) {
+    return new Deny(reason, reasonCode);
   }
 
   static PolicyDecision error(String reason) {

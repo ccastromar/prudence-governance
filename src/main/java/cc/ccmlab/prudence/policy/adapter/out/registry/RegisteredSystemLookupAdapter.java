@@ -4,7 +4,10 @@ import cc.ccmlab.prudence.policy.application.port.out.RegisteredSystemLookup;
 import cc.ccmlab.prudence.registry.application.port.out.AiSystemRepository;
 import cc.ccmlab.prudence.registry.domain.AiSystemId;
 import cc.ccmlab.prudence.registry.domain.ApprovalStatus;
+import cc.ccmlab.prudence.registry.agents.SystemAgentJpaEntity;
+import cc.ccmlab.prudence.registry.agents.SystemAgentRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
@@ -14,9 +17,25 @@ import org.springframework.stereotype.Component;
 public class RegisteredSystemLookupAdapter implements RegisteredSystemLookup {
 
   private final AiSystemRepository registry;
+  private final SystemAgentRepository agents;
 
-  public RegisteredSystemLookupAdapter(AiSystemRepository registry) {
+  public RegisteredSystemLookupAdapter(AiSystemRepository registry, SystemAgentRepository agents) {
     this.registry = registry;
+    this.agents = agents;
+  }
+
+  @Override
+  public List<String> agentsOf(String aiSystemId) {
+    return agents.findByAiSystemIdOrderByAgentId(aiSystemId).stream()
+        .map(SystemAgentJpaEntity::getAgentId)
+        .toList();
+  }
+
+  @Override
+  public List<String> systemsOf(String agent) {
+    return agents.findByAgentIdOrderByAiSystemId(agent).stream()
+        .map(SystemAgentJpaEntity::getAiSystemId)
+        .toList();
   }
 
   @Override

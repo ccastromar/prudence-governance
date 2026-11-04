@@ -13,7 +13,26 @@ public interface PolicyEnginePort {
 
   record Evaluation(Outcome outcome, String version, String digest) {}
 
+  /// Whether the policy lets `caller` speak for `agent` (`data.prudence.speaks_for`).
+  enum Delegation {
+    ALLOWED,
+    DENIED,
+    ERROR
+  }
+
   boolean isAllowed(DecisionContext context);
+
+  /// Fail closed: an engine that does not know delegation lets no caller speak for another.
+  default Delegation delegation(String caller, String agent) {
+    return Delegation.DENIED;
+  }
+
+  /// After a denial: whether it was because the pipeline requires a verified person with a
+  /// function this decision's person lacks (`data.prudence.person_requires`). Only names the
+  /// denial; it never turns one into an ALLOW.
+  default boolean personFunctionMissing(DecisionContext context) {
+    return false;
+  }
 
   default Evaluation evaluate(DecisionContext context) {
     return new Evaluation(

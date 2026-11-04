@@ -8,6 +8,7 @@ import {
   type RegisterInput,
   type RegulatoryRole,
   type RiskTier,
+  type SystemAgents,
 } from "../api";
 import { RiskBadge, StatusBadge } from "../components";
 import { ssoEnabled } from "../auth";
@@ -121,10 +122,51 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
     setControlsFor(system);
     setControls([]);
     setControlError("");
+    setAgents(null);
+    setAgentsDraft("");
+    setAgentsNote("");
+    api
+      .systemAgents(system.id)
+      .then((a) => {
+        setAgents(a);
+        setAgentsDraft(a.agents.map((x) => x.agentId).join(", "));
+      })
+      .catch(() => setAgentsNote("Could not load the system's agents"));
     try {
       setControls(await api.complianceControls(system.id));
     } catch {
       setControlError("Could not load compliance controls");
+    }
+  };
+
+  // The agents that act for the system: a gateway may ask Prudence about an agent only for a
+  // system that declares it. Adding one to an approved high-risk system suspends it.
+  const [agents, setAgents] = useState<SystemAgents | null>(null);
+  const [agentsDraft, setAgentsDraft] = useState("");
+  const [agentsNote, setAgentsNote] = useState("");
+  const [agentsBusy, setAgentsBusy] = useState(false);
+  const saveAgents = async () => {
+    if (!controlsFor) return;
+    setAgentsBusy(true);
+    setAgentsNote("");
+    try {
+      const ids = agentsDraft
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const saved = await api.declareSystemAgents(controlsFor.id, ids);
+      setAgents(saved);
+      setAgentsDraft(saved.agents.map((x) => x.agentId).join(", "));
+      if (saved.suspended) {
+        setAgentsNote(
+          "New agents on an approved high-risk system: it is suspended until approved again.",
+        );
+        await load();
+      }
+    } catch (e) {
+      setAgentsNote((e as Error).message || "Could not save the agents");
+    } finally {
+      setAgentsBusy(false);
     }
   };
   const updateEvidence = (
@@ -449,6 +491,50 @@ export default function Registry({ focusSystem }: { focusSystem?: string }) {
               </p>
             </div>
             <Button onClick={() => setControlsFor(null)}>Close</Button>
+          </div>
+          <div
+            style={{
+              borderTop: "1px solid var(--line)",
+              padding: "var(--sp-4) 0",
+            }}
+          >
+            <strong>Agents</strong>
+            <p className="ct-muted ct-text-sm">
+              The workloads that act for this system. An AI or MCP gateway may
+              ask Prudence about an agent only for a system that declares it.
+            </p>
+            {agentsNote && <Alert tone="warn">{agentsNote}</Alert>}
+            {agents && agents.agents.length === 0 && !canDeclare && (
+              <p className="ct-muted ct-text-sm">No agents declared.</p>
+            )}
+            {agents && !canDeclare && agents.agents.length > 0 && (
+              <p className="ct-text-sm">
+                {agents.agents.map((a) => a.agentId).join(", ")}
+              </p>
+            )}
+            {canDeclare && (
+              <div className="ct-row" style={{ alignItems: "end" }}>
+                <Field
+                  label="Agent ids, comma-separated"
+                  htmlFor="registry-agent-ids"
+                >
+                  <Input
+                    id="registry-agent-ids"
+                    value={agentsDraft}
+                    onChange={(e) => setAgentsDraft(e.target.value)}
+                    placeholder="claims-assistant, spiffe://example.org/agent"
+                  />
+                </Field>
+                <div style={{ marginBottom: "var(--sp-4)" }}>
+                  <Button
+                    disabled={agentsBusy || !agents}
+                    onClick={saveAgents}
+                  >
+                    {agentsBusy ? "Saving…" : "Save agents"}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
           {controlError && <Alert tone="danger">{controlError}</Alert>}
           {controls.length === 0 && !controlError && (

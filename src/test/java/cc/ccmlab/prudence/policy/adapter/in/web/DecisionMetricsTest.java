@@ -21,7 +21,9 @@ class DecisionMetricsTest {
   void aDecisionIsTimedByVerdictAndFrontDoorInTheObjectivesBuckets() {
     metrics.time(
         "decision_api",
-        () -> new RecordedDecisions.Recorded("d-1", "v1", "sha", new PolicyDecision.Deny("no")));
+        () ->
+            new RecordedDecisions.Recorded(
+                "d-1", "v1", "sha", new PolicyDecision.Deny("no"), null, "system-1"));
 
     Timer timer =
         registry

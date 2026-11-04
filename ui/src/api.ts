@@ -203,7 +203,13 @@ export interface GovernedDemo {
   detail: string;
   pipeline: string;
   runner: number;
+  /// How the runner can govern it: `adapter` (in the agent's code) and, when an AI gateway is
+  /// configured, `gateway` (the agent has no adapter; the gateway asks Prudence).
+  modes?: GovernedDemoMode[];
+  tool?: string;
 }
+
+export type GovernedDemoMode = "adapter" | "gateway";
 
 /// One run of a demo. `decision` and `continued` are the runner's account; `prudence` is what
 /// Prudence itself recorded for the run (its PDP decision and the reported execution).
@@ -552,6 +558,14 @@ export interface DeadLetter {
   lastError: string | null;
 }
 
+/// The agents that act for an AI system; `suspended` when declaring them took an approved
+/// high-risk system out of service until it is approved again.
+export interface SystemAgents {
+  aiSystemId: string;
+  agents: { agentId: string; declaredBy: string | null; declaredAt: string }[];
+  suspended: boolean;
+}
+
 export const NOT_ALLOWED = "Your account is not allowed to do this.";
 
 async function json<T>(res: Response): Promise<T> {
@@ -774,11 +788,11 @@ export const api = {
     }).then(json<Decision>),
   demos: () =>
     fetch("/api/demos", { headers: withAuth() }).then(json<GovernedDemo[]>),
-  runDemo: (demo: string, aiSystemId: string) =>
+  runDemo: (demo: string, aiSystemId: string, mode: GovernedDemoMode = "adapter") =>
     fetch(`/api/demos/${encodeURIComponent(demo)}/runs`, {
       method: "POST",
       headers: withAuth(json_ct),
-      body: JSON.stringify({ aiSystemId }),
+      body: JSON.stringify({ aiSystemId, mode }),
     }).then(ok<GovernedDemoRun>),
   demoRun: (runId: string) =>
     fetch(`/api/demos/runs/${encodeURIComponent(runId)}`, {
@@ -813,6 +827,12 @@ export const api = {
     fetch(`/api/registry/systems/${id}/compliance-controls`, {
       headers: withAuth(),
     }).then(ok<ComplianceControl[]>),
+  systemAgents: (id: string) =>
+    fetch(`/api/registry/systems/${id}/agents`, { headers: withAuth() }).then(
+      ok<SystemAgents>,
+    ),
+  declareSystemAgents: (id: string, agentIds: string[]) =>
+    post<SystemAgents>(`/api/registry/systems/${id}/agents`, { agentIds }),
   satisfyComplianceControl: (
     systemId: string,
     controlId: string,

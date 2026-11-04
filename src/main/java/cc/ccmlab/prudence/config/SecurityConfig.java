@@ -106,6 +106,7 @@ public class SecurityConfig {
                         HttpMethod.POST,
                         "/api/registry/systems",
                         "/api/registry/systems/*/submit",
+                        "/api/registry/systems/*/agents",
                         "/api/registry/systems/*/compliance-controls/**",
                         "/api/governance/cases",
                         "/api/governance/cases/**",

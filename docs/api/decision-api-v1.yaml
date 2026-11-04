@@ -16,9 +16,11 @@ info:
     `ERROR`, an `ALLOW` under another status, a timeout or an unreadable body. The test vectors
     in `contract/decision/` spell this out case by case; gates run them.
 
-    **Who is asking comes from the token, not the body.** The subject is the authenticated
+    **Who is asking comes from the token, not the body.** The caller is the authenticated
     workload identity (`email`, then `preferred_username`, then `sub` of the access token).
-    The `subject` field in the request is ignored outside the open development profile.
+    The `subject` field in the request is ignored outside the open development profile. A
+    caller may ask about another agent (`agent`) only if the policy lets it speak for that
+    agent; the answer's `identity` says who was decided about (`contract/identity/`).
 
     **Every decision is evidence.** Prudence records each decision, in the same transaction
     that produces it, under `decisionId`, and delivers it to the evidence store
@@ -166,20 +168,31 @@ paths:
         The same decision as `POST /api/policy/decisions`, for orchestrators that speak OpenID
         AuthZEN Authorization API 1.0. Mapping: `resource` is
         `{type: "pipeline", id: <pipeline>, properties: {aiSystemId}}` and `action.name` is the
-        action. `subject` is required by AuthZEN but, as in Decision API v1, the authenticated
-        workload identity is used instead.
+        action. `subject` is required by AuthZEN but, as in Decision API v1, the caller is the
+        authenticated workload identity. The agent is `context.agent.id`, else the caller; a
+        `subject` of type `user` is the person the agent acts for, recorded as asserted
+        (`contract/identity/`). `context.agent.token` and `context.onBehalfOfToken` forward the agent's
+        and the person's tokens, validated like the caller's (`verified`).
 
         **MCP tool calls.** An MCP gateway can ask about a tool call with
         `resource: {type: "tool", id: <tool name>}`. Prudence checks it as the pipeline
         `tool:<name>` of the AI system the tool acts for: `resource.properties.aiSystemId` when the
-        gateway sends it, otherwise the `prudence.authzen.tool-systems` mapping. A tool mapped to
-        no AI system is refused with `400`, never guessed. Grant the gateway's identity the
-        pipeline `tool:<name>` in the policy data.
+        gateway sends it, otherwise the one AI system that declares the agent
+        (`/api/registry/systems/{id}/agents`); an agent declared in none or several is a `DENY`
+        (`agent_unknown`, `agent_system_ambiguous`), never a guess. A system sent must declare
+        the agent when another caller asks for it (`agent_not_in_system`). The deprecated
+        `prudence.authzen.tool-systems` mapping still serves a caller asking for itself. Grant the
+        agent the pipeline `tool:<name>` in the policy data.
+
+        **Model calls.** An AI gateway can ask about a model call with
+        `resource: {type: "model", id: <model>}`, checked as the pipeline `model:<model>` of the AI
+        system the agent acts for, resolved the same way.
 
         Always `200` for a decision. `decision` is `true` only for Prudence's ALLOW, so a
         generic AuthZEN client fails closed on APPROVAL_REQUIRED; `context` carries
-        `prudenceDecision`, `reason`, `approvalRequired`, `approver`, `decisionId` and
-        `policyVersion`. Every evaluation is recorded as a decision. `X-Request-ID` is echoed.
+        `prudenceDecision`, `reason`, `reasonCode` (some denials), `approvalRequired`,
+        `approver`, `decisionId`, `policyVersion`, `identity` and `aiSystemId` (the system the decision
+        was recorded under). Every evaluation is recorded as a decision. `X-Request-ID` is echoed.
       parameters:
         - name: X-Request-ID
           in: header
@@ -200,6 +213,12 @@ paths:
                   subject: { type: agent, id: claims-assistant }
                   resource: { type: tool, id: send_customer_letter }
                   action: { name: run }
+              gatewayForAgent:
+                value:
+                  subject: { type: user, id: alice }
+                  resource: { type: tool, id: send_customer_letter }
+                  action: { name: tools/call }
+                  context: { agent: { id: claims-assistant } }
       responses:
         '200':
           description: The decision.
@@ -215,7 +234,7 @@ paths:
                   approver: risk-officer
                   reason: high-risk system awaiting governance approval
         '400':
-          description: 'A required attribute is missing, `resource.type` is neither `pipeline` nor `tool`, or a tool is mapped to no AI system. Body `{error: {status, message}}`.'
+          description: 'A required attribute is missing, `resource.type` is not `pipeline`, `tool` or `model`, or a token was forwarded to a Prudence with no token issuer (development). Body `{error: {status, message}}`.'
         '401':
           description: No token, or an invalid one.
         '403':
@@ -283,6 +302,32 @@ components:
             decision and carried with its evidence to Ernest. Not a trace id: trace context
             travels in the W3C `traceparent` header. The
             `X-Correlation-Id` header is used when the field is absent.
+        agent:
+          type: [string, 'null']
+          maxLength: 255
+          description: |
+            Optional. The agent that will act, when it is not the caller (an AI or MCP gateway
+            asking for the agent behind it). Allowed only for agents the policy lets the caller
+            speak for (`speaks_for`); otherwise `DENY` with `reasonCode: agent_not_delegated`.
+        agentToken:
+          type: [string, 'null']
+          description: |
+            Optional. The agent's own access token, issued for Prudence (same issuer and audience
+            as the caller's). Validated like the caller's; the agent is the identity it names
+            (`verified`). A token that fails is a `DENY` with `reasonCode: agent_token_invalid`.
+            Without a token issuer (development) it is a `400`.
+        onBehalfOf:
+          type: [string, 'null']
+          maxLength: 255
+          description: |
+            Optional. The person the agent acts for. Without a token it is recorded as
+            `asserted` and never grants anything.
+        onBehalfOfToken:
+          type: [string, 'null']
+          description: |
+            Optional. The person's access token, issued for Prudence. Validated like the caller's;
+            the person becomes `verified` and their governance functions count for the policy. A
+            token that fails is a `DENY` with `reasonCode: person_token_invalid`.
     DecisionResponse:
       type: object
       required: [decision, decisionId]
@@ -308,6 +353,34 @@ components:
         policyDigest:
           type: [string, 'null']
           description: The digest of the policy bundle that produced it, when Prudence knows it.
+        reasonCode:
+          type: [string, 'null']
+          description: A stable code for some denials (`contract/identity/` section 10), e.g. `agent_not_delegated`.
+        identity:
+          $ref: '#/components/schemas/DecisionIdentity'
+    DecisionIdentity:
+      type: [object, 'null']
+      description: |
+        Who asked, who was decided about and for whom (`contract/identity/`). A gate that asked
+        about another agent runs the step only if `agent` is that agent.
+      required: [caller, agent, agentAssurance]
+      properties:
+        caller:
+          type: string
+        agent:
+          type: string
+        agentAssurance:
+          type: string
+          enum: [self, delegated, verified]
+        onBehalfOf:
+          type: object
+          required: [id, assurance]
+          properties:
+            id:
+              type: string
+            assurance:
+              type: string
+              enum: [verified, asserted]
     ExecutionReport:
       type: object
       required: [runtime, executionId, aiSystemId, pipeline, startedAt]
@@ -329,6 +402,13 @@ components:
           type: string
           format: date-time
           description: When the execution started (ISO-8601 instant).
+        agent:
+          type: [string, 'null']
+          maxLength: 512
+          description: |
+            Optional. The agent that ran it, when the reporting workload reports for another
+            agent (a gateway). Allowed only for agents the policy lets it speak for, else `403`.
+            The cited decision must then be about that agent, else `OTHER_AGENT`.
     ExecutionReportRecord:
       allOf:
         - $ref: '#/components/schemas/ExecutionReport'
@@ -338,11 +418,12 @@ components:
               type: string
             decisionStatus:
               type: string
-              enum: [ALLOW, DENY, APPROVAL_REQUIRED, NONE, UNKNOWN, OTHER_SYSTEM]
+              enum: [ALLOW, DENY, APPROVAL_REQUIRED, NONE, UNKNOWN, OTHER_SYSTEM, OTHER_AGENT]
               description: |
                 What Prudence found for the cited decision: its verdict; NONE when none was
                 cited; UNKNOWN when no recorded decision has that id; OTHER_SYSTEM when the
-                decision was about a different AI system.
+                decision was about a different AI system; OTHER_AGENT when the report names an
+                agent the decision was not about. Drift counts every status but ALLOW.
             reportedBy:
               type: string
               description: The workload identity of the token that reported it.

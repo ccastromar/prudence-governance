@@ -1,16 +1,19 @@
 package cc.ccmlab.prudence.policy.adapter.in.web;
 
 import cc.ccmlab.prudence.config.CorrelationIdFilter;
+import cc.ccmlab.prudence.config.ForwardedTokens;
 import cc.ccmlab.prudence.config.IntegrationProperties;
 import cc.ccmlab.prudence.policy.adapter.in.web.dto.DecisionRequest;
 import cc.ccmlab.prudence.policy.adapter.in.web.dto.DecisionResponse;
 import cc.ccmlab.prudence.policy.application.port.in.DecidePolicyUseCase;
+import cc.ccmlab.prudence.policy.domain.DecisionIdentity;
 import cc.ccmlab.prudence.policy.domain.PolicyDecision;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 /// The PDP endpoint a runtime gate calls (Decision API v1, `docs/api/decision-api-v1.yaml`).
 /// Maps the sealed decision to HTTP with exhaustive pattern matching — allow 200, approval
@@ -22,12 +25,17 @@ public class PolicyController {
   private final DecidePolicyUseCase pdp;
   private final IntegrationProperties properties;
   private final DecisionMetrics metrics;
+  private final ForwardedTokens tokens;
 
   public PolicyController(
-      DecidePolicyUseCase pdp, IntegrationProperties properties, DecisionMetrics metrics) {
+      DecidePolicyUseCase pdp,
+      IntegrationProperties properties,
+      DecisionMetrics metrics,
+      ForwardedTokens tokens) {
     this.pdp = pdp;
     this.properties = properties;
     this.metrics = metrics;
+    this.tokens = tokens;
   }
 
   @PostMapping("/decisions")
@@ -37,6 +45,19 @@ public class PolicyController {
     // workload identity.  The request field is retained only for the open dev profile.
     // A caller must not be able to impersonate another principal by changing JSON.
     String subject = authentication != null ? authentication.getName() : request.subject();
+    DecisionIdentity identity;
+    try {
+      identity =
+          RecordedDecisions.identity(
+              subject,
+              request.agent(),
+              request.onBehalfOf(),
+              request.agentToken(),
+              request.onBehalfOfToken(),
+              tokens);
+    } catch (IllegalArgumentException unsupported) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, unsupported.getMessage());
+    }
     var recorded =
         metrics.time(
             "decision_api",
@@ -44,7 +65,7 @@ public class PolicyController {
                 RecordedDecisions.decide(
                     pdp,
                     properties,
-                    subject,
+                    identity,
                     request.pipeline(),
                     request.aiSystemId(),
                     request.action(),
@@ -56,11 +77,13 @@ public class PolicyController {
     String policyVersion = recorded.policyVersion();
     String policyDigest = recorded.policyDigest();
     PolicyDecision decision = recorded.decision();
+    var resolved = RecordedDecisions.view(recorded.identity());
 
     return switch (decision) {
       case PolicyDecision.Allow ignored ->
           ResponseEntity.ok(
-              new DecisionResponse("ALLOW", null, null, decisionId, policyVersion, policyDigest));
+              new DecisionResponse(
+                  "ALLOW", null, null, decisionId, policyVersion, policyDigest, null, resolved));
       case PolicyDecision.ApprovalRequired ar ->
           ResponseEntity.status(HttpStatus.ACCEPTED)
               .body(
@@ -70,17 +93,33 @@ public class PolicyController {
                       ar.approver(),
                       decisionId,
                       policyVersion,
-                      policyDigest));
+                      policyDigest,
+                      null,
+                      resolved));
       case PolicyDecision.Deny d ->
           ResponseEntity.status(HttpStatus.FORBIDDEN)
               .body(
                   new DecisionResponse(
-                      "DENY", d.reason(), null, decisionId, policyVersion, policyDigest));
+                      "DENY",
+                      d.reason(),
+                      null,
+                      decisionId,
+                      policyVersion,
+                      policyDigest,
+                      d.reasonCode(),
+                      resolved));
       case PolicyDecision.Error e ->
           ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
               .body(
                   new DecisionResponse(
-                      "ERROR", e.reason(), null, decisionId, policyVersion, policyDigest));
+                      "ERROR",
+                      e.reason(),
+                      null,
+                      decisionId,
+                      policyVersion,
+                      policyDigest,
+                      null,
+                      resolved));
     };
   }
 }
