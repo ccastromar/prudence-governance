@@ -15,8 +15,8 @@ target/
 ui/dist
 ui/*.tsbuildinfo
 # The backend image does not need integrations. Keep them out by default, but retain the
-# adapters, the runner and the conformance agents and scripted model the demo runner images run
-# (integrations/demo-runner/Dockerfile).
+# adapters, the runner, the conformance agents and scripted model the demo runner images run
+# (integrations/demo-runner/Dockerfile), and the AI gateway's tool server.
 integrations/*
 !integrations/prudence-core/
 !integrations/prudence-core/**
@@ -51,6 +51,9 @@ integrations/conformance/*
 !integrations/conformance/fake_llm.py
 !integrations/conformance/agents/
 !integrations/conformance/agents/**
+# The AI gateway's MCP tool server (ai-gateway-tools runs it from runner A's image).
+!integrations/litellm-gateway/
+!integrations/litellm-gateway/**
 integrations/**/.venv/
 integrations/**/.venv-*/
 integrations/**/__pycache__/
