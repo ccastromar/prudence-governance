@@ -3,6 +3,7 @@ import {
   api,
   type AiSystem,
   type GovernedDemo,
+  type GovernedDemoMode,
   type GovernedDemoRun,
 } from "../api";
 import { ssoEnabled } from "../auth";
@@ -82,6 +83,8 @@ function DemoCard({
   latest?: GovernedDemoRun;
 }) {
   const [systemId, setSystemId] = useState("");
+  const gatewayOffered = (demo.modes ?? []).includes("gateway");
+  const [mode, setMode] = useState<GovernedDemoMode>("adapter");
   const [result, setResult] = useState<GovernedDemoRun | null>(latest ?? null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -106,7 +109,7 @@ function DemoCard({
     setError("");
     setResult(null);
     try {
-      const started = await api.runDemo(demo.id, systemId);
+      const started = await api.runDemo(demo.id, systemId, mode);
       setResult(started);
       await follow(started.runId, setResult);
     } catch (e) {
@@ -145,9 +148,33 @@ function DemoCard({
           ))}
         </Select>
       </Field>
+      {gatewayOffered && (
+        <Field label="Governed by" htmlFor={`decisions-mode-${demo.id}`}>
+          <Select
+            id={`decisions-mode-${demo.id}`}
+            value={mode}
+            onChange={(e) => setMode(e.target.value as GovernedDemoMode)}
+            disabled={busy}
+          >
+            <option value="adapter">The framework adapter, in the agent</option>
+            <option value="gateway">
+              The AI gateway, in front of the model and the tool
+            </option>
+          </Select>
+        </Field>
+      )}
+      {mode === "gateway" && (
+        <p className="ct-muted ct-text-sm">
+          The agent runs with no adapter. The gateway asks Prudence before its
+          model call and its tool call, with the agent&apos;s own token; the AI
+          system must declare the agent (Registry → Controls → Agents).
+        </p>
+      )}
       <div className="ct-row ct-between">
         <span className="ct-muted ct-text-sm">
-          PDP → runtime hook → Ernest evidence
+          {mode === "gateway"
+            ? "Agent → AI gateway → PDP → tool → Ernest evidence"
+            : "PDP → runtime hook → Ernest evidence"}
         </span>
         <Button
           variant="primary"
@@ -192,7 +219,9 @@ function DemoCard({
                 The tool{" "}
                 {result.continued
                   ? "ran"
-                  : "did not run: it stopped at the governance gate"}
+                  : mode === "gateway"
+                    ? "did not run: the gateway stopped it"
+                    : "did not run: it stopped at the governance gate"}
                 .
               </p>
               <PrudenceRecord run={result} />

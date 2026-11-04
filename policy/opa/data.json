@@ -19,8 +19,24 @@
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }
       ],
       "framework-demo-runner": [
-        { "pipeline": "demo_customer_letter", "actions": ["run"] }
+        { "pipeline": "demo_customer_letter", "actions": ["run"] },
+        { "pipeline": "tool:triage_incident", "actions": ["tools/call"] },
+        { "pipeline": "tool:deliver_reply", "actions": ["tools/call"] },
+        { "pipeline": "tool:queue_claim_letter", "actions": ["tools/call"] },
+        { "pipeline": "tool:approve_refund", "actions": ["tools/call"] },
+        { "pipeline": "tool:log_customer_call", "actions": ["tools/call"] },
+        { "pipeline": "tool:flag_contract_clause", "actions": ["tools/call"] },
+        { "pipeline": "tool:schedule_change", "actions": ["tools/call"] },
+        { "pipeline": "tool:reorder_stock", "actions": ["tools/call"] },
+        { "pipeline": "tool:export_report", "actions": ["tools/call"] },
+        { "pipeline": "tool:grant_access", "actions": ["tools/call"] },
+        { "pipeline": "tool:onboard_supplier", "actions": ["tools/call"] },
+        { "pipeline": "tool:publish_article", "actions": ["tools/call"] },
+        { "pipeline": "model:conformance-scripted", "actions": ["invoke"] }
       ]
+    },
+    "speaks_for": {
+      "service-account-ai-gateway": ["service-account-prudence-demo-runner"]
     }
   }
 }

@@ -4,7 +4,7 @@ Prudence (DemoRunController) is the only caller; the browser never reaches a run
 carries the runner's bridge token (`X-Prudence-Demo-Runner-Token`).
 
     GET  /demos                 the demos this runner offers (its manifest)
-    POST /demos/{id}/runs       {aiSystemId}; header X-Prudence-Demo-Initiator -> 202 {runId}
+    POST /demos/{id}/runs       {aiSystemId, mode?}; header X-Prudence-Demo-Initiator -> 202 {runId}
     GET  /runs/{runId}          {status: running|done|failed, decision, continued, output, model, …}
     GET  /runs                  the latest run of each demo
     GET  /healthz               no token; "ok"
@@ -21,6 +21,12 @@ ERNEST_API_KEY, PRUDENCE_DEMO_PIPELINE (demo_customer_letter), DEMOS (comma list
 installed), PRUDENCE_DEMO_LLM_BASE_URL / _MODEL / _API_KEY (an OpenAI-compatible endpoint; without
 one, the scripted model runs in-process), AGENTS_DIR and CONFORMANCE_DIR (default: next to this
 folder, as in the repository and the image).
+
+Gateway mode (`mode: gateway`, offered when PRUDENCE_DEMO_GATEWAY_URL is set): the same agent with
+no adapter; its model and its tool go through an AI gateway (integrations/litellm-gateway) that asks
+Prudence. The agent presents its own access token (the runner's PDP client, by client credentials)
+and the run's AI system. PRUDENCE_DEMO_GATEWAY_URL, _KEY (the gateway's key) and _MODEL (the model
+name the gateway serves; conformance-scripted).
 """
 from __future__ import annotations
 
@@ -33,6 +39,8 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
+import urllib.request
 import uuid
 from collections import OrderedDict
 from datetime import datetime, timezone
@@ -53,6 +61,12 @@ LLM_BASE_URL = os.getenv("PRUDENCE_DEMO_LLM_BASE_URL", "").strip().rstrip("/")
 LLM_MODEL = os.getenv("PRUDENCE_DEMO_LLM_MODEL", "aos-deterministic-mock").strip()
 LLM_API_KEY = os.getenv("PRUDENCE_DEMO_LLM_API_KEY", "deterministic-demo-only").strip()
 RUN_TIMEOUT = int(os.getenv("PRUDENCE_DEMO_RUN_TIMEOUT", "180"))
+GATEWAY_URL = os.getenv("PRUDENCE_DEMO_GATEWAY_URL", "").strip().rstrip("/")
+GATEWAY_KEY = os.getenv("PRUDENCE_DEMO_GATEWAY_KEY", "").strip()
+GATEWAY_MODEL = os.getenv("PRUDENCE_DEMO_GATEWAY_MODEL", "conformance-scripted").strip()
+MODES = ["adapter", "gateway"] if GATEWAY_URL else ["adapter"]
+# What the gateway says when it refuses a model or tool call (prudence_guardrail.py).
+BLOCKED = re.compile(r"Blocked by Prudence: ([^\n\"'}]*)")
 KEEP_RUNS = 200
 
 # An agent's answer carries the refusal ("… (Prudence APPROVAL_REQUIRED): …", or "⛔ Governance
@@ -92,6 +106,24 @@ def model_for(demo: Demo) -> tuple[dict[str, str], str]:
             "conformance-scripted (scripted, in-process; not a language model)")
 
 
+def gateway_for(demo: Demo) -> tuple[dict[str, str], str]:
+    """A gateway run's environment: no adapter, model and tool through the gateway, the agent's
+    own token (the PDP client it would use with an adapter) and the run's AI system."""
+    creds = clients().get(demo.id, {})
+    form = {"grant_type": "client_credentials",
+            "client_id": creds.get("clientId", os.getenv("PRUDENCE_PDP_CLIENT_ID", "")),
+            "client_secret": creds.get("clientSecret", os.getenv("PRUDENCE_PDP_CLIENT_SECRET", ""))}
+    if os.getenv("PRUDENCE_PDP_SCOPE"):
+        form["scope"] = os.environ["PRUDENCE_PDP_SCOPE"]
+    request = urllib.request.Request(os.environ["PRUDENCE_PDP_TOKEN_URL"],
+                                     data=urllib.parse.urlencode(form).encode(), method="POST")
+    with urllib.request.urlopen(request, timeout=10) as answer:
+        token = json.load(answer)["access_token"]
+    return ({"GOVERNANCE_MODE": "gateway", "LLM_URL": f"{GATEWAY_URL}/v1", "LLM_API_KEY": GATEWAY_KEY,
+             "LLM_MODEL": GATEWAY_MODEL, "MCP_URL": f"{GATEWAY_URL}/mcp/", "AGENT_TOKEN": token},
+            f"{GATEWAY_MODEL} via the AI gateway")
+
+
 def now() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
@@ -103,10 +135,12 @@ class Runs:
         self.latest: dict[str, str] = {}
         self.slots = threading.BoundedSemaphore(int(os.getenv("PRUDENCE_DEMO_CONCURRENCY", "2")))
 
-    def start(self, demo: Demo, system: str, initiator: str) -> dict[str, Any]:
+    def start(self, demo: Demo, system: str, initiator: str, mode: str = "adapter") -> dict[str, Any]:
         run = {"runId": str(uuid.uuid4()), "demo": demo.id, "framework": demo.framework,
-               "aiSystemId": system, "pipeline": PIPELINE, "initiator": initiator,
-               "status": "running", "startedAt": now()}
+               "aiSystemId": system, "pipeline": PIPELINE if mode == "adapter" else f"tool:{demo.tool}",
+               "mode": mode, "initiator": initiator, "status": "running", "startedAt": now()}
+        if mode == "gateway":
+            run["gatewayModel"] = GATEWAY_MODEL  # a refused model call is decided on model:<this>
         with self.lock:
             self.by_id[run["runId"]] = run
             self.latest[demo.id] = run["runId"]
@@ -131,7 +165,8 @@ class Runs:
     def _execute(self, demo: Demo, run: dict[str, Any]):
         with self.slots:
             try:
-                model_env, label = model_for(demo)
+                gateway = run.get("mode") == "gateway"
+                model_env, label = gateway_for(demo) if gateway else model_for(demo)
                 creds = clients().get(demo.id, {})
                 env = {
                     **os.environ, **model_env, **demo.environment(),
@@ -142,6 +177,17 @@ class Runs:
                 proc = subprocess.run([sys.executable, "-I", str(AGENTS / demo.agent)], env=env,
                                       capture_output=True, text=True, timeout=RUN_TIMEOUT)
                 line = next((l for l in reversed(proc.stdout.splitlines()) if l.startswith("{")), "")
+                if gateway:
+                    # The tool runs on the far side of the gateway: a refusal of the tool comes back
+                    # as its result, a refused model call ends the agent; either way it says why.
+                    answer = str(json.loads(line).get("answer") or "") if line else ""
+                    blocked = BLOCKED.search(answer) or BLOCKED.search(proc.stderr or "")
+                    if line or blocked:
+                        self._finish(run, status="done", decision="DENY" if blocked else "ALLOW",
+                                     continued=not blocked,
+                                     output=(f"Blocked by Prudence: {blocked.group(1)}" if blocked and not line
+                                             else answer)[:2000], model=label)
+                        return
                 if not line:
                     tail = (proc.stderr.strip().splitlines() or ["no output"])[-1]
                     print(f"[{demo.id}] run {run['runId']} failed: {proc.stderr[-2000:]}", file=sys.stderr)
@@ -174,7 +220,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.reply(HTTPStatus.UNAUTHORIZED, {"error": "runner token required"})
         if self.path == "/demos":
             return self.reply(HTTPStatus.OK, {"protocol": "prudence.demo-runner/v1",
-                                              "demos": [d.manifest(PIPELINE) for d in offered()]})
+                                              "demos": [{**d.manifest(PIPELINE), "modes": MODES, "tool": d.tool}
+                                                        for d in offered()]})
         if self.path == "/runs":
             return self.reply(HTTPStatus.OK, RUNS.latest_runs())
         if self.path.startswith("/runs/"):
@@ -197,7 +244,10 @@ class Handler(BaseHTTPRequestHandler):
         if not isinstance(system, str) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,128}", system):
             return self.reply(HTTPStatus.BAD_REQUEST, {"error": "aiSystemId is required"})
         initiator = self.headers.get("X-Prudence-Demo-Initiator", "unknown")[:200]
-        self.reply(HTTPStatus.ACCEPTED, RUNS.start(demo, system, initiator))
+        mode = payload.get("mode") or "adapter"
+        if mode not in MODES:
+            return self.reply(HTTPStatus.BAD_REQUEST, {"error": f"mode must be one of {MODES}"})
+        self.reply(HTTPStatus.ACCEPTED, RUNS.start(demo, system, initiator, mode))
 
     def read_body(self) -> bytes:
         """Request body, with or without Content-Length (HTTP/1.1 chunked transfer encoding)."""

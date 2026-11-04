@@ -12,8 +12,8 @@ Prudence is the only caller. Every call except `/healthz` carries the runner's b
 
 | Call | Answer |
 |---|---|
-| `GET /demos` | `{protocol, demos: [{id, framework, title, detail, pipeline}]}` — what this runner offers |
-| `POST /demos/{id}/runs` `{aiSystemId}` (header `X-Prudence-Demo-Initiator`) | `202 {runId, status: running, …}` |
+| `GET /demos` | `{protocol, demos: [{id, framework, title, detail, pipeline, modes, tool}]}` — what this runner offers |
+| `POST /demos/{id}/runs` `{aiSystemId, mode?}` (header `X-Prudence-Demo-Initiator`) | `202 {runId, status: running, …}`; `mode` is `adapter` (default) or `gateway`, among the demo's `modes` |
 | `GET /runs/{runId}` | `{status: running\|done\|failed, decision, continued, output, model, error}` |
 | `GET /runs` | the latest run of each demo |
 | `GET /healthz` | `{status: ok}` |
@@ -58,6 +58,7 @@ python3 check-images.py
 | `ERNEST_URL`, `ERNEST_API_KEY` | with Ernest, each allowed execution is sealed there |
 | `PRUDENCE_DEMO_LLM_BASE_URL` (`_MODEL`, `_API_KEY`) | an OpenAI-compatible `/v1` endpoint, such as AOS's deterministic mock. Without one, the scripted model (`../conformance/fake_llm.py`) runs in-process; it is not a language model and the panel says so. The Claude Agent SDK demo always uses the scripted model's Anthropic endpoint |
 | `DEMOS` | limit the demos offered (comma list of ids) |
+| `PRUDENCE_DEMO_GATEWAY_URL`, `_KEY`, `_MODEL` | offer **gateway mode**: the same demo with no adapter, its model and tool through an AI gateway ([`../litellm-gateway`](../litellm-gateway)) that asks Prudence. The agent's token is the runner's PDP client's; the run's AI system travels in `x-prudence-ai-system` and must declare that agent |
 | `PRUDENCE_DEMO_CONCURRENCY`, `PRUDENCE_DEMO_RUN_TIMEOUT` | runs at once (2) and seconds per run (180) |
 
 Prudence's side: `PRUDENCE_DEMO_RUNNER_URL` / `_TOKEN` (runner A) and

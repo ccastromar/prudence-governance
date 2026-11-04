@@ -11,10 +11,12 @@ the Claude Agent SDK's CLI speaks), streaming or not. Its whole behaviour:
 - no tools: answer "OK".
 
 Run it alone with `python fake_llm.py [port]`, or start it in-process with `serve(port)`.
+FAKE_LLM_HOST sets the address it listens on (127.0.0.1; 0.0.0.0 in a container).
 """
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import threading
@@ -182,7 +184,7 @@ class _Handler(BaseHTTPRequestHandler):
 
 def serve(port: int = 0) -> tuple[ThreadingHTTPServer, str]:
     """Start in a background thread; returns the server and its /v1 base URL."""
-    server = ThreadingHTTPServer(("127.0.0.1", port), _Handler)
+    server = ThreadingHTTPServer((os.environ.get("FAKE_LLM_HOST", "127.0.0.1"), port), _Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, f"http://127.0.0.1:{server.server_address[1]}/v1"
 

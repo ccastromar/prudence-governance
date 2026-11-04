@@ -29,12 +29,18 @@ import org.springframework.web.client.RestClientResponseException;
  * declare, a run goes to the runner that declared it, and a finished run carries what Prudence
  * itself recorded for it (the PDP decision and the reported execution), next to the runner's
  * account. The runners own the framework hooks and the M2M PDP and Ernest secrets.
+ *
+ * <p>A demo may also run in `gateway` mode (when its runner offers it): the same agent with no
+ * adapter, behind an AI gateway that asks Prudence. Its records are then the decision on the tool
+ * (`tool:<name>`) and the execution the gateway reported (runtime `litellm-gateway`).
  */
 @RestController
 @RequestMapping("/api/demos")
 public class DemoRunController {
   private static final Duration TIMEOUT = Duration.ofSeconds(5);
   private static final int KEEP_RUNS = 500;
+  private static final String GATEWAY = "gateway";
+  private static final String GATEWAY_RUNTIME = "litellm-gateway";
 
   private final DemoRunnerProperties properties;
   private final DemoRunRecords records;
@@ -102,6 +108,13 @@ public class DemoRunController {
     Optional<Map<String, Object>> declared =
         demos().stream().filter(d -> demo.equals(d.get("id"))).findFirst();
     if (declared.isEmpty()) return ResponseEntity.notFound().build();
+    String mode = request.mode() == null || request.mode().isBlank() ? "adapter" : request.mode();
+    if (!(declared.get().get("modes") instanceof List<?> modes ? modes : List.of("adapter"))
+        .contains(mode)) {
+      return ResponseEntity.badRequest()
+          .body(Map.of("error", "This demo does not run in mode " + mode));
+    }
+    boolean gateway = GATEWAY.equals(mode);
 
     Runner runner = runners.get((Integer) declared.get().get("runner"));
     String initiator = authentication == null ? "local-operator" : authentication.getName();
@@ -111,7 +124,7 @@ public class DemoRunController {
           client(runner, initiator)
               .post()
               .uri("/demos/{demo}/runs", demo)
-              .body(Map.of("aiSystemId", request.aiSystemId()))
+              .body(Map.of("aiSystemId", request.aiSystemId(), "mode", mode))
               .retrieve()
               .body(Map.class);
       if (started == null || !(started.get("runId") instanceof String runId)) {
@@ -123,7 +136,10 @@ public class DemoRunController {
           new StartedRun(
               runner,
               request.aiSystemId(),
-              String.valueOf(declared.get().get("pipeline")),
+              gateway
+                  ? "tool:" + declared.get().get("tool")
+                  : String.valueOf(declared.get().get("pipeline")),
+              gateway ? GATEWAY_RUNTIME : demo,
               startedAt,
               new AtomicReference<>()));
       return ResponseEntity.status(HttpStatus.ACCEPTED).body(started);
@@ -166,7 +182,11 @@ public class DemoRunController {
     StartedRun started = runs.get(String.valueOf(out.get("runId")));
     String system = started != null ? started.aiSystemId() : (String) out.get("aiSystemId");
     String pipeline = started != null ? started.pipeline() : (String) out.get("pipeline");
-    String runtime = (String) out.get("demo"); // a demo's id is the runtime its adapter reports
+    // A demo's id is the runtime its adapter reports; behind the gateway, the gateway reports.
+    String runtime =
+        started != null
+            ? started.runtime()
+            : GATEWAY.equals(out.get("mode")) ? GATEWAY_RUNTIME : (String) out.get("demo");
     // The window is Prudence's own clock when this instance started the run: from the forward to
     // the first time it saw the run finished. Otherwise (after a restart) the runner's times.
     Instant from = started != null ? started.startedAt() : parse(out.get("startedAt"));
@@ -175,7 +195,17 @@ public class DemoRunController {
             ? started.finishedSeen().updateAndGet(seen -> seen != null ? seen : Instant.now())
             : Optional.ofNullable(parse(out.get("finishedAt"))).orElseGet(Instant::now);
     if (system != null && pipeline != null && runtime != null && from != null) {
-      out.put("prudence", records.forRun(system, pipeline, runtime, from, to));
+      Map<String, Object> seen = records.forRun(system, pipeline, runtime, from, to);
+      // Behind the gateway the model is asked for first: a run it stopped there has no decision
+      // on the tool, only one on the model.
+      if (!seen.containsKey("decision") && out.get("gatewayModel") instanceof String model) {
+        Object onModel = records.forRun(system, "model:" + model, runtime, from, to).get("decision");
+        if (onModel != null) {
+          seen = new LinkedHashMap<>(seen);
+          seen.put("decision", onModel);
+        }
+      }
+      out.put("prudence", seen);
     }
     return out;
   }
@@ -221,8 +251,14 @@ public class DemoRunController {
       Runner runner,
       String aiSystemId,
       String pipeline,
+      String runtime,
       Instant startedAt,
       AtomicReference<Instant> finishedSeen) {}
 
-  public record DemoRunRequest(@NotBlank String aiSystemId) {}
+  /// `mode`: `adapter` (default) or `gateway`, among the modes the demo's runner offers.
+  public record DemoRunRequest(@NotBlank String aiSystemId, String mode) {
+    public DemoRunRequest(String aiSystemId) {
+      this(aiSystemId, null);
+    }
+  }
 }
