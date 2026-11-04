@@ -1,0 +1,62 @@
+{
+  "version": "prudence.identity/v1",
+  "description": "A gate that asked about another agent (`agent`/`agentToken`, or AuthZEN `context.agent`) -> whether it runs the step (README.md, section 12). `asked` is the agent the gate asked about. The rules of contract/decision/vectors/gate.json apply first; these cases only add the identity check.",
+  "cases": [
+    {
+      "name": "ALLOW about the agent asked for runs",
+      "api": "decision",
+      "asked": "claims-assistant",
+      "status": 200,
+      "body": "{\"decision\": \"ALLOW\", \"decisionId\": \"4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90\", \"identity\": {\"caller\": \"tool-gateway\", \"agent\": \"claims-assistant\", \"agentAssurance\": \"delegated\"}}",
+      "expect": {"run": true, "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}
+    },
+    {
+      "name": "ALLOW without identity comes from a Prudence that decided about the caller: stop",
+      "api": "decision",
+      "asked": "claims-assistant",
+      "status": 200,
+      "body": "{\"decision\": \"ALLOW\", \"decisionId\": \"4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90\"}",
+      "expect": {"run": false}
+    },
+    {
+      "name": "ALLOW about another agent: stop",
+      "api": "decision",
+      "asked": "claims-assistant",
+      "status": 200,
+      "body": "{\"decision\": \"ALLOW\", \"decisionId\": \"4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90\", \"identity\": {\"caller\": \"tool-gateway\", \"agent\": \"tool-gateway\", \"agentAssurance\": \"self\"}}",
+      "expect": {"run": false}
+    },
+    {
+      "name": "DENY with a reason code stops and reports the code",
+      "api": "decision",
+      "asked": "payments-bot",
+      "status": 403,
+      "body": "{\"decision\": \"DENY\", \"reason\": \"caller may not speak for agent payments-bot\", \"reasonCode\": \"agent_not_delegated\", \"decisionId\": \"7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d\", \"identity\": {\"caller\": \"tool-gateway\", \"agent\": \"payments-bot\", \"agentAssurance\": \"delegated\"}}",
+      "expect": {"run": false, "reasonCode": "agent_not_delegated"}
+    },
+    {
+      "name": "AuthZEN true about the agent asked for runs",
+      "api": "authzen",
+      "asked": "claims-assistant",
+      "status": 200,
+      "body": "{\"decision\": true, \"context\": {\"decisionId\": \"4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90\", \"prudenceDecision\": \"ALLOW\", \"identity\": {\"caller\": \"tool-gateway\", \"agent\": \"claims-assistant\", \"agentAssurance\": \"verified\"}}}",
+      "expect": {"run": true, "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}
+    },
+    {
+      "name": "AuthZEN true without identity: stop",
+      "api": "authzen",
+      "asked": "claims-assistant",
+      "status": 200,
+      "body": "{\"decision\": true, \"context\": {\"decisionId\": \"4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90\", \"prudenceDecision\": \"ALLOW\"}}",
+      "expect": {"run": false}
+    },
+    {
+      "name": "AuthZEN false stops whatever identity says",
+      "api": "authzen",
+      "asked": "refund-agent",
+      "status": 200,
+      "body": "{\"decision\": false, \"context\": {\"decisionId\": \"9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a\", \"prudenceDecision\": \"DENY\", \"reasonCode\": \"high_risk_requires_verified_agent\", \"identity\": {\"caller\": \"tool-gateway\", \"agent\": \"refund-agent\", \"agentAssurance\": \"delegated\"}}}",
+      "expect": {"run": false, "reasonCode": "high_risk_requires_verified_agent"}
+    }
+  ]
+}

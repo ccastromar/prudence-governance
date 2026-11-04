@@ -1,0 +1,274 @@
+{
+  "version": "prudence.identity/v1",
+  "description": "Request + tokens + policy data + registry -> resolved identities, AI system, decision and reasonCode (README.md). `api` is `decision` (POST /api/policy/decisions) or `authzen` (POST /access/v1/evaluation). Strings `$token:<name>` stand for a signed JWT with the claims in `tokens.<name>`; `valid: false` marks one that fails validation and why. `decision` maps to the wire as in contract/decision (ALLOW 200, DENY 403; AuthZEN true only for ALLOW). Every case with a decision is recorded; `evidence` lists fields of the recorded decision as they leave Prudence, with the development pseudonym key.",
+  "setup": {
+    "trustedIssuers": ["https://sso.example.com/realms/example"],
+    "pseudonymKey": "development-only-evidence-pseudonym-key",
+    "tokens": {
+      "aos": {"iss": "https://sso.example.com/realms/example", "preferred_username": "aos", "scope": "pdp.decide"},
+      "langgraph-runtime": {"iss": "https://sso.example.com/realms/example", "preferred_username": "langgraph-runtime", "scope": "pdp.decide"},
+      "tool-gateway": {"iss": "https://sso.example.com/realms/example", "preferred_username": "tool-gateway", "scope": "pdp.decide"},
+      "claims-assistant": {"iss": "https://sso.example.com/realms/example", "preferred_username": "claims-assistant"},
+      "claims-assistant-expired": {"iss": "https://sso.example.com/realms/example", "preferred_username": "claims-assistant", "valid": false, "why": "expired"},
+      "claims-assistant-foreign": {"iss": "https://login.other.example/tenant", "preferred_username": "claims-assistant", "valid": false, "why": "untrusted issuer"},
+      "refund-agent": {"iss": "https://sso.example.com/realms/example", "preferred_username": "refund-agent"},
+      "alice": {"iss": "https://sso.example.com/realms/example", "preferred_username": "alice", "functions": ["ai.use:finance"]},
+      "bob": {"iss": "https://sso.example.com/realms/example", "preferred_username": "bob", "functions": []}
+    },
+    "policy": {
+      "speaks_for": {
+        "tool-gateway": ["claims-assistant", "refund-agent", "shared-agent", "orphan-agent"]
+      },
+      "roles_of": {
+        "aos": ["credit-runner"],
+        "langgraph-runtime": ["letters-runner"],
+        "claims-assistant": ["claims-tools"],
+        "shared-agent": ["claims-tools"],
+        "orphan-agent": ["claims-tools"],
+        "refund-agent": ["refund-tools"]
+      },
+      "role_permissions": {
+        "credit-runner": [{"pipeline": "credit_prescreening", "actions": ["run"]}],
+        "letters-runner": [{"pipeline": "draft_letter", "actions": ["run"]}],
+        "claims-tools": [{"pipeline": "tool:send_customer_letter", "actions": ["run", "tools/call"]}],
+        "refund-tools": [{"pipeline": "tool:approve_refund", "actions": ["run", "tools/call"]}]
+      },
+      "person_requires": {
+        "tool:approve_refund": "ai.use:finance"
+      }
+    },
+    "registry": {
+      "credit":  {"id": "68bf42c1-7b02-46b7-a7d9-68d696620b8a", "riskTier": "LIMITED", "approved": true, "agentIds": []},
+      "letters": {"id": "2c9d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "riskTier": "LIMITED", "approved": true, "agentIds": []},
+      "claims":  {"id": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e", "riskTier": "LIMITED", "approved": true, "agentIds": ["claims-assistant", "shared-agent"]},
+      "refunds": {"id": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d", "riskTier": "HIGH", "approved": true, "agentIds": ["refund-agent", "shared-agent"]}
+    }
+  },
+  "cases": [
+    {
+      "id": "1",
+      "name": "AOS, no agent and no person: decided as today",
+      "api": "decision",
+      "callerToken": "aos",
+      "body": {"subject": "ignored-when-authenticated", "pipeline": "credit_prescreening", "aiSystemId": "68bf42c1-7b02-46b7-a7d9-68d696620b8a", "action": "run"},
+      "expect": {"decision": "ALLOW", "aiSystemId": "68bf42c1-7b02-46b7-a7d9-68d696620b8a",
+                 "identity": {"caller": "aos", "agent": "aos", "agentAssurance": "self"}}
+    },
+    {
+      "id": "2",
+      "name": "framework adapter, no agent: decided as today",
+      "api": "decision",
+      "callerToken": "langgraph-runtime",
+      "body": {"subject": "x", "pipeline": "draft_letter", "aiSystemId": "2c9d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f", "action": "run"},
+      "expect": {"decision": "ALLOW", "aiSystemId": "2c9d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+                 "identity": {"caller": "langgraph-runtime", "agent": "langgraph-runtime", "agentAssurance": "self"}}
+    },
+    {
+      "id": "3",
+      "name": "gateway asks for an agent it speaks for, AI system sent",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter", "properties": {"aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "claims-assistant"}}},
+      "expect": {"decision": "ALLOW", "aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "4",
+      "name": "gateway names an agent it does not speak for",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "payments-bot"},
+               "resource": {"type": "tool", "id": "send_customer_letter", "properties": {"aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "payments-bot"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_not_delegated",
+                 "identity": {"caller": "tool-gateway", "agent": "payments-bot", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "5",
+      "name": "a runtime with no speaks_for names another agent: refused, never decided as the caller",
+      "api": "decision",
+      "callerToken": "langgraph-runtime",
+      "body": {"subject": "x", "pipeline": "tool:send_customer_letter", "aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e", "action": "run", "agent": "claims-assistant"},
+      "expect": {"decision": "DENY", "reasonCode": "agent_not_delegated",
+                 "identity": {"caller": "langgraph-runtime", "agent": "claims-assistant", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "6",
+      "name": "gateway forwards a valid agent token",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:claims-assistant"}}},
+      "expect": {"decision": "ALLOW", "aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "verified"}}
+    },
+    {
+      "id": "6b",
+      "name": "agent token names another agent than the body",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "x"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "shared-agent", "token": "$token:claims-assistant"}}},
+      "expect": {"decision": "DENY", "reasonCode": "subject_mismatch",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "verified"}}
+    },
+    {
+      "id": "7",
+      "name": "expired agent token",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:claims-assistant-expired"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_token_invalid",
+                 "identity": {"caller": "tool-gateway"}}
+    },
+    {
+      "id": "7b",
+      "name": "agent token from an untrusted issuer",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:claims-assistant-foreign"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_token_invalid",
+                 "identity": {"caller": "tool-gateway"}}
+    },
+    {
+      "id": "8",
+      "name": "AI system sent in which the agent is not declared",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter", "properties": {"aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "claims-assistant"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_not_in_system",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "9",
+      "name": "no AI system sent, the agent acts for exactly one",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "claims-assistant"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "claims-assistant"}}},
+      "expect": {"decision": "ALLOW", "aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "10",
+      "name": "no AI system sent, the agent acts for several",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "shared-agent"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "shared-agent"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_system_ambiguous",
+                 "identity": {"caller": "tool-gateway", "agent": "shared-agent", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "10b",
+      "name": "no AI system sent, the agent acts for none",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "orphan-agent"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "orphan-agent"}}},
+      "expect": {"decision": "DENY", "reasonCode": "agent_unknown",
+                 "identity": {"caller": "tool-gateway", "agent": "orphan-agent", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "11",
+      "name": "a person named without a token is recorded as asserted and changes nothing",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "user", "id": "alice"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "claims-assistant"}}},
+      "expect": {"decision": "ALLOW", "aiSystemId": "7d1e0c2a-3f4b-4a5c-9d6e-0f1a2b3c4d5e",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "delegated",
+                              "onBehalfOf": {"id": "alice", "assurance": "asserted"}}}
+    },
+    {
+      "id": "12",
+      "name": "HIGH system, verified agent, verified person with the required function",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "user", "id": "alice"},
+               "resource": {"type": "tool", "id": "approve_refund", "properties": {"aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:refund-agent"}, "onBehalfOfToken": "$token:alice"}},
+      "expect": {"decision": "ALLOW", "aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d",
+                 "identity": {"caller": "tool-gateway", "agent": "refund-agent", "agentAssurance": "verified",
+                              "onBehalfOf": {"id": "alice", "assurance": "verified"}}}
+    },
+    {
+      "id": "13",
+      "name": "as 12, but the person is only asserted: the function cannot be taken from the body",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "user", "id": "alice"},
+               "resource": {"type": "tool", "id": "approve_refund", "properties": {"aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:refund-agent"}}},
+      "expect": {"decision": "DENY", "reasonCode": "person_function_required",
+                 "identity": {"caller": "tool-gateway", "agent": "refund-agent", "agentAssurance": "verified",
+                              "onBehalfOf": {"id": "alice", "assurance": "asserted"}}}
+    },
+    {
+      "id": "14",
+      "name": "the body names alice, the verified person token is bob's",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "user", "id": "alice"},
+               "resource": {"type": "tool", "id": "send_customer_letter"},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "claims-assistant"}, "onBehalfOfToken": "$token:bob"}},
+      "expect": {"decision": "DENY", "reasonCode": "subject_mismatch",
+                 "identity": {"caller": "tool-gateway", "agent": "claims-assistant", "agentAssurance": "delegated"}}
+    },
+    {
+      "id": "15",
+      "name": "the person leaves Prudence only as a pseudonym (same request as 12)",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "user", "id": "alice"},
+               "resource": {"type": "tool", "id": "approve_refund", "properties": {"aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"token": "$token:refund-agent"}, "onBehalfOfToken": "$token:alice"}},
+      "expect": {"decision": "ALLOW",
+                 "evidence": {"caller": "tool-gateway", "agent": "refund-agent", "agentAssurance": "verified",
+                              "onBehalfOf": "45a11e1d51d9582cabd6410e2e03ab51092660068cc3c0bbaac2b8977e6f1e00",
+                              "onBehalfOfAssurance": "verified"}}
+    },
+    {
+      "id": "16",
+      "name": "HIGH system behind a gateway with a delegated agent",
+      "api": "authzen",
+      "callerToken": "tool-gateway",
+      "body": {"subject": {"type": "agent", "id": "refund-agent"},
+               "resource": {"type": "tool", "id": "approve_refund", "properties": {"aiSystemId": "5a6b7c8d-9e0f-4a1b-8c2d-3e4f5a6b7c8d"}},
+               "action": {"name": "tools/call"},
+               "context": {"agent": {"id": "refund-agent"}, "onBehalfOfToken": "$token:alice"}},
+      "expect": {"decision": "DENY", "reasonCode": "high_risk_requires_verified_agent",
+                 "identity": {"caller": "tool-gateway", "agent": "refund-agent", "agentAssurance": "delegated",
+                              "onBehalfOf": {"id": "alice", "assurance": "verified"}}}
+    }
+  ]
+}
