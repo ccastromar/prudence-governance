@@ -1,0 +1,36 @@
+# LiteLLM in front of the example agents: the model and the tools go through it, and Prudence
+# decides every tool call and every model call (prudence_guardrail.py). Values in os.environ/…
+# come from run.py.
+model_list:
+  - model_name: conformance-scripted
+    litellm_params:
+      model: openai/conformance-scripted
+      api_base: os.environ/FAKE_LLM_URL
+      api_key: none
+  # The same scripted model under a name the example policy does not grant.
+  - model_name: unapproved-model
+    litellm_params:
+      model: openai/conformance-scripted
+      api_base: os.environ/FAKE_LLM_URL
+      api_key: none
+
+mcp_servers:
+  tools:
+    url: os.environ/MOCK_TOOLS_URL
+    transport: http
+
+guardrails:
+  - guardrail_name: prudence
+    litellm_params:
+      guardrail: prudence_guardrail.PrudenceGuardrail
+      mode: [pre_call, pre_mcp_call]
+      # MCP calls do not inherit a request's guardrail selection: always on.
+      default_on: true
+
+litellm_settings:
+  # Anthropic Messages (the Claude Agent SDK's CLI) reach an OpenAI-compatible model over
+  # chat/completions, which every such endpoint speaks, rather than the Responses API.
+  use_chat_completions_url_for_anthropic_messages: true
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY

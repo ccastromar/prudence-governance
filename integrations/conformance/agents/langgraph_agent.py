@@ -5,6 +5,9 @@ conditional edge only reaches `confirm` on ALLOW.
 
 Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL, LLM_MODEL and
 LLM_API_KEY; prints one JSON line: {"toolRan": bool, "answer": str}.
+
+GOVERNANCE_MODE=gateway: no gate on the node; the model call and the sending (DEMO_TOOL, over
+MCP) both go through an AI gateway (gateway_mode.py), which asks Prudence.
 """
 import json
 import os
@@ -14,12 +17,20 @@ from typing import TypedDict
 import httpx
 from langgraph.graph import END, START, StateGraph
 
-from prudence_governance import ErnestEvidence, PrudenceGate
-from prudence_langgraph import gate_route, governed_node
+GATEWAY = os.environ.get("GOVERNANCE_MODE", "adapter") == "gateway"
+if GATEWAY:  # runners start agents with python -I, which leaves this directory off the path
+    import sys
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gateway_mode import call_tool, model_headers
+else:
+    def model_headers() -> dict:
+        return {}
 
 ran: list[str] = []
 
 # The story this run tells: a demo's, set by the demo runner, or conformance's own by default.
+TOOL = os.environ.get("DEMO_TOOL", "send_customer_letter")
 TASK = os.environ.get("DEMO_TASK", "Send the letter to customer C-1")
 RESULT = os.environ.get("DEMO_RESULT", "sent to {reference}")
 
@@ -35,29 +46,39 @@ class LetterState(TypedDict, total=False):
 
 def send(state: LetterState) -> dict:
     r = httpx.post(f"{os.environ['LLM_URL']}/chat/completions", timeout=20,
-                   headers={"Authorization": f"Bearer {os.environ.get('LLM_API_KEY', 'none')}"},
+                   headers={"Authorization": f"Bearer {os.environ.get('LLM_API_KEY', 'none')}", **model_headers()},
                    json={"model": os.environ.get("LLM_MODEL", "conformance-scripted"),
                          "messages": [{"role": "user", "content": TASK}]})
     r.raise_for_status()
     draft = r.json()["choices"][0]["message"]["content"]
+    if GATEWAY:
+        return {"output": f"{call_tool(TOOL, {'reference': state['reference']})} ({draft})"}
     ran.append(state["reference"])
     return {"output": f"{RESULT.format(reference=state['reference'])} ({draft})"}
 
 
 graph = StateGraph(LetterState)
-graph.add_node("send", governed_node(
-    send, pipeline=os.environ.get("PIPELINE", "send_customer_letter"),
-    gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-    evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None))
-graph.add_node("confirm", lambda state: {"output": state["output"] + "; confirmed"})
-graph.add_edge(START, "send")
-graph.add_conditional_edges("send", gate_route, {"allow": "confirm", "stop": END})
+if GATEWAY:
+    graph.add_node("send", send)
+    graph.add_node("confirm", lambda state: {"output": state["output"] + "; confirmed"})
+    graph.add_edge(START, "send")
+    graph.add_edge("send", "confirm")
+else:
+    from prudence_governance import ErnestEvidence, PrudenceGate
+    from prudence_langgraph import gate_route, governed_node
+
+    graph.add_node("send", governed_node(
+        send, pipeline=os.environ.get("PIPELINE", "send_customer_letter"),
+        gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
+        evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None))
+    graph.add_node("confirm", lambda state: {"output": state["output"] + "; confirmed"})
+    graph.add_edge(START, "send")
+    graph.add_conditional_edges("send", gate_route, {"allow": "confirm", "stop": END})
 graph.add_edge("confirm", END)
 
-system = os.environ["AI_SYSTEM_ID"]
 out = graph.compile().invoke({
     "subject": "langgraph",  # the dev profile's caller; a secured PDP takes it from the token
-    "ai_system_id": system,
+    "ai_system_id": os.environ.get("AI_SYSTEM_ID", "") if GATEWAY else os.environ["AI_SYSTEM_ID"],
     "reference": re.search(r"[A-Z]+-\d+", TASK).group(0),
 })
-print(json.dumps({"toolRan": bool(ran), "answer": out.get("output", "")}))
+print(json.dumps({"toolRan": None if GATEWAY else bool(ran), "answer": out.get("output", "")}))

@@ -6,6 +6,8 @@ environment with frameworks that need 3.x (the demo runner's image A).
 
 Reads PRUDENCE_URL, LLM_URL, AI_SYSTEM_ID, PIPELINE and, optionally, ERNEST_URL, LLM_MODEL and
 LLM_API_KEY; prints one JSON line: {"toolRan": bool, "answer": str}.
+
+GOVERNANCE_MODE=gateway: no adapter, model and tool through an AI gateway (gateway_mode.py).
 """
 import asyncio
 import json
@@ -20,8 +22,15 @@ from google.adk.models.llm_response import LlmResponse
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from prudence_adk import PrudenceGate, PrudencePlugin
-from prudence_governance import ErnestEvidence
+GATEWAY = os.environ.get("GOVERNANCE_MODE", "adapter") == "gateway"
+if GATEWAY:  # runners start agents with python -I, which leaves this directory off the path
+    import sys
+
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gateway_mode import call_tool, model_headers
+else:
+    def model_headers() -> dict:
+        return {}
 
 ran: list[str] = []
 
@@ -89,7 +98,7 @@ class ChatCompletionsLlm(BaseLlm):
             body["tools"] = tools
         async with httpx.AsyncClient(timeout=20) as client:
             r = await client.post(f"{self.base_url}/chat/completions", json=body,
-                                  headers={"Authorization": f"Bearer {self.api_key}"})
+                                  headers={"Authorization": f"Bearer {self.api_key}", **model_headers()})
             r.raise_for_status()
         message = r.json()["choices"][0]["message"]
         if message.get("tool_calls"):
@@ -102,6 +111,8 @@ class ChatCompletionsLlm(BaseLlm):
 
 
 def run_tool(reference: str) -> dict:
+    if GATEWAY:
+        return {"status": "done", "result": call_tool(TOOL, {"reference": reference})}
     ran.append(reference)
     return {"status": "done", "result": RESULT.format(reference=reference)}
 
@@ -118,13 +129,18 @@ async def main() -> None:
         instruction="Use your tools to do what the user asks.",
         tools=[run_tool],
     )
-    governance = PrudencePlugin(
-        os.environ["AI_SYSTEM_ID"],
-        gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-        pipelines={TOOL: os.environ.get("PIPELINE", "send_customer_letter")},
-        evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
-    )
-    runner = InMemoryRunner(agent=agent, app_name="conformance", plugins=[governance])
+    plugins = []
+    if not GATEWAY:
+        from prudence_adk import PrudenceGate, PrudencePlugin
+        from prudence_governance import ErnestEvidence
+
+        plugins.append(PrudencePlugin(
+            os.environ["AI_SYSTEM_ID"],
+            gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
+            pipelines={TOOL: os.environ.get("PIPELINE", "send_customer_letter")},
+            evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
+        ))
+    runner = InMemoryRunner(agent=agent, app_name="conformance", plugins=plugins)
     session = await runner.session_service.create_session(app_name="conformance", user_id="tester")
     answer = ""
     message = types.Content(role="user", parts=[types.Part(text=TASK)])
@@ -133,7 +149,7 @@ async def main() -> None:
             if part.text:
                 answer = part.text
     await asyncio.sleep(0.5)  # the plugin reports in the background
-    print(json.dumps({"toolRan": bool(ran), "answer": answer}))
+    print(json.dumps({"toolRan": None if GATEWAY else bool(ran), "answer": answer}))
 
 
 asyncio.run(main())
