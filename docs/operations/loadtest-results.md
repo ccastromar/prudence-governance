@@ -3,7 +3,7 @@
 Two runs: **before** and **after "phase 0"** (Prudence `cb335c3…` → current; Ernest `40ec302`).
 The "after" table comes first.
 
-## Chain-derived read models (Ernest ADR-006, 2026-10-13)
+## Chain-derived read models (Ernest, 2026-10-13)
 
 Ernest's chainer now validates each block when it is connected and keeps per-model and
 per-system indexes; stats and per-model integrity read the indexes, and the integrity
@@ -21,7 +21,7 @@ checkpoint follows the validated tip. Same host and script, chain at ~1.14M even
 Writes are unaffected (Kafka ≥ 7,000/s, direct ~4,200/s) and the indexer never stalled. Read cost
 no longer depends on chain length; only the explicit full re-verification does.
 
-## Kafka transport and outbox drain (Ernest ADR-005, 2026-10-13)
+## Kafka transport and outbox drain (Ernest, 2026-10-13)
 
 `decision-transport=kafka`: Prudence publishes decisions to a topic (idempotent producer,
 `acks=all`, keyed by AI system) and `event-ingestor kafka` records them in bulk. On the way three
@@ -69,7 +69,7 @@ is Prudence's own sender (8 senders; one event per request on the ingestor path)
 with MongoDB and the chainer); horizontal gains need separate hosts. Per-model integrity reads
 grow with events (~5 s for one model with ~600k events) — the next read-side item.
 
-## With ADR-004 batching (`EVIDENCE_BATCHING=on`, 2026-10-13)
+## With batching (`EVIDENCE_BATCHING=on`, 2026-10-13)
 
 Same host and script (`EVIDENCE_BATCHING=on ./loadtest/run-local.sh`), Ernest with the Merkle
 batcher and a single backend process holding all roles. Throughput counts *chained events*.
@@ -91,7 +91,7 @@ Reading: batching changes the *shape* — chain-wide work (anchoring, audit bund
 scales with ~400 blocks instead of 350k — but write throughput moved only ~10–20 %. The ceiling
 is no longer the serialized append; it is one Node process admitting events (validation,
 canonicalization, dedup insert). That is what the role split (`ERNEST_ROLE=writer`, N
-replicas) addresses; the ADR-004 target of ≥ 5,000 events/s is not reached by one process.
+replicas) addresses; the batching target of ≥ 5,000 events/s is not reached by one process.
 Full verification still re-derives every leaf, so it stays linear in events.
 
 

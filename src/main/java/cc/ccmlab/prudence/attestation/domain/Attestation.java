@@ -7,7 +7,7 @@ import java.util.List;
 /// hashed and the hash is sealed in Ernest, so the report itself is tamper-evident and
 /// carries a qualified seal. `evidence` records where/whether it was sealed.
 ///
-/// ADR-000 "reporting & attestation": the loop closes — the governance report is proved by
+/// Reporting and attestation: the loop closes — the governance report is proved by
 /// the same evidence plane that proves executions.
 public record Attestation(
     String id,

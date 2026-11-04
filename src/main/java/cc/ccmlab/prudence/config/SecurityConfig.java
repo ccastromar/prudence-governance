@@ -34,7 +34,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 /**
- * ADR-000 / SSO: Prudence as an OAuth2 resource server validating the Chestertown IdP's JWTs
+ * SSO: Prudence as an OAuth2 resource server validating the Chestertown IdP's JWTs
  * (Keycloak realm). Enabled only when an issuer is configured
  * (spring.security.oauth2.resourceserver.jwt.issuer-uri); otherwise a permit-all chain keeps dev
  * and tests unauthenticated. Realm roles arrive in the `roles` claim and become ROLE_* authorities.

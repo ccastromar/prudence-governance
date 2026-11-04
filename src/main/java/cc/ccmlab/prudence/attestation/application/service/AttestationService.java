@@ -21,7 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 /// Builds a tamper-evident attestation of the estate and seals its hash in Ernest. Composes
 /// the posture read model (what to report) with the evidence plane (how it's proved), so the
-/// governance report is itself provable — ADR-000's closing step.
+/// governance report is itself provable: the step that closes the loop.
 @Service
 public class AttestationService implements AttestationUseCase {
 

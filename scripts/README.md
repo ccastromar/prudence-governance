@@ -3,6 +3,9 @@
 Run Prudence and its dependencies on one machine. Login comes from a local Keycloak — the
 Chestertown dev IdP shared by AOS · Prudence · Ernest, standalone on your JDK. Test realm only; the passwords here are demo values.
 
+Requires JDK 25 and Maven (backend), Node.js 22+ (console) and OPA (`brew install opa`). The
+login mode also needs PostgreSQL on :5432, and Ernest needs MongoDB on :27017.
+
 ## Run
 
 Without login (H2 in `./data`, every action signed as `dev-reviewer`): `./scripts/opa.sh`,
@@ -21,7 +24,7 @@ and unpack it next to this repo. Then, each in its own terminal:
 ./scripts/ernest.sh        # Ernest from the sibling repo on :3001 (--kafka adds its Kafka consumer)
 ```
 
-Decisions over Kafka (Ernest ADR-005): start `./scripts/kafka.sh`, then `./scripts/ernest.sh --kafka`
+Decisions over Kafka: start `./scripts/kafka.sh`, then `./scripts/ernest.sh --kafka`
 (Ernest's backend plus its `event-ingestor kafka` consumer), and start Prudence with
 `PRUDENCE_ERNEST_DECISION_TRANSPORT=kafka PRUDENCE_ERNEST_KAFKA_BOOTSTRAP_SERVERS=127.0.0.1:9092`.
 This local Kafka is PLAINTEXT, so use it with `./scripts/backend.sh` (dev profile): the secured

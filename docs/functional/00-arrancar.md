@@ -32,12 +32,14 @@ comprobar que van**. Todos los comandos se lanzan desde la carpeta del repo de P
 
 ## Una sola vez (la primera)
 
+- **Herramientas**: JDK 25 y Maven (backend), Node.js 22 o superior (web).
 - **Keycloak** (solo modo 🅱️): descarga un `.tar.gz` 26.x de
   `github.com/keycloak/keycloak/releases` y descomprímelo **al lado** de la carpeta de Prudence.
 - **OPA**: `brew install opa`
 - **Ernest**: su repo (`ai-blockchain-provenance`) clonado **al lado** de la carpeta de Prudence.
 - **Kafka** (solo si vas a usar el modo Kafka): `brew install kafka`
-- **PostgreSQL y MongoDB**: ya funcionan como servicios y arrancan solos al encender el Mac.
+- **PostgreSQL** (solo modo 🅱️) **y MongoDB** (solo con Ernest): instalados y en marcha en sus
+  puertos de siempre (5432 y 27017), por ejemplo como servicios que arrancan con el equipo.
   Si alguno no responde, mira [Si algo falla](#si-algo-falla).
 
 ---

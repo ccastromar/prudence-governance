@@ -22,7 +22,7 @@ PIDS=()
 cleanup(){ for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null; done; LC_ALL=C "$PG/pg_ctl" -D "$WORK/pg" -m fast stop >/dev/null 2>&1; wait 2>/dev/null; }
 trap cleanup EXIT
 log(){ echo "$*" | tee -a "$WORK/results.txt"; }
-# Evidence recorded on the chain: blocks, or (ADR-004 batching) chained events — with batching
+# Evidence recorded on the chain: blocks, or (with batching) chained events — with batching
 # one block holds a whole batch, so counting blocks would understate throughput.
 blocks(){ if [ "${EVIDENCE_BATCHING:-off}" = on ]; then mongosh --quiet --port 27117 ernest --eval 'db.evidence_events.countDocuments({state:"chained"})'; else mongosh --quiet --port 27117 ernest --eval 'db.provenanceblocks.countDocuments()'; fi; }
 pending(){ PGPASSWORD=pw "$PG/psql" -h 127.0.0.1 -p 54329 -U prudence -d prudence -At -c "select count(*) from evidence_outbox where delivered_at is null and dead_at is null"; }
@@ -104,7 +104,7 @@ drain2 "ingestor transport, 8 concurrent senders"
 kill $PRUDENCE; wait $PRUDENCE 2>/dev/null; start_prudence quiet --prudence.evidence.outbox-delay-ms=3600000
 read n secs <<<"$(wait_drained)"   # let the ingestor worker finish what it queued
 
-# Kafka transport (Ernest ADR-005), when a broker is reachable (./scripts/kafka.sh): a throwaway
+# Kafka transport, when a broker is reachable (./scripts/kafka.sh): a throwaway
 # topic per run, one `event-ingestor kafka` consumer. The outbox is refilled first so the 60 s
 # window measures the transport, not an empty backlog.
 KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-127.0.0.1:9092}"

@@ -16,7 +16,7 @@ info:
     it (a Kafka write acknowledged by the brokers, or a 2xx from the webhook); until then
     Prudence retries from its outbox. `id` is stable across retries: **deduplicate on `id`**.
 
-    **Custody only.** This sink gives custody (capability level C1 in ADR-001): durable
+    **Custody only.** This sink gives custody (capability level C1): durable
     acknowledgement and deduplication. It gives no inclusion proof, no external anchor and no
     read-back. Prudence says so in Posture, attestations and snapshots, and never claims a seal
     it does not have. Ernest is the sink that adds proofs, anchoring and read-back.

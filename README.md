@@ -15,9 +15,6 @@ posture is **watched** and **attested**.
 
 The three form a closed control loop: **decide → enforce → prove → oversee → decide.**
 
-See [docs/adr/adr-000-prudence-the-governance-vertex.md](docs/adr/adr-000-prudence-the-governance-vertex.md)
-for the founding architecture.
-
 > Status: active implementation. The current vertical slice covers a classification dossier
 > (role, Annex I/III, version/hash, geography, affected population, justification and
 > obligations), policy decisions, review audit, approval expiry and periodic review, posture/drift,
@@ -30,7 +27,7 @@ for the founding architecture.
 |---|---|
 | `src/`, `ui/` | Spring Boot backend and React console |
 | `policy/opa/` | OPA/Rego policy bundle (the authorization half of the PDP) |
-| `integrations/` | Python adapters for agent runtimes (LangGraph, Pydantic AI) |
+| `integrations/` | Python adapters for 12 agent frameworks (LangGraph, LangChain, CrewAI, OpenAI Agents, Claude Agent SDK and more) on a shared `prudence-core`, plus their conformance suite and the demo runner |
 | `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
 | `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model, test vectors, organization templates and the `ct-model` tool |
 | `contract/decision/` | Decision API v1 as test vectors: when a gate may run a step, what a runtime does with each report answer, what Prudence must answer. Prudence, AOS and prudence-core run them |
@@ -39,7 +36,6 @@ for the founding architecture.
 | `docs/api/` | Published contracts: Decision API v1 (OpenAPI) and evidence events v1 (AsyncAPI) |
 | `loadtest/` | Local load test of Prudence + Ernest |
 | `scripts/` | Run everything locally without Docker: OPA, Keycloak, backend, console, seed data |
-| `docs/adr/` | Architecture decisions |
 | `ui/vendor/` | `@chestertown/design`, the shared design system (tokens and React components), as a pinned tarball released from a separate repository |
 | `docs/operations/` | Load-test results |
 | `docs/functional/` | Manual functional-test guides (Spanish) — start with `00-arrancar.md` |

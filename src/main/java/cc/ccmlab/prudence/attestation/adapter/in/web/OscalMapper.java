@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.UUID;
 
 /// Maps an attestation to a NIST OSCAL **Assessment Results** document — machine-readable
-/// compliance (the "serious, not a CRUD" artifact of ADR-000). Each registered AI system
+/// compliance. Each registered AI system
 /// becomes an observation; its posture becomes a finding (GREEN = satisfied, else
 /// not-satisfied); the Ernest seal is recorded in back-matter so the OSCAL report points at
 /// the tamper-evident evidence it derives from.
