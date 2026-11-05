@@ -27,24 +27,34 @@ Configuration (environment):
   PRUDENCE_TOKEN                the gateway's own access token, or else
   PRUDENCE_TOKEN_URL, PRUDENCE_CLIENT_ID, PRUDENCE_CLIENT_SECRET   client credentials
   PRUDENCE_TIMEOUT              seconds, default 3
+  PRUDENCE_PRINCIPAL_MODE       how Prudence names principals (`prudence.identity.principal-mode`):
+                                `legacy` (default) or `issuer-subject`; the guardrail names the
+                                agent the same way to check Prudence decided about it
 """
 from __future__ import annotations
 
 import asyncio
 import logging
 import os
+import sys
 import time
 from datetime import datetime, timezone
+from pathlib import Path
 
 import httpx
 from fastapi import HTTPException
 from litellm.integrations.custom_guardrail import CustomGuardrail
+
+# LiteLLM loads this file by path, without its folder on sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from identity_gate import agent_named_by, gate  # noqa: E402
 
 MCP_TOOL_CALL = "call_mcp_tool"
 MODEL_CALLS = {"completion", "acompletion", "anthropic_messages", "responses", "aresponses"}
 AGENT_TOKEN_HEADER = "x-prudence-agent-token"
 AI_SYSTEM_HEADER = "x-prudence-ai-system"
 RUNTIME = os.environ.get("PRUDENCE_RUNTIME", "litellm-gateway")
+PRINCIPAL_MODE = os.environ.get("PRUDENCE_PRINCIPAL_MODE", "legacy")
 ALLOWED_TTL = 600  # seconds an allowed call waits for its tool before it is forgotten
 log = logging.getLogger("prudence_guardrail")
 
@@ -80,19 +90,22 @@ class PrudenceGuardrail(CustomGuardrail):
         returns the decision's context on an ALLOW about that agent, blocks the call otherwise."""
         if not agent_token:
             _block(f"{kind} {name}: the agent presented no token of its own")
+        agent = agent_named_by(agent_token, PRINCIPAL_MODE)
+        if not agent:
+            _block(f"{kind} {name}: the agent's token names no one")
         try:
-            answer = await self._evaluate(kind, name, agent_token, system)
-        except Exception as failure:  # unreachable, timeout, refused, unreadable: never a yes
+            status, body = await self._evaluate(kind, name, agent_token, system)
+        except Exception as failure:  # unreachable, timeout, refused: never a yes
             _block(f"{kind} {name}: Prudence could not decide ({type(failure).__name__})")
-        context = answer.get("context") or {}
-        identity = context.get("identity") or {}
-        if answer.get("decision") is not True:
-            _block(f"{kind} {name}: {context.get('reasonCode') or context.get('reason') or 'denied'}"
-                   f" (decision {context.get('decisionId')})")
-        # An ALLOW about someone else (an older Prudence deciding about the gateway) is no ALLOW.
-        if identity.get("agentAssurance") != "verified" or identity.get("caller") == identity.get("agent"):
-            _block(f"{kind} {name}: Prudence did not decide about the agent")
-        return context
+        # contract/identity/ section 12: an ALLOW about someone else (an older Prudence deciding
+        # about the gateway) is no ALLOW.
+        verdict = gate("authzen", status, body, agent)
+        if not verdict["run"]:
+            _block(f"{kind} {name}: {verdict.get('reasonCode') or verdict.get('reason') or f'Prudence answered {status}'}")
+        # It forwarded the agent's own token, so Prudence must have validated it.
+        if verdict["facts"]["identity"].get("agentAssurance") != "verified":
+            _block(f"{kind} {name}: Prudence did not verify the agent's token")
+        return verdict["facts"]
 
     async def async_post_mcp_tool_call_hook(self, kwargs, response_obj, start_time, end_time):
         """After an allowed tool ran: report the execution, citing the decision that allowed it,
@@ -143,7 +156,7 @@ class PrudenceGuardrail(CustomGuardrail):
                 "agent": (context.get("identity") or {}).get("agent"),
             }
 
-    async def _evaluate(self, kind: str, name: str, agent_token: str, system: str | None = None) -> dict:
+    async def _evaluate(self, kind: str, name: str, agent_token: str, system: str | None = None) -> tuple[int, str]:
         resource: dict = {"type": kind, "id": name}
         if system:
             resource["properties"] = {"aiSystemId": system}
@@ -160,8 +173,7 @@ class PrudenceGuardrail(CustomGuardrail):
                 json=body,
                 headers={"Authorization": f"Bearer {await self._gateway_token(client)}"},
             )
-        response.raise_for_status()
-        return response.json()
+        return response.status_code, response.text
 
     async def _gateway_token(self, client: httpx.AsyncClient) -> str:
         if os.environ.get("PRUDENCE_TOKEN"):

@@ -13,6 +13,8 @@ agent (no adapter) ──► LiteLLM ──► model
 | File | What it is |
 | --- | --- |
 | `prudence_guardrail.py` | A LiteLLM custom guardrail: the policy enforcement point |
+| `identity_gate.py` | Whether an answer lets the call run (`contract/identity/` section 12), standard library only |
+| `check_gate_vectors.py` | Runs `contract/identity/vectors/gate.json` against `identity_gate.py`; no LiteLLM or Prudence needed |
 | `config.yaml` | LiteLLM with the model, the tool server and the guardrail |
 | `mock_tools.py` | The example agents' tools as an MCP server, logging every call that reaches them |
 | `run.py` | End to end with the twelve example agents in gateway mode |
@@ -30,7 +32,9 @@ agent (no adapter) ──► LiteLLM ──► model
 3. Prudence validates the agent's token, checks that the gateway may speak for that agent
    (`speaks_for`), takes the AI system the agent is declared in, and decides
    (`contract/identity/`).
-4. The call goes through only on an ALLOW about that agent with `agentAssurance: verified`.
+4. The call goes through only on an ALLOW about that agent with `agentAssurance: verified`:
+   the guardrail names the agent from its token as Prudence does (`PRUDENCE_PRINCIPAL_MODE`,
+   default `legacy`) and checks the answer's `identity.agent` is that name.
    Anything else blocks it: a denial, no agent token, Prudence unreachable or slow, an answer
    about another agent (`403` from the gateway, the reason in the message).
 5. After the tool ran, the guardrail reports the execution (`POST /api/executions`, runtime

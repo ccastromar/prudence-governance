@@ -242,3 +242,8 @@ A gate that sends `agent`/`agentToken` must check that the answer's `identity.ag
 asked about. An answer without `identity` comes from a Prudence that does not know this contract
 and decided about the caller instead: the gate does not run the step. `vectors/gate.json` spells
 this out; the rules of `contract/decision/` README section 2 still apply first.
+
+A gate that forwards only `agentToken` names the agent from that token exactly as Prudence names a
+caller (section 3.2, same principal mode) and compares the answer with that name. The LiteLLM
+gateway (`integrations/litellm-gateway/identity_gate.py`) is the reference gate:
+`check_gate_vectors.py` next to it runs every case of `vectors/gate.json`.

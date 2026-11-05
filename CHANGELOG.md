@@ -23,8 +23,9 @@ not a legal declaration of EU AI Act conformity.
 - Python adapters for twelve agent frameworks (LangGraph, LangChain, CrewAI, OpenAI Agents,
   Claude Agent SDK and more) on a shared core, each tested against a real agent.
 - An AI gateway as the policy enforcement point: a LiteLLM guardrail asks Prudence before each
-  model call and tool call, with the agent's own token, and reports the tools that ran. The twelve
-  example agents also run behind it, with no adapter.
+  model call and tool call, with the agent's own token, lets a call through only on an ALLOW about
+  that very agent, and reports the tools that ran. The twelve example agents also run behind it,
+  with no adapter.
 - Who asked, which agent acted and for which person: a gateway may speak only for the agents
   it is allowed to, each AI system declares its agents, and a high-risk system behind a gateway
   needs a verified agent. Decisions and evidence record all three.
