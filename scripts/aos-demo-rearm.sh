@@ -44,7 +44,8 @@ base = os.environ["BASE"].rstrip("/")
 systems_api, incidents_api = f"{base}/api/registry/systems", f"{base}/api/incidents"
 
 def call(method, url, body=None):
-    headers = {"Accept": "application/json"}
+    # Cloudflare's browser integrity check blocks urllib's default User-Agent (error 1010).
+    headers = {"Accept": "application/json", "User-Agent": "prudence-aos-demo-rearm/1"}
     if os.environ["TOKEN"]:
         headers["Authorization"] = "Bearer " + os.environ["TOKEN"]
     data = None
