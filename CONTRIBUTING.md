@@ -1,8 +1,13 @@
 # Contributing to Prudence
 
-Thank you for helping. Prudence implements Decide and Oversee in the Chestertown reference architecture
+Thank you for helping. Prudence implements Decide and Oversee in the Chestertown open architecture
 (AOS runs, Ernest proves, Prudence decides and oversees); a change here can change what the other two
 see, so the contracts below matter as much as the code.
+
+**Maintenance.** This is a reference implementation kept by one person in their spare time. Issues and
+pull requests are read when time allows; there is no support and no promised response time, and a
+pull request may stay open or be closed without a full review. Security reports follow
+[SECURITY.md](SECURITY.md).
 
 ## Before you open a pull request
 

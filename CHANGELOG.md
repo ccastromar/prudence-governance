@@ -6,6 +6,8 @@ The format follows the spirit of Keep a Changelog, and Prudence uses semantic ve
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-11-16
+
 First release, part of Chestertown 0.1.0 together with AOS and Ernest: Prudence is the reference
 implementation of Decide and Oversee. It helps an organization get ready for AI governance; it is
 not a legal declaration of EU AI Act conformity.

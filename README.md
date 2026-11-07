@@ -2,6 +2,12 @@
 
 **Prudence implements Decide and Oversee in [Chestertown](https://ccmlab.cc/architecture), an open architecture for governing AI agents: Decide · Run · Prove · Oversee.**
 
+> **See it run:** a 1:21 recording of one request going through Prudence, AOS and Ernest is on
+> [ccmlab.cc](https://ccmlab.cc/#film), with one recording per risk tier.
+>
+> **Maintenance:** a reference implementation, maintained by one person on a best-effort basis.
+> Issues and pull requests are welcome, but there is no support and no promised response time.
+
 Prudence is the **control plane** for AI systems. Where [AOS](https://github.com/ccastromar/aos-agentic-orchestration-system)
 runs intent-driven pipelines under control and [Ernest](https://github.com/ccastromar/ai-blockchain-provenance) proves
 what ran (tamper-evident, independently verifiable), Prudence is where the rules are
