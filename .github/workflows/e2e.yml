@@ -105,7 +105,7 @@ jobs:
         run: |
           curl -fsSL -o /usr/local/bin/opa "https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_linux_amd64_static"
           chmod +x /usr/local/bin/opa
-          npm install -g mongosh
+          npm install -g mongosh@2.14.1  # 2.14.2 is broken: missing mongodb-redact
           curl -fsSL "https://archive.apache.org/dist/kafka/${KAFKA_VERSION}/kafka_2.13-${KAFKA_VERSION}.tgz" | tar xz -C "$RUNNER_TEMP"
           echo "KAFKA_HOME=$RUNNER_TEMP/kafka_2.13-${KAFKA_VERSION}" >> "$GITHUB_ENV"
           curl -fsSL "https://github.com/keycloak/keycloak/releases/download/${KEYCLOAK_VERSION}/keycloak-${KEYCLOAK_VERSION}.tar.gz" | tar xz -C "$RUNNER_TEMP"
