@@ -22,6 +22,21 @@ the policy. The governed subject, the registry system id and the evidence client
 the agent's dependencies, so one tool can run under different identities and policies
 without changing its code.
 
+Without `pipeline`, the tool is governed as `tool:<name>` with the action `tools/call`, the grant
+every other adapter and the AI/MCP gateways use (`scripts/provision-runtime.py --tool <name>`):
+
+```python
+@agent.tool(name="send_customer_letter")
+@governed(tool="send_customer_letter")   # tool= when the registered name differs from the function's
+def send_letter(ctx, reference: str) -> str:
+    ...
+```
+
+A tool whose `GovDeps.ai_system_id` is empty is refused without asking Prudence. Wrap each agent
+run in `with prudence_governance.run():` so its decisions share one `correlationId`, and check
+the adapter with [`../conformance-kit`](../conformance-kit). Configuration: `PRUDENCE_PDP_URL`,
+`PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`, `PRUDENCE_PDP_CLIENT_SECRET`.
+
 ## What gets sealed
 
 Per governed call, Ernest records:

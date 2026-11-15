@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 
 import httpx
 
+from .run import check_correlation_id, current_correlation_id
+
 
 @dataclass(frozen=True)
 class Decision:
@@ -79,13 +81,27 @@ class M2MAuth:
 
 
 class PrudenceGate:
-    def __init__(self, base_url: str | None = None, timeout: float = 3.0, auth: M2MAuth | None = None):
-        self.base_url = (base_url or os.getenv("PRUDENCE_URL", "http://127.0.0.1:8099")).rstrip("/")
+    def __init__(self, base_url: str | None = None, timeout: float = 3.0, auth: M2MAuth | None = None,
+                 correlation_id: str | None = None):
+        """`base_url`: Prudence's base URL; else PRUDENCE_PDP_URL (the name AOS and every
+        Chestertown runtime use), else PRUDENCE_URL. `auth`: else M2MAuth.from_env().
+        `correlation_id`: a fixed flow id for every decision of this gate; usually leave it
+        unset and wrap each agent run in `prudence_governance.run()` instead."""
+        self.base_url = (base_url or os.getenv("PRUDENCE_PDP_URL") or os.getenv("PRUDENCE_URL")
+                         or "http://127.0.0.1:8099").rstrip("/")
         self.timeout = timeout
         self.auth = auth if auth is not None else M2MAuth.from_env()
+        self.correlation_id = check_correlation_id(correlation_id) if correlation_id else None
 
-    def decide(self, subject: str, pipeline: str, ai_system_id: str, action: str = "run") -> Decision:
+    def decide(self, subject: str, pipeline: str, ai_system_id: str, action: str = "run", *,
+               correlation_id: str | None = None) -> Decision:
+        """Ask Prudence whether `pipeline` may run now (fail closed: anything but a valid
+        ALLOW is a refusal). The decision carries the flow's correlation id: the argument, else
+        the enclosing `run()`, else the gate's own; with none, it is sent without one."""
         payload = {"subject": subject, "pipeline": pipeline, "aiSystemId": ai_system_id, "action": action}
+        correlation = correlation_id or current_correlation_id() or self.correlation_id
+        if correlation:
+            payload["correlationId"] = correlation
         headers = {}
         try:
             if self.auth is not None:

@@ -1,0 +1,67 @@
+{
+  "version": "prudence.adapter/v1",
+  "description": "One governed tool call per case (README.md). `prudence` is what the kit answers to POST /api/policy/decisions (`unreachable`: nothing listens); `report` is its status for POST /api/executions. `expect.asks`: the adapter sends exactly one decision request whose `request` fields match (false: it sends none). `toolRuns`: the tool ran. `modelTold`: the agent's final answer contains this verdict (the scripted model repeats the tool result it got). `reports`: an execution report citing `decisionId` reached Prudence (false: none did).",
+  "tool": "send_customer_letter",
+  "aiSystemId": "68bf42c1-0000-4000-8000-00000000c0de",
+  "cases": [
+    {
+      "name": "ALLOW runs the tool and reports it",
+      "prudence": {"status": 200, "body": {"decision": "ALLOW", "reason": null, "approver": null, "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}},
+      "report": 201,
+      "expect": {
+        "asks": true,
+        "request": {"pipeline": "tool:send_customer_letter", "action": "tools/call", "aiSystemId": "68bf42c1-0000-4000-8000-00000000c0de"},
+        "toolRuns": true,
+        "reports": true,
+        "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"
+      }
+    },
+    {
+      "name": "ALLOW still runs the tool when the report fails",
+      "prudence": {"status": 200, "body": {"decision": "ALLOW", "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}},
+      "report": 503,
+      "expect": {"asks": true, "toolRuns": true}
+    },
+    {
+      "name": "APPROVAL_REQUIRED stops the tool and tells the model",
+      "prudence": {"status": 202, "body": {"decision": "APPROVAL_REQUIRED", "reason": "high-risk system awaiting governance approval", "approver": "risk-officer", "decisionId": "0b7e3d21-55a4-4f0e-9c3b-1a2d3e4f5a6b"}},
+      "expect": {"asks": true, "toolRuns": false, "modelTold": "APPROVAL_REQUIRED", "reports": false}
+    },
+    {
+      "name": "DENY stops the tool and tells the model",
+      "prudence": {"status": 403, "body": {"decision": "DENY", "reason": "no role grants this tool", "approver": null, "decisionId": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d"}},
+      "expect": {"asks": true, "toolRuns": false, "modelTold": "DENY", "reports": false}
+    },
+    {
+      "name": "ERROR stops the tool",
+      "prudence": {"status": 503, "body": {"decision": "ERROR", "reason": "policy engine unavailable", "approver": null, "decisionId": "9d8c7b6a-5f4e-4d3c-8b2a-1f0e9d8c7b6a"}},
+      "expect": {"asks": true, "toolRuns": false, "reports": false}
+    },
+    {
+      "name": "ALLOW without a decisionId stops the tool",
+      "prudence": {"status": 200, "body": {"decision": "ALLOW"}},
+      "expect": {"asks": true, "toolRuns": false, "reports": false}
+    },
+    {
+      "name": "ALLOW under 202 stops the tool",
+      "prudence": {"status": 202, "body": {"decision": "ALLOW", "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}},
+      "expect": {"asks": true, "toolRuns": false, "reports": false}
+    },
+    {
+      "name": "a sign-in page instead of a decision stops the tool",
+      "prudence": {"status": 200, "raw": "<html><body>Sign in</body></html>"},
+      "expect": {"asks": true, "toolRuns": false, "reports": false}
+    },
+    {
+      "name": "Prudence down stops the tool",
+      "prudence": {"unreachable": true},
+      "expect": {"toolRuns": false}
+    },
+    {
+      "name": "a tool with no AI system is refused without asking",
+      "aiSystemId": "",
+      "prudence": {"status": 200, "body": {"decision": "ALLOW", "decisionId": "4f1c2a5e-9b0d-4c67-8a21-3e5f6d7c8b90"}},
+      "expect": {"asks": false, "toolRuns": false, "reports": false}
+    }
+  ]
+}

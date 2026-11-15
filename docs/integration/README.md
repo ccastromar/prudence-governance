@@ -33,6 +33,11 @@ These are the contract. A runtime that breaks one is not governed, whatever else
 5. **Send identifiers, never content.** Prudence needs ids, names and times. Do not put
    prompts, inputs or outputs in any field.
 
+A framework adapter follows these through the [adapter contract](../../contract/adapter/README.md):
+it asks before every tool call as the pipeline `tool:<name>` with the action `tools/call` (the same
+grant an AI or MCP gateway uses), tells the model why when it may not run, and can prove it with the
+[conformance kit](../../integrations/conformance-kit), with no Prudence and no model.
+
 ## Step 1: register the runtime
 
 Each runtime gets its own machine identity (an OAuth2 client) and a grant listing the
@@ -52,6 +57,8 @@ It creates (or tightens) the Keycloak client `claims-langgraph-pdp` with:
   (`service-account-claims-langgraph-pdp`).
 
 It then grants that name a role in `policy/opa/data.json` that may `run` the listed pipelines.
+For an agent whose adapter governs each tool call, grant the tools instead (or as well):
+`--tool send_customer_letter` grants `tools/call` on `tool:send_customer_letter`.
 The client secret goes to a `0600` file, never to the terminal.
 
 Commit `data.json` afterwards. OPA reloads the policy folder it watches. Run the script again
@@ -121,7 +128,7 @@ tool as the resource:
 ```json
 { "subject":  { "type": "agent", "id": "claims-assistant" },
   "resource": { "type": "tool", "id": "send_customer_letter" },
-  "action":   { "name": "run" } }
+  "action":   { "name": "tools/call" } }
 ```
 
 Prudence checks it as the pipeline `tool:send_customer_letter` of the AI system the tool acts
@@ -139,10 +146,12 @@ A tool mapped to no AI system is refused, never guessed. Register the gateway li
 runtime and grant it the tools it may call:
 
 ```bash
-scripts/provision-runtime.py --name mcp-gateway --pipeline tool:send_customer_letter
+scripts/provision-runtime.py --name mcp-gateway --tool send_customer_letter
 ```
 
-Configure the gateway's action name as `run`; that is what the grant allows.
+Configure the gateway's action name as `tools/call`; that is what the grant allows, and the same
+grant the framework adapters and the AI gateway use, so a tool is granted once however it is
+reached.
 
 ## Step 4: report the execution
 
@@ -208,11 +217,37 @@ external store; not independently verifiable"), and never claims a seal it does 
 | LlamaIndex | [`integrations/llamaindex`](../../integrations/llamaindex) | a wrapper per tool |
 | smolagents | [`integrations/smolagents`](../../integrations/smolagents) | a wrapper per tool |
 | Claude Agent SDK | [`integrations/claude-agent-sdk`](../../integrations/claude-agent-sdk) | a PreToolUse hook: built-in and MCP tools |
+| Any TypeScript code | [`integrations/typescript/prudence-core`](../../integrations/typescript/prudence-core) | `PrudenceGate.decide()` and `reportExecution()` |
+| Vercel AI SDK | [`integrations/typescript/ai-sdk`](../../integrations/typescript/ai-sdk) | `governTools()`: a wrapper per tool |
+| OpenAI Agents SDK (JS) | [`integrations/typescript/openai-agents`](../../integrations/typescript/openai-agents) | a tool input guardrail |
+| Mastra | [`integrations/typescript/mastra`](../../integrations/typescript/mastra) | agent tool hooks: every tool of the agent |
+| LangGraph.js | [`integrations/typescript/langgraph`](../../integrations/typescript/langgraph) | governed tools, or a governed node and a routing gate |
+| Any Java code | [`integrations/java/prudence-core`](../../integrations/java) | `PrudenceGate.decide()` and `reportExecution()` |
+| Spring AI | [`integrations/java/spring-ai`](../../integrations/java) | governed `ToolCallback`s and `ToolCallbackProvider`s |
+| LangChain4j | [`integrations/java/langchain4j`](../../integrations/java) | governed `ToolExecutor`s and `ToolProvider`s |
 | Go | AOS `internal/governance` | the reference implementation |
 | MCP gateway (AuthZEN) | none needed | `resource.type: tool`, see step 3 |
 
 Each adapter does the same two things at its framework's natural hook point: ask before the
-step, report after it starts. [`integrations/conformance`](../../integrations/conformance)
+step, report after it starts.
+
+**Install** from a checkout until the packages are published:
+`pip install -e integrations/prudence-core -e integrations/<framework>`; for TypeScript,
+`npm install && npm run build` in `integrations/typescript`; for Java, `mvn install` in
+`integrations/java` (see their READMEs). Every adapter depends
+on its language's core and reads the same configuration:
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `PRUDENCE_PDP_URL` | Prudence's base URL (`PRUDENCE_URL` is still read) | `http://127.0.0.1:8099` |
+| `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`, `PRUDENCE_PDP_CLIENT_SECRET` | the runtime's client credentials (step 1); all three, or none in the open development profile | none |
+| `PRUDENCE_PDP_SCOPE` | scope asked for | `pdp.decide` |
+| `ERNEST_URL`, `ERNEST_API_KEY` | Ernest, for execution evidence | `http://127.0.0.1:3001` |
+| `ERNEST_INGESTOR_URL`, `ERNEST_INGESTOR_KEY` | Ernest's event-ingestor, for volume | direct |
+
+**One flow per agent run:** wrap the run in `with prudence_governance.run():` (or pass your own
+id, `run("ticket-4711")`) and every decision inside carries the same `correlationId`, so the
+run's tool calls read as one flow in Prudence and in Ernest. [`integrations/conformance`](../../integrations/conformance)
 checks that they do, with real agents of each framework against a real Prudence. For anything else, steps 3 and 4 are two HTTP calls.
 
 ## When it says no

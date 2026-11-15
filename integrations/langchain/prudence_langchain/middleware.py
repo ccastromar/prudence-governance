@@ -8,9 +8,10 @@ error `ToolMessage`, which the model reads instead of the tool's output.
 Middleware compose first-defined-outermost. Put this one after any middleware that rewrites
 tool arguments, so it decides on the arguments the tool will get.
 
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool
-nobody granted is denied.
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool nobody
+granted is denied.
 """
 from __future__ import annotations
 
@@ -23,7 +24,7 @@ from langchain_core.messages import ToolMessage
 from langgraph.prebuilt.tool_node import ToolCallRequest
 from langgraph.types import Command
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class PrudenceMiddleware(AgentMiddleware):
@@ -75,13 +76,13 @@ class PrudenceMiddleware(AgentMiddleware):
         tool = call["name"]
         if tool in self.ungoverned:
             return None
-        pipeline = self.pipelines.get(tool, tool)
+        pipeline, action = tool_target(tool, self.pipelines)
         system = self.ai_system_id if isinstance(self.ai_system_id, str) else self.ai_system_id.get(tool)
         if not system:
             # No AI system for this tool: there is nothing Prudence could have approved.
             return self._refusal(call, f"Not permitted by governance: tool {tool!r} has no AI system.")
 
-        decision = self.gate.decide(self.runtime, pipeline, system, "run")
+        decision = self.gate.decide(self.runtime, pipeline, system, action)
         if not decision.allowed:
             return self._refusal(call, decision.refusal())
 

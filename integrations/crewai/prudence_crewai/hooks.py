@@ -8,10 +8,11 @@ CrewAI then hands the model a generic "blocked by hook" message; the matching
 CrewAI swallows an exception raised by a hook and runs the tool anyway, so the before hook
 never raises: any failure of its own is a refusal.
 
-The hooks are process-wide (CrewAI keeps one list), so they govern every crew and agent in
-the process. Which pipeline a tool is governed as: `pipelines[tool name]` when given,
-otherwise the tool's name. Grant the runtime those pipelines in Prudence
-(`scripts/provision-runtime.py`); a tool nobody granted is denied.
+The hooks are process-wide (CrewAI keeps one list), so they govern every crew and agent in the
+process. Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool nobody
+granted is denied.
 """
 from __future__ import annotations
 
@@ -27,7 +28,7 @@ from crewai.hooks import (
     unregister_before_tool_call_hook,
 )
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 _BLOCKED = "Tool execution blocked by hook"
 
@@ -86,12 +87,12 @@ class PrudenceToolHooks:
         tool = context.tool_name
         if tool in self.ungoverned:
             return None
-        pipeline = self.pipelines.get(tool, tool)
+        pipeline, action = tool_target(tool, self.pipelines)
         system = self.ai_system_id if isinstance(self.ai_system_id, str) else self.ai_system_id.get(tool)
         if not system:
             return f"Not permitted by governance: tool {tool!r} has no AI system."
 
-        decision = self.gate.decide(self.runtime, pipeline, system, "run")
+        decision = self.gate.decide(self.runtime, pipeline, system, action)
         if not decision.allowed:
             return decision.refusal()
 

@@ -6,8 +6,9 @@ and asks Prudence on each `call`/`acall`. ALLOW calls the wrapped tool; anything
 the refusal as an error `ToolOutput`, which the agent hands to the model.
 
 Wrap every tool you give the agent (`govern_tools`); a tool left unwrapped is not governed.
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from typing import Any, Iterable, Mapping
 
 from llama_index.core.tools import AsyncBaseTool, BaseTool, ToolMetadata, ToolOutput, adapt_to_async_tool
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class GovernedTool(AsyncBaseTool):
@@ -32,12 +33,15 @@ class GovernedTool(AsyncBaseTool):
         runtime: str = "llamaindex",
     ):
         """`ai_system_id`: the registry id the agent acts as when it calls this tool.
-        `pipeline`: what the tool is governed as (default: the tool's name).
+        `pipeline`: a pipeline of your own to govern the tool as (action `run`);
+        default `tool:<name>` (action `tools/call`).
         `evidence`: with Ernest in the suite, also seal each allowed execution there."""
         self.tool = adapt_to_async_tool(tool)
         self.gate = gate or PrudenceGate()
         self.ai_system_id = ai_system_id
-        self.pipeline = pipeline or tool.metadata.get_name()
+        # A pipeline of the integrator's own is run; otherwise this is a call to tool:<name>.
+        name = tool.metadata.get_name()
+        self.pipeline, self.action = tool_target(name, {name: pipeline} if pipeline else None)
         self.evidence = evidence
         self.runtime = runtime
 
@@ -60,7 +64,7 @@ class GovernedTool(AsyncBaseTool):
 
     def _check(self, args: tuple, kwargs: dict[str, Any]) -> ToolOutput | None:
         """None when the tool may run, otherwise the refusal as the tool's output."""
-        decision = self.gate.decide(self.runtime, self.pipeline, self.ai_system_id, "run")
+        decision = self.gate.decide(self.runtime, self.pipeline, self.ai_system_id, self.action)
         if not decision.allowed:
             return self._refusal(decision.refusal(), args, kwargs)
 

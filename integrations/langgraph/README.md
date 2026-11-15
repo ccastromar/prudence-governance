@@ -16,6 +16,14 @@ is reported to Prudence and sealed in Ernest under the AI system's registry id (
 compares the two). Governance context (subject, registry system id) travels in the graph
 state, so the same node runs under different identities and policies unchanged.
 
+A node is governed as the pipeline you name, with `run`. To govern a node that is really one tool
+call under the same grant AI/MCP gateways and the other adapters use, name it
+`pipeline="tool:<name>", action="tools/call"`. A state without an AI system is refused without
+asking Prudence. Wrap each graph run in `with prudence_governance.run():` so its decisions share
+one `correlationId`, and check the adapter with [`../conformance-kit`](../conformance-kit).
+Configuration: `PRUDENCE_PDP_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,
+`PRUDENCE_PDP_CLIENT_SECRET`.
+
 ## Run the demo
 
 Needs the local stack up (Prudence :8099 + OPA :8181 + Ernest :3001).

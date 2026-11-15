@@ -11,13 +11,18 @@ decision is DENY:
    audience (`prudence-api` unless Prudence is configured otherwise) a secured Prudence
    rejects the token outright with 401.
 2. A grant in OPA's data (`policy/opa/data.json`): the service account's username gets a
-   role, and the role may `run` the runtime's pipelines.
+   role, and the role may `run` the runtime's pipelines and call its tools (`tools/call` on
+   `tool:<name>`, how every adapter and gateway asks for a tool call).
 
 This script does both. It is idempotent: run it again with more pipelines to widen the
 grant. Standard library only.
 
     KEYCLOAK_ADMIN_PASSWORD=… scripts/provision-runtime.py \\
         --name langgraph-claims --pipeline claims_triage --pipeline claims_letter
+
+    # an agent whose adapter governs each tool call
+    KEYCLOAK_ADMIN_PASSWORD=… scripts/provision-runtime.py \\
+        --name crewai-claims --tool send_customer_letter --tool approve_refund
 
     # see what it would do, touching nothing
     scripts/provision-runtime.py --name langgraph-claims --pipeline claims_triage --dry-run
@@ -135,29 +140,41 @@ def provision_keycloak(kc: Keycloak, client_id: str, display: str, audience: str
     return user["username"], secret
 
 
-def grant(data: dict, subject: str, role: str, pipelines: list[str]) -> list[str]:
-    """Bind subject → role and let the role run the pipelines. Returns the pipelines added."""
+TOOL_ACTION = "tools/call"
+
+
+def grant(data: dict, subject: str, role: str, pipelines: list[str], tools: list[str] = ()) -> list[str]:
+    """Bind subject → role, let the role run the pipelines and call the tools (`tools/call` on
+    `tool:<name>`). Returns the pipelines added."""
     prudence = data.setdefault("prudence", {})
     roles = prudence.setdefault("roles_of", {}).setdefault(subject, [])
     if role not in roles:
         roles.append(role)
     perms = prudence.setdefault("role_permissions", {}).setdefault(role, [])
     added = []
-    for p in pipelines:
+    wanted = [(p, "run") for p in pipelines] + [(tool_pipeline(t), TOOL_ACTION) for t in tools]
+    for p, action in wanted:
         perm = next((x for x in perms if x.get("pipeline") == p), None)
         if perm is None:
-            perms.append({"pipeline": p, "actions": ["run"]})
+            perms.append({"pipeline": p, "actions": [action]})
             added.append(p)
-        elif "run" not in perm.setdefault("actions", []):
-            perm["actions"].append("run")
+        elif action not in perm.setdefault("actions", []):
+            perm["actions"].append(action)
             added.append(p)
     return added
+
+
+def tool_pipeline(tool: str) -> str:
+    """`tool:<name>`; a name given with the prefix already is taken as it is."""
+    return tool if tool.startswith("tool:") else f"tool:{tool}"
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Register a runtime with Prudence (Keycloak identity + OPA grant).")
     ap.add_argument("--name", required=True, help="runtime name, e.g. langgraph-claims (lowercase, digits, dashes)")
     ap.add_argument("--pipeline", action="append", default=[], help="pipeline it may run (repeatable)")
+    ap.add_argument("--tool", action="append", default=[],
+                    help="tool it may call, granted as tools/call on tool:<name> (repeatable)")
     ap.add_argument("--role", help="OPA role to grant (default: runtime-<name>)")
     ap.add_argument("--client-id", help="Keycloak client id (default: <name>-pdp)")
     ap.add_argument("--keycloak-url", default=os.getenv("KEYCLOAK_URL", "http://localhost:8081"))
@@ -171,8 +188,8 @@ def main() -> None:
 
     if not re.fullmatch(r"[a-z0-9][a-z0-9-]{1,40}", args.name):
         die("--name must be 2–41 characters: lowercase letters, digits and dashes")
-    if not args.pipeline:
-        die("give at least one --pipeline: a runtime with no grant is denied everything")
+    if not args.pipeline and not args.tool:
+        die("give at least one --pipeline or --tool: a runtime with no grant is denied everything")
     client_id = args.client_id or f"{args.name}-pdp"
     role = args.role or f"runtime-{args.name}"
     subject = f"service-account-{client_id}"  # Keycloak's username for the client's service account
@@ -182,7 +199,10 @@ def main() -> None:
     print(f"Runtime {args.name}")
     print(f"  Keycloak  {args.keycloak_url} realm {args.realm}: client {client_id}, scopes {', '.join(SCOPES)}, audience {args.audience}")
     print(f"  Subject   {subject} (the PDP takes it from the token, never from the request)")
-    print(f"  OPA       role {role} may run: {', '.join(args.pipeline)}  ({opa_path})")
+    if args.pipeline:
+        print(f"  OPA       role {role} may run: {', '.join(args.pipeline)}  ({opa_path})")
+    if args.tool:
+        print(f"  OPA       role {role} may call: {', '.join(tool_pipeline(t) for t in args.tool)}  ({opa_path})")
     if args.dry_run:
         print("Dry run: nothing changed.")
         return
@@ -194,7 +214,7 @@ def main() -> None:
         die(f"service account is {username}, expected {subject}; grant it by hand or pass --client-id")
 
     data = json.loads(opa_path.read_text())
-    added = grant(data, subject, role, args.pipeline)
+    added = grant(data, subject, role, args.pipeline, args.tool)
     opa_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
     print(f"  OPA grant updated ({len(added)} new pipeline grant(s))")
 
@@ -211,6 +231,7 @@ def main() -> None:
     print(f"       PRUDENCE_PDP_TOKEN_URL={token_url}")
     print(f"       PRUDENCE_PDP_CLIENT_ID={client_id}")
     print(f"       PRUDENCE_PDP_CLIENT_SECRET=<contents of {secret_file}>")
+    print("       PRUDENCE_PDP_URL=<Prudence's base URL>")
     print("  Guide: docs/integration/README.md")
 
 

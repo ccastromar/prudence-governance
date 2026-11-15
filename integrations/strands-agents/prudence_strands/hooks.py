@@ -5,9 +5,10 @@ Strands fires `BeforeToolCallEvent` just before each tool runs; when a callback 
 That is the gate: ALLOW leaves the event alone (the tool runs), anything else cancels it with
 the refusal.
 
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool
-nobody granted is denied, so a new tool cannot slip through ungoverned.
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool nobody
+granted is denied, so a new tool cannot slip through ungoverned.
 """
 from __future__ import annotations
 
@@ -16,7 +17,7 @@ from typing import Any, Mapping
 
 from strands.hooks import BeforeToolCallEvent, HookProvider, HookRegistry
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class PrudenceHooks(HookProvider):
@@ -47,7 +48,7 @@ class PrudenceHooks(HookProvider):
         tool = event.tool_use["name"]
         if tool in self.ungoverned:
             return
-        pipeline = self.pipelines.get(tool, tool)
+        pipeline, action = tool_target(tool, self.pipelines)
         system = self.ai_system_id if isinstance(self.ai_system_id, str) else self.ai_system_id.get(tool)
         if not system:
             # No AI system for this tool: there is nothing Prudence could have approved.
@@ -55,7 +56,7 @@ class PrudenceHooks(HookProvider):
             return
 
         # The gate is synchronous (httpx); keep the event loop free while it waits.
-        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, "run")
+        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, action)
         if not decision.allowed:
             event.cancel_tool = decision.refusal()
             return

@@ -29,7 +29,11 @@ def governed_node(fn: Callable[[dict], dict], *, pipeline: str, action: str = "r
                   subject_key: str = "subject", system_key: str = "ai_system_id") -> Callable[[dict], dict]:
     def node(state: dict) -> dict:
         subject = state[subject_key]
-        ai_system = state[system_key]
+        ai_system = state.get(system_key)
+        if not ai_system:
+            # No AI system: there is nothing Prudence could have approved, so do not ask.
+            reason = "the node has no AI system"
+            return {"gate": "DENY", "reason": reason, "output": f"⛔ Governance DENY: {reason}"}
 
         decision = gate.decide(subject, pipeline, ai_system, action)
 

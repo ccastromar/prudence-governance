@@ -56,7 +56,7 @@ async def main() -> None:
         governance = PrudenceHook(
             os.environ["AI_SYSTEM_ID"],
             gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-            pipelines={f"mcp__claims__{TOOL}": os.environ.get("PIPELINE", "send_customer_letter")},
+            pipelines={f"mcp__claims__{TOOL}": p} if (p := os.environ.get("PIPELINE", "send_customer_letter")) else None,
             evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
         )
         hooks = {"PreToolUse": [governance.matcher()]}

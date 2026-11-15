@@ -23,7 +23,14 @@ smolagents/           prudence_smolagents — a governed tool wrapper (smolagent
 claude-agent-sdk/     prudence_claude_agent — a PreToolUse hook (Claude Agent SDK)
 conformance/          real agents of every framework above, run against a real Prudence: do the
                         adapters enforce ALLOW / APPROVAL_REQUIRED / DENY / down?
+conformance-kit/      the adapter contract (contract/adapter/) as a self-contained check: it plays
+                        Prudence and the model, runs any agent command, any language
 demo-runner/          internal HTTP runner used by Prudence's visible framework demos
+
+typescript/           the same for TypeScript: @chestertown/prudence-core and adapters for the
+                        Vercel AI SDK, the OpenAI Agents SDK (JS), Mastra and LangGraph.js
+java/                 the same for Java: cc.ccmlab.prudence:prudence-core and adapters for
+                        Spring AI and LangChain4j
 ```
 
 Start with [`docs/integration/README.md`](../docs/integration/README.md): it covers registering a
@@ -32,7 +39,10 @@ underneath.
 
 Every adapter does the same two things at its framework's natural hook point: consult the
 PDP before a step runs (allow / deny / approval-required), and seal the execution in Ernest
-afterwards. The decision is sealed by Prudence itself (the PDP records every decision it
+afterwards. They all follow one [adapter contract](../contract/adapter/README.md): a tool call is
+asked as `tool:<name>` with `tools/call` (the grant AI and MCP gateways use too), configuration
+comes from the same variables (`PRUDENCE_PDP_URL`, `PRUDENCE_PDP_TOKEN_URL`, …), and
+`prudence_governance.run()` gives one agent run one `correlationId`. The decision is sealed by Prudence itself (the PDP records every decision it
 makes), so adapters never record it twice: per governed call that is one PDP call and one
 Ernest write from the agent. Adding a runtime is a new
 thin adapter, not a new core.
@@ -52,8 +62,11 @@ The browser calls Prudence with an `author` session; Prudence calls a runner wit
 private token; the runner's agents call the PDP with their framework's M2M identity. The browser
 never receives a PDP or Ernest credential. See [`demo-runner/README.md`](demo-runner/README.md).
 
-`pydantic-ai` and `langgraph` are installable packages (`pip install -e ./pydantic-ai`), each
-next to `prudence-core`.
+Every adapter is an installable package that depends on `prudence-governance` (`prudence-core`).
+Until they are published, install both from a checkout:
+`pip install -e ./prudence-core -e ./crewai` (or any other adapter). The TypeScript packages
+build with `npm install && npm run build` in [`typescript`](typescript), the Java ones with
+`mvn install` in [`java`](java).
 
 ## Qualified seals (eIDAS B2) — optional
 

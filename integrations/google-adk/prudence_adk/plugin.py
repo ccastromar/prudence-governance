@@ -4,9 +4,10 @@ ADK runs a plugin's `before_tool_callback` before each tool; when it returns a d
 is skipped and the dict becomes the tool's response. That is the gate: ALLOW returns None (the
 tool runs), anything else returns the refusal.
 
-Which pipeline a tool is governed as: `pipelines[tool.name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool
-nobody granted is denied, so a new tool cannot slip through ungoverned.
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`); a tool nobody
+granted is denied, so a new tool cannot slip through ungoverned.
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from google.adk.plugins.base_plugin import BasePlugin
 from google.adk.tools.base_tool import BaseTool
 from google.adk.tools.tool_context import ToolContext
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class PrudencePlugin(BasePlugin):
@@ -54,7 +55,7 @@ class PrudencePlugin(BasePlugin):
     ) -> dict[str, Any] | None:
         if tool.name in self.ungoverned:
             return None
-        pipeline = self.pipelines.get(tool.name, tool.name)
+        pipeline, action = tool_target(tool.name, self.pipelines)
         system = self._system_for(tool.name)
         if not system:
             # No AI system for this tool: there is nothing Prudence could have approved.
@@ -62,7 +63,7 @@ class PrudencePlugin(BasePlugin):
                     "message": f"Not permitted by governance: tool {tool.name!r} has no AI system."}
 
         # The gate is synchronous (httpx); keep the event loop free while it waits.
-        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, "run")
+        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, action)
         if not decision.allowed:
             return {"status": "denied", "decision": decision.decision, "reason": decision.reason,
                     "approver": decision.approver, "decisionId": decision.decision_id,

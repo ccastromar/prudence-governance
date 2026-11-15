@@ -18,19 +18,26 @@ def send_customer_letter(customer_id: str) -> str:
 agent = Agent(name="claims", tools=[send_customer_letter, govern(other_tool, guard)])
 ```
 
-- **Pipeline per tool:** `pipelines[tool name]`, or the tool's name.
+- **Pipeline per tool:** `tool:<tool name>` with the action `tools/call`, the grant AI and MCP
+  gateways use too (`scripts/provision-runtime.py --tool <name>`); or `pipelines[tool name]`,
+  asked with `run`.
 - **AI system:** one id for the agent, or a mapping per tool name.
 - **`govern(tool, guard)`** puts the guardrail in front of a tool you did not define.
 - **With Ernest:** pass `evidence=ErnestEvidence("https://ernest…")` so each allowed
   execution is also sealed there. Prudence compares the two sources; a run reported to Prudence
   with no evidence in Ernest shows up in Posture as `REPORTED_NOT_EVIDENCED`.
-- **Credentials:** `PRUDENCE_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,
+- **Credentials:** `PRUDENCE_PDP_URL`, `PRUDENCE_PDP_TOKEN_URL`, `PRUDENCE_PDP_CLIENT_ID`,
   `PRUDENCE_PDP_CLIENT_SECRET` (from `scripts/provision-runtime.py`), or pass a `PrudenceGate`.
+- **One flow per run:** wrap each agent run in `with prudence_governance.run():` and all its
+  decisions share one `correlationId` in Prudence and Ernest.
+- **Prove it:** [`../conformance-kit`](../conformance-kit) checks the adapter against the
+  [adapter contract](../../contract/adapter/README.md) with no Prudence and no model.
 
 The SDK attaches guardrails per tool: a tool without the guardrail is not governed. Attach it
 to every tool that acts.
 
 ```bash
+# from a checkout, until the packages are published
 pip install -e ../prudence-core -e .
 ```
 

@@ -54,7 +54,7 @@ agent = Agent(model, deps_type=GovDeps, instructions="Use your tools to do what 
 
 
 @agent.tool(name=TOOL, description=DESCRIPTION)
-@governed(pipeline=os.environ.get("PIPELINE", "send_customer_letter"))
+@governed(pipeline=os.environ.get("PIPELINE", "send_customer_letter") or None, tool=TOOL)
 def run_tool(ctx: RunContext[GovDeps], reference: str) -> str:
     """Send the standard claims letter to a customer."""
     ran.append(reference)

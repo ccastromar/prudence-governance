@@ -8,8 +8,9 @@ end the run when `stop_on_deny` is set.
 Register it after any argument-repair middleware: the framework fails closed if arguments
 change after a policy layer has seen them.
 
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ from typing import Awaitable, Callable, Mapping
 
 from agent_framework import FunctionInvocationContext, FunctionMiddleware, MiddlewareTermination
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class PrudenceMiddleware(FunctionMiddleware):
@@ -52,14 +53,14 @@ class PrudenceMiddleware(FunctionMiddleware):
         if tool in self.ungoverned:
             await call_next()
             return
-        pipeline = self.pipelines.get(tool, tool)
+        pipeline, action = tool_target(tool, self.pipelines)
         system = self.ai_system_id if isinstance(self.ai_system_id, str) else self.ai_system_id.get(tool)
         if not system:
             self._refuse(context, f"Not permitted by governance: tool {tool!r} has no AI system.")
             return
 
         # The gate is synchronous (httpx); keep the event loop free while it waits.
-        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, "run")
+        decision = await asyncio.to_thread(self.gate.decide, self.runtime, pipeline, system, action)
         if not decision.allowed:
             self._refuse(context, decision.refusal())
             return

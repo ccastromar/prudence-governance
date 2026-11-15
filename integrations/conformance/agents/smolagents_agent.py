@@ -55,7 +55,7 @@ if not GATEWAY:
     tools = govern_tools(
         [run_tool], os.environ["AI_SYSTEM_ID"],
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
-        pipelines={TOOL: os.environ.get("PIPELINE", "send_customer_letter")},
+        pipelines={TOOL: p} if (p := os.environ.get("PIPELINE", "send_customer_letter")) else None,
         evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None,
     )
 agent = ToolCallingAgent(tools=tools, model=model, max_steps=2, verbosity_level=0)

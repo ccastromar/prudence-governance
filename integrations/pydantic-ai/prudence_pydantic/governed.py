@@ -21,7 +21,7 @@ from typing import Callable
 
 from pydantic_ai import RunContext
 
-from prudence_governance import Decision, ErnestEvidence, PrudenceGate
+from prudence_governance import RUN_ACTION, Decision, ErnestEvidence, PrudenceGate, tool_target
 
 
 @dataclass
@@ -40,12 +40,27 @@ class GovernanceDenied(Exception):
         super().__init__(f"{decision.decision}: {decision.reason}")
 
 
-def governed(pipeline: str, action: str = "run", *, raise_on_deny: bool = False):
+def governed(pipeline: str | None = None, action: str | None = None, *, tool: str | None = None,
+             raise_on_deny: bool = False):
+    """Govern the decorated tool. Without `pipeline` it is governed as `tool:<name>` with the
+    action `tools/call`, the grant every other adapter and gateway uses; `<name>` is `tool`
+    (give it when you register the tool under another name, `@agent.tool(name=…)`), else the
+    function's name. With `pipeline`, as that pipeline with `action` (default `run`)."""
     def deco(fn: Callable) -> Callable:
+        if pipeline is None:
+            target, verb = tool_target(tool or fn.__name__)
+        else:
+            target, verb = pipeline, action or RUN_ACTION
+
         @functools.wraps(fn)
         def wrapper(ctx: RunContext[GovDeps], *args, **kwargs):
+            pipeline, action = target, verb
             deps: GovDeps = ctx.deps
-            decision = deps.gate.decide(deps.subject, pipeline, deps.ai_system_id, action)
+            if not deps.ai_system_id:
+                # No AI system: there is nothing Prudence could have approved, so do not ask.
+                decision = Decision("DENY", "the tool has no AI system")
+            else:
+                decision = deps.gate.decide(deps.subject, pipeline, deps.ai_system_id, action)
 
             if not decision.allowed:
                 if raise_on_deny:

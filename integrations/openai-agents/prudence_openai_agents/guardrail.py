@@ -4,8 +4,9 @@ The SDK runs a tool's input guardrails before the tool. A guardrail answers allo
 reject_content (skip the tool, tell the model why, keep the run going) or raise_exception
 (stop the run). That is the gate: ALLOW allows, anything else rejects.
 
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ from typing import Literal, Mapping
 
 from agents import FunctionTool, ToolGuardrailFunctionOutput, ToolInputGuardrail, ToolInputGuardrailData
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 def prudence_guardrail(
@@ -35,14 +36,14 @@ def prudence_guardrail(
     async def check(data: ToolInputGuardrailData) -> ToolGuardrailFunctionOutput:
         ctx = data.context
         tool = ctx.tool_name
-        pipeline = pipelines.get(tool, tool)
+        pipeline, action = tool_target(tool, pipelines)
         system = ai_system_id if isinstance(ai_system_id, str) else ai_system_id.get(tool)
         if not system:
             message = f"Not permitted by governance: tool {tool!r} has no AI system."
             info = {"decision": "DENY", "reason": "no AI system for this tool"}
         else:
             # The gate is synchronous (httpx); keep the event loop free while it waits.
-            decision = await asyncio.to_thread(gate.decide, runtime, pipeline, system, "run")
+            decision = await asyncio.to_thread(gate.decide, runtime, pipeline, system, action)
             info = {"decision": decision.decision, "reason": decision.reason,
                     "approver": decision.approver, "decisionId": decision.decision_id}
             if decision.allowed:

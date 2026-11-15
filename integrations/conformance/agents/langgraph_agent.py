@@ -68,7 +68,8 @@ else:
     from prudence_langgraph import gate_route, governed_node
 
     graph.add_node("send", governed_node(
-        send, pipeline=os.environ.get("PIPELINE", "send_customer_letter"),
+        send, pipeline=os.environ.get("PIPELINE", "send_customer_letter") or f"tool:{TOOL}",
+        action="run" if os.environ.get("PIPELINE", "send_customer_letter") else "tools/call",
         gate=PrudenceGate(os.environ["PRUDENCE_URL"], timeout=3.0),
         evidence=ErnestEvidence(os.environ["ERNEST_URL"]) if os.getenv("ERNEST_URL") else None))
     graph.add_node("confirm", lambda state: {"output": state["output"] + "; confirmed"})

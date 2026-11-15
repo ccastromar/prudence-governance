@@ -7,8 +7,9 @@ wrapped tool; anything else returns the refusal as the tool's result. It works t
 `ToolCallingAgent` and for a `CodeAgent`, whose generated code calls the tool as a function.
 
 Wrap every tool you give the agent (`govern_tools`); a tool left unwrapped is not governed.
-Which pipeline a tool is governed as: `pipelines[tool name]` when given, otherwise the tool's
-name. Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
+Which pipeline a tool is governed as: `pipelines[tool name]` (action `run`) when given,
+otherwise `tool:<tool name>` (action `tools/call`), the same grant an AI or MCP gateway uses.
+Grant the runtime those pipelines in Prudence (`scripts/provision-runtime.py`).
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from typing import Any, Iterable, Mapping
 
 from smolagents import Tool
 
-from prudence_governance import ErnestEvidence, PrudenceGate
+from prudence_governance import ErnestEvidence, PrudenceGate, tool_target
 
 
 class GovernedTool(Tool):
@@ -35,7 +36,8 @@ class GovernedTool(Tool):
         runtime: str = "smolagents",
     ):
         """`ai_system_id`: the registry id the agent acts as when it calls this tool; None
-        denies every call. `pipeline`: what the tool is governed as (default: the tool's name).
+        denies every call. `pipeline`: a pipeline of your own to govern the tool as (action
+        `run`); default `tool:<name>` (action `tools/call`).
         `evidence`: with Ernest in the suite, also seal each allowed execution there."""
         self.name = tool.name
         self.description = tool.description
@@ -46,7 +48,8 @@ class GovernedTool(Tool):
         self.tool = tool
         self.gate = gate or PrudenceGate()
         self.ai_system_id = ai_system_id
-        self.pipeline = pipeline or tool.name
+        # A pipeline of the integrator's own is run; otherwise this is a call to tool:<name>.
+        self.pipeline, self.action = tool_target(tool.name, {tool.name: pipeline} if pipeline else None)
         self.evidence = evidence
         self.runtime = runtime
 
@@ -54,7 +57,7 @@ class GovernedTool(Tool):
         if not self.ai_system_id:
             # No AI system for this tool: there is nothing Prudence could have approved.
             return f"Not permitted by governance: tool {self.name!r} has no AI system."
-        decision = self.gate.decide(self.runtime, self.pipeline, self.ai_system_id, "run")
+        decision = self.gate.decide(self.runtime, self.pipeline, self.ai_system_id, self.action)
         if not decision.allowed:
             return decision.refusal()
 
