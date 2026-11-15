@@ -17,14 +17,18 @@ OPA starts with no grant for any runtime (stack-sso.sh). This run:
 5. with Ernest in the stack: checks the decisions and executions were sealed there, and that
    Prudence's execution-source check flags a runtime that reported without evidence.
 
-Needs scripts/keycloak.sh and stack-sso.sh running, and the per-framework environments (README.md).
-Uses the dev realm's test credentials only (admin/admin, alice/alice). Exits 1 if any case fails.
+Every framework run.py covers takes part: twelve in Python, four in TypeScript, two in Java
+(`--lang` for a subset). Needs scripts/keycloak.sh and stack-sso.sh running, the per-framework
+Python environments and the built TypeScript and Java agents (README.md). Uses the dev realm's test
+credentials only (admin/admin, alice/alice). Exits 1 if any case fails.
 """
 from __future__ import annotations
 
+import argparse
 import base64
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -36,6 +40,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from fake_llm import serve  # noqa: E402
+from run import FRAMEWORKS as AGENTS, SETUP  # noqa: E402  (the agents, one command per framework)
 
 REPO = HERE.parent.parent
 PRUDENCE = "http://127.0.0.1:18099"
@@ -43,19 +48,14 @@ KEYCLOAK = os.getenv("KEYCLOAK_URL", "http://localhost:8081")
 REALM = "chestertown"
 TOKEN_URL = f"{KEYCLOAK}/realms/{REALM}/protocol/openid-connect/token"
 STATE = HERE / ".sso"
-FRAMEWORKS = [  # (label, runtime to register, venv, agent script, runtime name the adapter reports)
-    ("Pydantic AI", "conformance-pydantic", ".venv-pydantic", "pydantic_agent.py", "pydantic-ai"),
-    ("LangGraph", "conformance-langgraph", ".venv-langgraph", "langgraph_agent.py", "langgraph"),
-    ("Google ADK", "conformance-adk", ".venv-adk", "adk_agent.py", "google-adk"),
-    ("OpenAI Agents SDK", "conformance-openai", ".venv-openai", "openai_agent.py", "openai-agents"),
-    ("MS Agent Framework", "conformance-maf", ".venv-maf", "maf_agent.py", "agent-framework"),
-    ("Strands Agents", "conformance-strands", ".venv-strands", "strands_agent.py", "strands-agents"),
-    ("LangChain", "conformance-langchain", ".venv-langchain", "langchain_agent.py", "langchain"),
-    ("Claude Agent SDK", "conformance-claude", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),
-    ("CrewAI", "conformance-crewai", ".venv-crewai", "crewai_agent.py", "crewai"),
-    ("Agno", "conformance-agno", ".venv-agno", "agno_agent.py", "agno"),
-    ("LlamaIndex", "conformance-llamaindex", ".venv-llamaindex", "llamaindex_agent.py", "llamaindex"),
-    ("smolagents", "conformance-smolagents", ".venv-smolagents", "smolagents_agent.py", "smolagents"),
+# The runtime each framework is registered as (its Keycloak client is `<runtime>-pdp`). The Python
+# names predate the others and stay as they were, so existing local clients are reused.
+REGISTERED = {"pydantic-ai": "conformance-pydantic", "google-adk": "conformance-adk",
+              "openai-agents": "conformance-openai", "agent-framework": "conformance-maf",
+              "strands-agents": "conformance-strands", "claude-agent-sdk": "conformance-claude"}
+FRAMEWORKS = [  # (label, language, runtime to register, agent command, runtime name the adapter reports)
+    (label, lang, REGISTERED.get(reported, f"conformance-{reported}"), command, reported)
+    for label, lang, command, reported in AGENTS
 ]
 MCP_RUNTIME = "conformance-mcp"
 
@@ -140,9 +140,13 @@ def provision(runtime: str, pipeline: str) -> str:
     return secret_file.read_text().strip()
 
 
-def run_agent(venv: str, script: str, env: dict) -> dict:
-    proc = subprocess.run([str(HERE / venv / "bin" / "python"), "-I", str(HERE / "agents" / script)],
-                          env={**os.environ, **env}, capture_output=True, text=True, timeout=180)
+def run_agent(command: list[str], env: dict) -> dict:
+    # PRUDENCE_PDP_URL is what the TypeScript and Java cores read first.
+    env = {**env, "PRUDENCE_PDP_URL": env.get("PRUDENCE_URL", PRUDENCE)}
+    try:
+        proc = subprocess.run(command, env={**os.environ, **env}, capture_output=True, text=True, timeout=180)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"error": str(e)}
     for line in reversed(proc.stdout.splitlines()):
         if line.startswith("{"):
             return json.loads(line)
@@ -150,14 +154,24 @@ def run_agent(venv: str, script: str, env: dict) -> dict:
 
 
 def main() -> int:
+    global FRAMEWORKS
+    ap = argparse.ArgumentParser(description="Conformance with real login, an MCP gateway and Ernest.")
+    ap.add_argument("--lang", action="append", choices=sorted(SETUP), help="only these languages (repeatable)")
+    langs = set(ap.parse_args().lang or SETUP)
+    FRAMEWORKS = [f for f in FRAMEWORKS if f[1] in langs]
+    if not any(f[4] == "agent-framework" for f in FRAMEWORKS):
+        print("the Prudence × Ernest negative control runs on the MS Agent Framework agent: include python")
+        return 1
     if call("GET", "/api/registry/systems")[0] != 401:
         print(f"Expected the secured Prudence on {PRUDENCE} (start stack-sso.sh).")
         return 1
     ernest = (STATE / "ernest-url").read_text().strip() if (STATE / "ernest-url").exists() else ""
     with_ernest = bool(ernest) and call("GET", f"{ernest}/api/stats")[0] == 200
-    for _, _, venv, _, _ in FRAMEWORKS:
-        if not (HERE / venv / "bin" / "python").exists():
-            print(f"missing {venv}: see README.md (one environment per framework)")
+    for label, lang, _, command, _ in FRAMEWORKS:
+        artifact = Path(command[0] if lang == "python" else command[2] if lang == "java" else command[-1])
+        if not artifact.exists() or (lang != "python" and not shutil.which(command[0])):
+            print(f"{label}: missing {artifact if not artifact.exists() else command[0]}. {SETUP[lang]}, "
+                  f"or leave {lang} out with --lang.")
             return 1
 
     rows: list[tuple[str, str, str, str]] = []
@@ -166,7 +180,7 @@ def main() -> int:
         rows.append((group, case, "PASS" if ok else "FAIL", detail))
 
     # 1. Runtimes, registered as adopters would. OPA reloads the folder it watches.
-    secrets = {runtime: provision(runtime, "send_customer_letter") for _, runtime, _, _, _ in FRAMEWORKS}
+    secrets = {runtime: provision(runtime, "send_customer_letter") for _, _, runtime, _, _ in FRAMEWORKS}
     mcp_secret = provision(MCP_RUNTIME, "tool:send_customer_letter")
     time.sleep(2)
 
@@ -181,7 +195,7 @@ def main() -> int:
 
     # 3. Each framework on its own runtime's credentials.
     _, llm_url = serve()
-    for label, runtime, venv, script, reported in FRAMEWORKS:
+    for label, _, runtime, command, reported in FRAMEWORKS:
         client_id, secret = f"{runtime}-pdp", secrets[runtime]
         subject = f"service-account-{client_id}"
         env = {"PRUDENCE_URL": PRUDENCE, "LLM_URL": llm_url, "PRUDENCE_PDP_TOKEN_URL": TOKEN_URL,
@@ -192,28 +206,28 @@ def main() -> int:
         check(label, "token names the runtime", c.get("preferred_username") == subject,
               f"preferred_username={c.get('preferred_username')}, scope={c.get('scope')}")
 
-        out = run_agent(venv, script, {**env, "AI_SYSTEM_ID": approved, "PIPELINE": "send_customer_letter"})
+        out = run_agent(command, {**env, "AI_SYSTEM_ID": approved, "PIPELINE": "send_customer_letter"})
         mine = [r for r in api("GET", f"/api/executions?aiSystemId={approved}", alice) if r.get("runtime") == reported]
         check(label, "ALLOW", out.get("toolRan") is True and bool(mine) and mine[0].get("decisionStatus") == "ALLOW",
               f"tool ran: {out.get('toolRan')}; execution recorded with decision "
               f"{mine[0].get('decisionStatus') if mine else 'NONE'}" + (f"; {out['error'][:80]}" if "error" in out else ""))
 
-        out = run_agent(venv, script, {**env, "AI_SYSTEM_ID": pending, "PIPELINE": "send_customer_letter"})
+        out = run_agent(command, {**env, "AI_SYSTEM_ID": pending, "PIPELINE": "send_customer_letter"})
         check(label, "APPROVAL_REQUIRED", out.get("toolRan") is False and "APPROVAL_REQUIRED" in (out.get("answer") or ""),
               f"tool ran: {out.get('toolRan')}; the model was told APPROVAL_REQUIRED")
 
-        out = run_agent(venv, script, {**env, "AI_SYSTEM_ID": approved, "PIPELINE": "not_granted_pipeline"})
+        out = run_agent(command, {**env, "AI_SYSTEM_ID": approved, "PIPELINE": "not_granted_pipeline"})
         check(label, "DENY (not granted)", out.get("toolRan") is False and "DENY" in (out.get("answer") or ""),
               f"tool ran: {out.get('toolRan')}; the model was told DENY")
 
-        out = run_agent(venv, script, {**env, "PRUDENCE_PDP_CLIENT_SECRET": "wrong",
+        out = run_agent(command, {**env, "PRUDENCE_PDP_CLIENT_SECRET": "wrong",
                                        "AI_SYSTEM_ID": approved, "PIPELINE": "send_customer_letter"})
         check(label, "wrong client secret", out.get("toolRan") is False,
               f"tool ran: {out.get('toolRan')} (no token, so the gate fails closed)")
 
     # The negative control for step 5: one allowed run that reports to Prudence, seals nothing.
-    label, runtime, venv, script, _ = next(f for f in FRAMEWORKS if f[4] == "agent-framework")
-    run_agent(venv, script, {"PRUDENCE_URL": PRUDENCE, "LLM_URL": llm_url, "PRUDENCE_PDP_TOKEN_URL": TOKEN_URL,
+    label, _, runtime, command, _ = next(f for f in FRAMEWORKS if f[4] == "agent-framework")
+    run_agent(command, {"PRUDENCE_URL": PRUDENCE, "LLM_URL": llm_url, "PRUDENCE_PDP_TOKEN_URL": TOKEN_URL,
                              "PRUDENCE_PDP_CLIENT_ID": f"{runtime}-pdp", "PRUDENCE_PDP_CLIENT_SECRET": secrets[runtime],
                              "ERNEST_URL": "", "AI_SYSTEM_ID": unsealed, "PIPELINE": "send_customer_letter"})
 
@@ -243,9 +257,15 @@ def main() -> int:
     status, out = evaluate({"type": "tool", "id": "delete_customer", "properties": {"aiSystemId": approved}})
     check("MCP gateway", "tool not granted", status == 200 and isinstance(out, dict) and out.get("decision") is False,
           f"{status}, decision={out.get('decision') if isinstance(out, dict) else out}")
+    # No AI system sent: the PDP takes the one system the agent acts for, and never guesses one.
+    # The gateway's agent acts for none, so the call is refused (since the subject model, a 200
+    # with decision false rather than a 400).
     status, out = evaluate({"type": "tool", "id": "send_customer_letter"})
-    check("MCP gateway", "tool mapped to no AI system", status == 400,
-          f"{status}: {(out.get('error') or {}).get('message', '')[:70] if isinstance(out, dict) else out}")
+    ctx = out.get("context", {}) if isinstance(out, dict) else {}
+    check("MCP gateway", "tool with no AI system", status == 200 and isinstance(out, dict) and out.get("decision") is False
+          and ctx.get("prudenceDecision") != "ALLOW",
+          f"{status}, decision={out.get('decision') if isinstance(out, dict) else out}, "
+          f"Prudence {ctx.get('prudenceDecision')}: {str(ctx.get('reason') or '')[:60]}")
 
     # 5. Ernest: the same story in the evidence.
     if with_ernest:

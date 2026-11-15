@@ -1,22 +1,69 @@
 {
   "prudence": {
     "roles_of": {
-      "pydantic-ai": ["conformance-runtime"],
-      "langgraph": ["conformance-runtime"],
-      "google-adk": ["conformance-runtime"],
-      "openai-agents": ["conformance-runtime"],
-      "agent-framework": ["conformance-runtime"],
-      "strands-agents": ["conformance-runtime"],
-      "langchain": ["conformance-runtime"],
-      "claude-agent-sdk": ["conformance-runtime"],
-      "crewai": ["conformance-runtime"],
-      "agno": ["conformance-runtime"],
-      "llamaindex": ["conformance-runtime"],
-      "smolagents": ["conformance-runtime"]
+      "pydantic-ai": [
+        "conformance-runtime"
+      ],
+      "langgraph": [
+        "conformance-runtime"
+      ],
+      "google-adk": [
+        "conformance-runtime"
+      ],
+      "openai-agents": [
+        "conformance-runtime"
+      ],
+      "agent-framework": [
+        "conformance-runtime"
+      ],
+      "strands-agents": [
+        "conformance-runtime"
+      ],
+      "langchain": [
+        "conformance-runtime"
+      ],
+      "claude-agent-sdk": [
+        "conformance-runtime"
+      ],
+      "crewai": [
+        "conformance-runtime"
+      ],
+      "agno": [
+        "conformance-runtime"
+      ],
+      "llamaindex": [
+        "conformance-runtime"
+      ],
+      "smolagents": [
+        "conformance-runtime"
+      ],
+      "ai-sdk": [
+        "conformance-runtime"
+      ],
+      "openai-agents-js": [
+        "conformance-runtime"
+      ],
+      "mastra": [
+        "conformance-runtime"
+      ],
+      "langgraph-js": [
+        "conformance-runtime"
+      ],
+      "spring-ai": [
+        "conformance-runtime"
+      ],
+      "langchain4j": [
+        "conformance-runtime"
+      ]
     },
     "role_permissions": {
       "conformance-runtime": [
-        { "pipeline": "send_customer_letter", "actions": ["run"] }
+        {
+          "pipeline": "send_customer_letter",
+          "actions": [
+            "run"
+          ]
+        }
       ]
     }
   }

@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 """Conformance run: do the framework adapters really enforce Prudence's decisions?
 
-For each framework in FRAMEWORKS (Pydantic AI, LangGraph, Google ADK, OpenAI Agents SDK, Microsoft Agent Framework,
-Strands, LangChain, Claude Agent SDK, CrewAI, Agno, LlamaIndex, smolagents) a
-real agent of that framework, with one tool and a scripted model (fake_llm.py), asks to send a letter. Four
-cases each:
+For each framework in FRAMEWORKS a real agent of that framework, with one tool and a scripted model
+(fake_llm.py), asks to send a letter: twelve in Python (Pydantic AI, LangGraph, Google ADK, OpenAI
+Agents SDK, Microsoft Agent Framework, Strands, LangChain, Claude Agent SDK, CrewAI, Agno,
+LlamaIndex, smolagents), four in TypeScript (Vercel AI SDK, OpenAI Agents JS, Mastra, LangGraph.js)
+and two in Java (Spring AI, LangChain4j). Four cases each:
 
   ALLOW              approved system, granted pipeline  -> the tool runs and the run is reported
   APPROVAL_REQUIRED  high-risk system awaiting approval -> the tool does not run
   DENY               pipeline the runtime was not granted -> the tool does not run
   PRUDENCE DOWN      Prudence unreachable                -> the tool does not run (fail closed)
 
-Needs the stack from stack.sh (Prudence :18099, OPA :18181) and the per-framework environments
-(setup in README.md). Standard library only; exits 1 if any case fails.
+Needs the stack from stack.sh (Prudence :18099, OPA :18181), the per-framework Python
+environments, and the built TypeScript and Java agents (setup in README.md). Standard library only;
+exits 1 if any case fails.
 
-    integrations/conformance/run.py
+    integrations/conformance/run.py                          # all three languages
+    integrations/conformance/run.py --lang python --lang java
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -31,20 +36,41 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from fake_llm import serve  # noqa: E402
 PRUDENCE = os.getenv("PRUDENCE_URL", "http://127.0.0.1:18099")
-FRAMEWORKS = [  # (label, venv, agent script, runtime name the adapter reports)
-    ("Pydantic AI", ".venv-pydantic", "pydantic_agent.py", "pydantic-ai"),
-    ("LangGraph", ".venv-langgraph", "langgraph_agent.py", "langgraph"),
-    ("Google ADK", ".venv-adk", "adk_agent.py", "google-adk"),
-    ("OpenAI Agents SDK", ".venv-openai", "openai_agent.py", "openai-agents"),
-    ("MS Agent Framework", ".venv-maf", "maf_agent.py", "agent-framework"),
-    ("Strands Agents", ".venv-strands", "strands_agent.py", "strands-agents"),
-    ("LangChain", ".venv-langchain", "langchain_agent.py", "langchain"),
-    ("Claude Agent SDK", ".venv-claude", "claude_agent.py", "claude-agent-sdk"),
-    ("CrewAI", ".venv-crewai", "crewai_agent.py", "crewai"),
-    ("Agno", ".venv-agno", "agno_agent.py", "agno"),
-    ("LlamaIndex", ".venv-llamaindex", "llamaindex_agent.py", "llamaindex"),
-    ("smolagents", ".venv-smolagents", "smolagents_agent.py", "smolagents"),
+TS_AGENTS = HERE.parent / "typescript" / "conformance" / "dist"
+JAVA_JAR = HERE.parent / "java" / "conformance" / "target" / "prudence-java-conformance.jar"
+NODE = os.getenv("NODE", "node")
+JAVA = os.getenv("JAVA", "java")
+
+
+def python(venv: str, script: str) -> list[str]:
+    return [str(HERE / venv / "bin" / "python"), "-I", str(HERE / "agents" / script)]
+
+
+FRAMEWORKS = [  # (label, language, command, runtime name the adapter reports)
+    ("Pydantic AI", "python", python(".venv-pydantic", "pydantic_agent.py"), "pydantic-ai"),
+    ("LangGraph", "python", python(".venv-langgraph", "langgraph_agent.py"), "langgraph"),
+    ("Google ADK", "python", python(".venv-adk", "adk_agent.py"), "google-adk"),
+    ("OpenAI Agents SDK", "python", python(".venv-openai", "openai_agent.py"), "openai-agents"),
+    ("MS Agent Framework", "python", python(".venv-maf", "maf_agent.py"), "agent-framework"),
+    ("Strands Agents", "python", python(".venv-strands", "strands_agent.py"), "strands-agents"),
+    ("LangChain", "python", python(".venv-langchain", "langchain_agent.py"), "langchain"),
+    ("Claude Agent SDK", "python", python(".venv-claude", "claude_agent.py"), "claude-agent-sdk"),
+    ("CrewAI", "python", python(".venv-crewai", "crewai_agent.py"), "crewai"),
+    ("Agno", "python", python(".venv-agno", "agno_agent.py"), "agno"),
+    ("LlamaIndex", "python", python(".venv-llamaindex", "llamaindex_agent.py"), "llamaindex"),
+    ("smolagents", "python", python(".venv-smolagents", "smolagents_agent.py"), "smolagents"),
+    ("Vercel AI SDK", "typescript", [NODE, str(TS_AGENTS / "ai-sdk.js")], "ai-sdk"),
+    ("OpenAI Agents JS", "typescript", [NODE, str(TS_AGENTS / "openai-agents.js")], "openai-agents-js"),
+    ("Mastra", "typescript", [NODE, str(TS_AGENTS / "mastra.js")], "mastra"),
+    ("LangGraph.js", "typescript", [NODE, str(TS_AGENTS / "langgraph.js")], "langgraph-js"),
+    ("Spring AI", "java", [JAVA, "-jar", str(JAVA_JAR), "spring-ai"], "spring-ai"),
+    ("LangChain4j", "java", [JAVA, "-jar", str(JAVA_JAR), "langchain4j"], "langchain4j"),
 ]
+SETUP = {  # what to do when a language's agents are missing
+    "python": "create the per-framework environments (README.md)",
+    "typescript": "npm install && npm run build in integrations/typescript",
+    "java": "mvn install -DskipTests in integrations/java (JDK 17+)",
+}
 
 
 def api(method: str, path: str, body=None):
@@ -88,9 +114,11 @@ def register(name: str, tier: str) -> str:
     return system["id"]
 
 
-def run_agent(venv: str, script: str, env: dict) -> dict:
-    proc = subprocess.run([str(HERE / venv / "bin" / "python"), "-I", str(HERE / "agents" / script)],
-                          env={**os.environ, **env}, capture_output=True, text=True, timeout=180)
+def run_agent(command: list[str], env: dict) -> dict:
+    try:
+        proc = subprocess.run(command, env={**os.environ, **env}, capture_output=True, text=True, timeout=180)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return {"error": str(e)}
     for line in reversed(proc.stdout.splitlines()):
         if line.startswith("{"):
             return json.loads(line)
@@ -103,14 +131,22 @@ def executions(system: str, runtime: str) -> list:
 
 
 def main() -> int:
+    ap = argparse.ArgumentParser(description="Run every framework's agent against the real Prudence and OPA.")
+    ap.add_argument("--lang", action="append", choices=sorted(SETUP), help="only these languages (repeatable)")
+    langs = set(ap.parse_args().lang or SETUP)
+    frameworks = [f for f in FRAMEWORKS if f[1] in langs]
     try:
         api("GET", "/api/registry/systems")
     except Exception as e:  # noqa: BLE001
         print(f"Prudence is not answering at {PRUDENCE} ({e}). Start integrations/conformance/stack.sh first.")
         return 1
-    for _, venv, _, _ in FRAMEWORKS:
-        if not (HERE / venv / "bin" / "python").exists():
-            print(f"missing {venv}: see README.md (one environment per framework)")
+    for label, lang, command, _ in frameworks:
+        # The venv's interpreter, the built TypeScript agent, or the Java agents' jar.
+        artifact = Path(command[0] if lang == "python" else command[2] if lang == "java" else command[-1])
+        program = command[0]
+        if not artifact.exists() or (lang != "python" and not shutil.which(program)):
+            print(f"{label}: missing {artifact if not artifact.exists() else program}. {SETUP[lang]}, "
+                  f"or leave {lang} out with --lang.")
             return 1
 
     _, llm_url = serve()
@@ -126,11 +162,12 @@ def main() -> int:
         ("PRUDENCE DOWN", approved, "send_customer_letter", "http://127.0.0.1:9", "DENY", False),
     ]
     rows, failures = [], 0
-    for label, venv, script, runtime in FRAMEWORKS:
+    for label, _, command, runtime in frameworks:
         for case, system, pipeline, url, expected, should_run in cases:
             before = len(executions(system, runtime)) if should_run else 0
-            out = run_agent(venv, script, {"PRUDENCE_URL": url, "LLM_URL": llm_url,
-                                           "AI_SYSTEM_ID": system, "PIPELINE": pipeline})
+            # PRUDENCE_PDP_URL is what the TypeScript and Java cores read first.
+            out = run_agent(command, {"PRUDENCE_URL": url, "PRUDENCE_PDP_URL": url, "LLM_URL": llm_url,
+                                      "AI_SYSTEM_ID": system, "PIPELINE": pipeline})
             if "error" in out:
                 ok, detail = False, f"agent failed: {out['error'][:90]}"
             else:

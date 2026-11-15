@@ -18,6 +18,12 @@ the tool, so whether the tool runs depends only on governance. No model, no API 
 | Agno | `agents/agno_agent.py` (`OpenAILike`) | `prudence_agno.PrudenceToolHook` |
 | LlamaIndex | `agents/llamaindex_agent.py` (`FunctionAgent`, `OpenAILike`) | `prudence_llamaindex.govern_tools` |
 | smolagents | `agents/smolagents_agent.py` (`ToolCallingAgent`) | `prudence_smolagents.govern_tools` |
+| Vercel AI SDK | `../typescript/conformance/src/ai-sdk.ts` (`generateText`) | `@chestertown/prudence-ai-sdk` `governTools` |
+| OpenAI Agents JS | `../typescript/conformance/src/openai-agents.ts` (Chat Completions) | `@chestertown/prudence-openai-agents` `prudenceGuardrail` |
+| Mastra | `../typescript/conformance/src/mastra.ts` (`Agent`) | `@chestertown/prudence-mastra` `prudenceHooks` |
+| LangGraph.js | `../typescript/conformance/src/langgraph.ts` (`createReactAgent`) | `@chestertown/prudence-langgraph` `governTools` |
+| Spring AI | `../java/conformance/…/SpringAiAgent.java` (`ChatClient`) | `prudence-spring-ai` `PrudenceTools.govern` |
+| LangChain4j | `../java/conformance/…/LangChain4jAgent.java` (`AiServices`) | `prudence-langchain4j` `PrudenceTools.govern` |
 
 The Claude Agent SDK agent points its CLI at the scripted model's Anthropic Messages endpoint
 (`ANTHROPIC_BASE_URL`), with the CLI's built-in tools off, no user or project settings and a
@@ -44,14 +50,19 @@ cd integrations/conformance
 for f in pydantic langgraph adk openai maf strands langchain claude crewai agno llamaindex smolagents; do
   python3.13 -m venv .venv-$f && .venv-$f/bin/pip install -r requirements-$f.txt
 done
+(cd ../typescript && npm install && npm run build)    # Node 22+
+(cd ../java && mvn -q install -DskipTests)            # JDK 17+
 ```
 
 Then, in two terminals:
 
 ```bash
 ./stack.sh     # OPA :18181 with opa-data.json, Prudence :18099 (dev, throw-away H2)
-./run.py       # registers two AI systems, runs the 48 cases, prints the table
+./run.py       # registers two AI systems, runs the 72 cases, prints the table
 ```
+
+`./run.py --lang python` (or `typescript`, `java`, repeatable) runs one language's agents only.
+`NODE` and `JAVA` choose the interpreters.
 
 `stack.sh` leaves your own dev Prudence (:8099), its database and `policy/opa/data.json`
 alone. It runs without Ernest: decisions still come back, and their evidence waits in
@@ -63,7 +74,8 @@ The second run covers the tokens.
 
 ## With real login, an MCP gateway and Ernest
 
-`run-sso.py` takes each framework through what an adopter does, against Prudence in its secured
+`run-sso.py` takes each framework (the same eighteen, Python, TypeScript and Java; `--lang` for a
+subset) through what an adopter does, against Prudence in its secured
 configuration (Keycloak JWTs, PostgreSQL, the production start checks), with Ernest in the loop:
 
 1. `scripts/provision-runtime.py` registers one runtime per framework and one MCP gateway
@@ -76,7 +88,7 @@ configuration (Keycloak JWTs, PostgreSQL, the production start checks), with Ern
 |---|---|
 | each framework | the token names the runtime; ALLOW runs the tool and is recorded citing an ALLOW decision; APPROVAL_REQUIRED and an ungranted pipeline do not run it; a wrong client secret fails closed |
 | Prudence | no token: 401; a person's token: 403 |
-| MCP gateway (AuthZEN) | granted tool on an approved system: `true`; system awaiting approval: `false` with the approver; tool not granted: `false`; tool mapped to no AI system: 400 |
+| MCP gateway (AuthZEN) | granted tool on an approved system: `true`; system awaiting approval: `false` with the approver; tool not granted: `false`; tool with no AI system: `false` (the agent acts for none; never guessed) |
 | Ernest | one execution per framework sealed under the system; the decisions sealed |
 | Prudence × Ernest | no source mismatch for the system both were told about; a run reported without evidence is flagged `REPORTED_NOT_EVIDENCED` |
 
