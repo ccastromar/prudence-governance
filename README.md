@@ -33,7 +33,7 @@ The three form a closed control loop: **decide → enforce → prove → oversee
 |---|---|
 | `src/`, `ui/` | Spring Boot backend and React console |
 | `policy/opa/` | OPA/Rego policy bundle (the authorization half of the PDP) |
-| `integrations/` | Python adapters for 12 agent frameworks (LangGraph, LangChain, CrewAI, OpenAI Agents, Claude Agent SDK and more) on a shared `prudence-core`, plus their conformance suite and the demo runner |
+| `integrations/` | Adapters for 18 agent frameworks: 12 in Python (LangGraph, LangChain, CrewAI, OpenAI Agents, Claude Agent SDK and more) on a shared `prudence-core`, 4 in TypeScript (`integrations/typescript/`) and 2 in Java (`integrations/java/`), plus the conformance kit, the conformance suite and the demo runner |
 | `docs/integration/` | How to connect any orchestrator to Prudence: register it, ask, report, keep the evidence |
 | `contract/governance/` | Governance functions v1: the contract AOS, Prudence and Ernest authorize by, with its default model, test vectors, organization templates and the `ct-model` tool |
 | `contract/decision/` | Decision API v1 as test vectors: when a gate may run a step, what a runtime does with each report answer, what Prudence must answer. Prudence, AOS and prudence-core run them |
