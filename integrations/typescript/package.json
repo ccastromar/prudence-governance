@@ -1,0 +1,27 @@
+{
+  "name": "prudence-typescript-integrations",
+  "private": true,
+  "description": "Prudence governance for TypeScript agent frameworks: the core and one adapter per framework.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "workspaces": [
+    "prudence-core",
+    "ai-sdk",
+    "openai-agents",
+    "mastra",
+    "langgraph",
+    "conformance"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write \"*/src/**/*.ts\"",
+    "format:check": "prettier --check \"*/src/**/*.ts\""
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}

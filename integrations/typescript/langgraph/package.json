@@ -1,0 +1,42 @@
+{
+  "name": "@chestertown/prudence-langgraph",
+  "version": "0.1.0",
+  "description": "Prudence governance for LangGraph.js: governed tools for ToolNode and agents, and a governed node.",
+  "license": "Apache-2.0",
+  "author": "Carlos Castro Martos",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@chestertown/prudence-core": "0.1.0"
+  },
+  "peerDependencies": {
+    "@langchain/core": "^1.3.4",
+    "@langchain/langgraph": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "~5.9.3",
+    "@langchain/core": "^1.4.1",
+    "@langchain/langgraph": "^1.7.4",
+    "zod": "^4.1.8"
+  }
+}
