@@ -109,6 +109,54 @@ jobs:
       - name: Compile
         run: python -m compileall -q -x '/\.venv/' integrations
 
+  typescript-adapters:
+    name: TypeScript adapters (format and build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: integrations/typescript/package-lock.json
+
+      # The workspace: @chestertown/prudence-core, the four adapters and the conformance agents.
+      - name: Install dependencies
+        working-directory: integrations/typescript
+        run: npm ci --ignore-scripts
+
+      - name: Check formatting
+        working-directory: integrations/typescript
+        run: npm run format:check
+
+      # Type-checks every package against the frameworks' own types and emits them.
+      - name: Type-check and build
+        working-directory: integrations/typescript
+        run: npm run build
+
+  java-adapters:
+    name: Java adapters (build and format)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # The libraries target Java 17 (maven.compiler.release); google-java-format needs a newer JDK.
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: integrations/java/**/pom.xml
+
+      # prudence-core, the Spring AI and LangChain4j adapters and the conformance agents.
+      - name: Build and check formatting
+        run: mvn -B -ntp -f integrations/java/pom.xml verify spotless:check
+
   contract:
     name: Contracts (test vectors)
     runs-on: ubuntu-latest
