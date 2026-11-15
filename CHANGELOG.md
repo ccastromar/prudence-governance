@@ -6,6 +6,40 @@ The format follows the spirit of Keep a Changelog, and Prudence uses semantic ve
 
 ## [Unreleased]
 
+### Added
+
+- Adapter contract (`contract/adapter/`) and a conformance kit (`integrations/conformance-kit/`):
+  any adapter, in any language, can show it follows the same rules as ours, with no Prudence and
+  no model.
+- `prudence_governance.run()`: every decision of one agent run carries the same `correlationId`.
+- `scripts/provision-runtime.py --tool <name>` grants `tools/call` on `tool:<name>`.
+- TypeScript: `@chestertown/prudence-core` (gate, report, Ernest evidence, `run()`, the same
+  variables and rules as the Python core) and adapters for the Vercel AI SDK, the OpenAI Agents SDK
+  (JS), Mastra and LangGraph.js, with an agent per framework for the conformance kit
+  (`integrations/typescript/`).
+- Java: `cc.ccmlab.prudence:prudence-core` (the same rules and variables) and adapters for Spring AI
+  (governed `ToolCallback`s) and LangChain4j (governed `ToolExecutor`s and `ToolProvider`s), with an
+  agent per framework for the conformance kit (`integrations/java/`).
+- The conformance run against a real Prudence and OPA (`integrations/conformance/run.py`) covers the
+  TypeScript and Java agents too: eighteen frameworks, 72 cases (`--lang` for one language). So does
+  the run with real login, an MCP gateway and Ernest (`run-sso.py`).
+
+### Changed
+
+- OPA grants AOS's runtime `pipeline_transfer_reviewed`, an AOS pipeline whose remote compliance
+  agent makes it an AI system (it runs only with an approved system behind it).
+- Adapters ask for a tool call as `tool:<name>` with the action `tools/call`, the same grant the
+  AI and MCP gateways use, unless the tool is mapped to a pipeline (then `run`). Grants written
+  for the bare tool name need the prefix, or a `pipelines` mapping.
+- The Claude Agent SDK adapter names an MCP tool without its `mcp__<server>__` prefix
+  (`mcp__claims__send_customer_letter` is asked as `tool:send_customer_letter`), as the gateway
+  does. Mappings take either name; the full one wins.
+- Every adapter declares `prudence-governance` as a dependency, and the core reads
+  `PRUDENCE_PDP_URL` (as AOS does) before `PRUDENCE_URL`.
+- The Pydantic AI and LangGraph adapters refuse a tool or node with no AI system without asking
+  Prudence, like the other ten.
+- The integration guide configures an AuthZEN MCP gateway with the action `tools/call`, not `run`.
+
 ## [0.1.0] - 2026-11-15
 
 First release, part of Chestertown 0.1.0 together with AOS and Ernest: Prudence is the reference

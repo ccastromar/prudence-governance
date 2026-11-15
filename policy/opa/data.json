@@ -13,7 +13,8 @@
         { "pipeline": "pipeline_aos_support_lookup", "actions": ["run"] },
         { "pipeline": "pipeline_aos_credit_pre_screening", "actions": ["run"] },
         { "pipeline": "pipeline_aos_translate_message", "actions": ["run"] },
-        { "pipeline": "pipeline_aos_spam_check", "actions": ["run"] }
+        { "pipeline": "pipeline_aos_spam_check", "actions": ["run"] },
+        { "pipeline": "pipeline_transfer_reviewed", "actions": ["run"] }
       ],
       "risk-officer": [
         { "pipeline": "credit-risk-scoring", "actions": ["run", "approve"] }

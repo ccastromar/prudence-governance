@@ -52,6 +52,14 @@ no depende de una GPU ni de internet, y nadie puede decir que "el modelo tuvo su
 > 🔒 Si falta un id o la URL de Prudence, AOS **no ejecuta** esas tareas y lo dice
 > (*requires a Prudence verdict … (fail-closed)*). Es a propósito: sin portero, no se pasa.
 
+> 🚪 **Fuera de los botones** (AOS posterior a 0.4.0): con Prudence como portero, AOS **solo
+> ejecuta los flujos con IA que Prudence conoce**. Si escribes algo que no es de ningún flujo, cae en
+> el chat libre, que usa IA sin estar registrado, y AOS **no lo ejecuta**: *Execution Failed* ·
+> *has no ai_system … (fail-closed)*. Antes se ejecutaba sin preguntar a nadie. Cada flujo dice si
+> es IA (`governed: true`) o no (`governed: false`, con su motivo): los que **no son IA** (consultar
+> un saldo, un ticket…) se ejecutan sin preguntar y el motivo queda en la auditoría de AOS; algo que
+> use IA no puede declararse así.
+
 ---
 
 ## J1 · Soporte: de "no" a "sí" con una firma 🟡
@@ -128,6 +136,19 @@ Escribe en AOS una petición de la demo y añade al final una de estas marcas:
 
 - [ ] Ningún fallo técnico ejecuta la tarea "por si acaso".
 - [ ] Una decisión de Prudence se ve **distinta** de un fallo técnico (tarjeta con escudo vs. *Execution Failed*).
+
+---
+
+## J6 · (Opcional) Lo que no está gobernado, no se ejecuta 🚪
+
+Solo con AOS posterior a 0.4.0. En AOS, escribe una petición que **no** sea de ningún botón, por
+ejemplo *¿qué tiempo hace en Madrid?*
+
+**Deberías ver:**
+- [ ] **Execution Failed** con *has no ai_system … (fail-closed)*: AOS no la ejecuta.
+- [ ] En Prudence **no aparece ninguna decisión** nueva: no había IA registrada sobre la que decidir.
+
+❌ **Fallo si** AOS contesta la pregunta: se habría ejecutado un flujo con IA sin pasar por Prudence.
 
 ---
 
